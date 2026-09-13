@@ -1,5 +1,6 @@
-import axios from 'axios';
+import axios, { type InternalAxiosRequestConfig } from 'axios';
 import type { Filiere, PageFilieres } from './filiere';
+import { CLES_JETONS, useAuthStore, type Utilisateur } from '@/stores/authStore';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -12,7 +13,7 @@ export const api = axios.create({
 
 api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem(CLES_JETONS.acces);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -20,25 +21,95 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Un seul rafraîchissement à la fois : le backend révoque le refresh token à chaque utilisation.
+let rafraichissementEnCours: Promise<string | null> | null = null;
+
+function rafraichirJeton(): Promise<string | null> {
+  if (!rafraichissementEnCours) {
+    const refreshToken = localStorage.getItem(CLES_JETONS.rafraichissement);
+    rafraichissementEnCours = (
+      refreshToken
+        ? axios
+            .post<Jetons>(`${API_URL}/api/auth/refresh`, { refreshToken })
+            .then(({ data }) => {
+              useAuthStore.getState().enregistrerJetons(data.accessToken, data.refreshToken);
+              return data.accessToken;
+            })
+            .catch(() => null)
+        : Promise.resolve(null)
+    ).finally(() => {
+      rafraichissementEnCours = null;
+    });
+  }
+  return rafraichissementEnCours;
+}
+
+const SANS_RAFRAICHISSEMENT = ['/auth/connexion', '/auth/inscription', '/auth/refresh', '/auth/deconnexion'];
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '/connexion';
-      }
+    const requete = error.config as (InternalAxiosRequestConfig & { _reessai?: boolean }) | undefined;
+    if (
+      error.response?.status !== 401 ||
+      typeof window === 'undefined' ||
+      !requete ||
+      requete._reessai ||
+      SANS_RAFRAICHISSEMENT.includes(requete.url ?? '')
+    ) {
+      return Promise.reject(error);
     }
+
+    requete._reessai = true;
+    const jeton = await rafraichirJeton();
+    if (jeton) {
+      requete.headers.Authorization = `Bearer ${jeton}`;
+      return api(requete);
+    }
+
+    useAuthStore.getState().logout();
+    window.location.href = `/connexion?redirect=${encodeURIComponent(window.location.pathname)}`;
     return Promise.reject(error);
   }
 );
 
+export interface Jetons {
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface ReponseAuth extends Jetons {
+  user: Utilisateur;
+}
+
+export interface DonneesInscription {
+  role: 'APPRENANT' | 'PARENT';
+  nom: string;
+  prenom: string;
+  motDePasse: string;
+  nip?: string;
+  dateNaissance?: string;
+  email?: string;
+}
+
+export interface ApprenantResume {
+  nip: string;
+  nom: string;
+  prenom: string;
+}
+
+export interface Moi extends Utilisateur {
+  email: string | null;
+  apprenant: ApprenantResume | null;
+  enfants: (ApprenantResume & { relation: string })[];
+}
+
 export const authApi = {
   login: (identifiant: string, motDePasse: string) =>
-    api.post('/auth/connexion', { identifiant, motDePasse }),
-  register: (data: any) => api.post('/auth/inscription', data),
-  refresh: (refreshToken: string) => api.post('/auth/refresh', { refreshToken }),
+    api.post<ReponseAuth>('/auth/connexion', { identifiant, motDePasse }),
+  register: (data: DonneesInscription) => api.post<ReponseAuth>('/auth/inscription', data),
+  moi: () => api.get<Moi>('/auth/moi'),
+  logout: () => api.post('/auth/deconnexion'),
 };
 
 export const filiereApi = {

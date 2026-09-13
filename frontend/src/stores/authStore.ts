@@ -1,35 +1,62 @@
 import { create } from 'zustand';
 
-interface User {
+export type Role = 'APPRENANT' | 'PARENT' | 'ETABLISSEMENT' | 'DGES' | 'ADMIN';
+
+export interface Utilisateur {
   id: string;
-  nip?: string;
+  nip: string | null;
   nom: string;
   prenom: string;
-  role: string;
+  role: Role;
 }
 
+export const CLES_JETONS = { acces: 'accessToken', rafraichissement: 'refreshToken' } as const;
+const CLE_UTILISATEUR = 'utilisateur';
+
 interface AuthState {
-  user: User | null;
-  isAuthenticated: boolean;
-  login: (user: User, accessToken: string, refreshToken: string) => void;
+  user: Utilisateur | null;
+  /** Vrai une fois la session restaurée depuis le navigateur : évite de rediriger avant de savoir. */
+  pret: boolean;
+  initialiser: () => void;
+  login: (user: Utilisateur, accessToken: string, refreshToken: string) => void;
+  enregistrerJetons: (accessToken: string, refreshToken: string) => void;
   logout: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  isAuthenticated: false,
-  login: (user, accessToken, refreshToken) => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('accessToken', accessToken);
-      localStorage.setItem('refreshToken', refreshToken);
+  pret: false,
+  initialiser: () => {
+    let user: Utilisateur | null = null;
+    try {
+      const brut = localStorage.getItem(CLE_UTILISATEUR);
+      if (brut && localStorage.getItem(CLES_JETONS.rafraichissement)) user = JSON.parse(brut);
+    } catch {
+      user = null;
     }
-    set({ user, isAuthenticated: true });
+    set({ user, pret: true });
+  },
+  login: (user, accessToken, refreshToken) => {
+    localStorage.setItem(CLES_JETONS.acces, accessToken);
+    localStorage.setItem(CLES_JETONS.rafraichissement, refreshToken);
+    localStorage.setItem(CLE_UTILISATEUR, JSON.stringify(user));
+    set({ user });
+  },
+  enregistrerJetons: (accessToken, refreshToken) => {
+    localStorage.setItem(CLES_JETONS.acces, accessToken);
+    localStorage.setItem(CLES_JETONS.rafraichissement, refreshToken);
   },
   logout: () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-    }
-    set({ user: null, isAuthenticated: false });
+    localStorage.removeItem(CLES_JETONS.acces);
+    localStorage.removeItem(CLES_JETONS.rafraichissement);
+    localStorage.removeItem(CLE_UTILISATEUR);
+    set({ user: null });
   },
 }));
+
+/** Page d'arrivée après connexion selon le rôle. */
+export function accueilDuRole(role: Role): string {
+  if (role === 'APPRENANT' || role === 'PARENT') return '/espace-apprenant';
+  if (role === 'DGES' || role === 'ADMIN') return '/stats';
+  return '/';
+}

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
+import { AuthInitialiser } from '@/components/auth/AuthInitialiser';
 
 export const metadata: Metadata = {
   title: 'Mon Orientation — Plateforme nationale d\'orientation scolaire',
@@ -17,6 +18,7 @@ export default function RootLayout({
   return (
     <html lang="fr">
       <body>
+        <AuthInitialiser />
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white">
           Aller au contenu principal
         </a>
