@@ -35,7 +35,7 @@ check "élève → chat d'un autre → 403" 403 $(req POST /conseiller/TEST-B1-B
 check "élève → stats nationales → 403" 403 $(req GET /stats/national "$TA")
 check "élève → explication inexistante/étrangère → 404" 404 $(req GET /orientation/TEST-B1-A/explain/00000000-0000-0000-0000-000000000000 "$TA")
 check "chat message vide → 400" 400 $(req POST /conseiller/TEST-B1-A/chat "$TA" '{"message":""}')
-check "chat valide → 201" 201 $(req POST /conseiller/TEST-B1-A/chat "$TA" '{"message":"bonjour"}')
+check "chat : conversation inconnue → 404 (sans appeler le modèle)" 404 $(req POST /conseiller/TEST-B1-A/chat "$TA" '{"message":"bonjour","conversationId":"3f1c2b9a-6d4e-4f8a-9b7c-1a2b3c4d5e6f"}')
 check "sans jeton → 401" 401 $(req GET /apprenant/TEST-B1-A "")
 check "/auth/moi élève → dossier rattaché" 200 $(req GET /auth/moi "$TA"); check "  moi.apprenant.nip" TEST-B1-A "$(jget j.apprenant?.nip)"
 

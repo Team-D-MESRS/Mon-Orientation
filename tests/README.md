@@ -15,6 +15,9 @@ bash tests/api/securite.sh          # droits d'accès, inscription, jetons, limi
 bash tests/api/parcours-eleve.sh    # bilan des notes, moteur d'orientation, vœux, validation parent
 node tests/e2e/connexion.mjs        # connexion, session, pages protégées, déconnexion, inscription
 node tests/e2e/parcours-eleve.mjs   # parcours complet élève / parent / Terminale, captures ordinateur et mobile
+bash tests/api/conseiller.sh        # conseiller : droits, validation, conversations, limitation (sans appel au modèle)
+CONSEILLER_TEST_LLM=1 bash tests/api/conseiller.sh   # + appels réels au modèle (clé GEMINI_API_KEY requise, quota gratuit limité)
+node tests/e2e/conseiller.mjs       # conseiller dans le navigateur (sans clé : message explicite ; avec clé : réponse)
 bash tests/reinitialiser-demo.sh    # remet la démo à zéro (le test navigateur laisse des vœux validés)
 ```
 
