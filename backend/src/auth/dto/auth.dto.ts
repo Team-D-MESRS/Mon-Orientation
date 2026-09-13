@@ -25,8 +25,8 @@ export class RegisterDto {
   @MinLength(8)
   motDePasse: string;
 
-  @ApiPropertyOptional({ enum: ['APPRENANT', 'PARENT', 'ETABLISSEMENT', 'DGES', 'ADMIN'] })
-  @IsEnum(['APPRENANT', 'PARENT', 'ETABLISSEMENT', 'DGES', 'ADMIN'])
+  @ApiPropertyOptional({ enum: ['APPRENANT', 'PARENT'], description: 'Auto-inscription limitée aux apprenants et parents ; les autres rôles sont attribués par un administrateur' })
+  @IsEnum(['APPRENANT', 'PARENT'], { message: 'role doit valoir APPRENANT ou PARENT' })
   @IsOptional()
   role?: string;
 }
