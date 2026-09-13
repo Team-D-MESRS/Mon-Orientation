@@ -1,0 +1,130 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Spectral:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bj-green: #008751;
+  --bj-yellow: #FCD116;
+  --bj-red: #E8112D;
+  --bj-ochre: #C8842A;
+  --bj-blue: #1B6B93;
+}
+
+body {
+  font-family: 'Montserrat', system-ui, sans-serif;
+  color: #161616;
+  background-color: #F6F6F6;
+}
+
+/* DSBJ-style components */
+.bj-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+@media (min-width: 768px) {
+  .bj-container {
+    padding: 0 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .bj-container {
+    padding: 0 32px;
+  }
+}
+
+.bj-header {
+  background: white;
+  border-bottom: 1px solid #E5E5E5;
+}
+
+.bj-header::before {
+  content: '';
+  display: block;
+  height: 4px;
+  background: linear-gradient(to right, #008751 33.33%, #FCD116 33.33% 66.66%, #E8112D 66.66%);
+}
+
+.bj-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 24px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 150ms ease;
+  cursor: pointer;
+}
+
+.bj-btn-primary {
+  background-color: var(--bj-green);
+  color: white;
+}
+
+.bj-btn-primary:hover {
+  background-color: #006B41;
+}
+
+.bj-btn-secondary {
+  background-color: transparent;
+  color: var(--bj-green);
+  border: 2px solid var(--bj-green);
+}
+
+.bj-btn-secondary:hover {
+  background-color: #F0FFF8;
+}
+
+.bj-card {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #E5E5E5;
+  overflow: hidden;
+  transition: all 150ms ease;
+}
+
+.bj-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+/* Tricolore stripe */
+.bj-tricolore {
+  height: 4px;
+  background: linear-gradient(to right, #008751 33.33%, #FCD116 33.33% 66.66%, #E8112D 66.66%);
+}
+
+/* Chat bubbles */
+.bubble-user {
+  background-color: #F0FFF8;
+  border-left: 3px solid var(--bj-green);
+  border-radius: 0 8px 8px 0;
+  padding: 12px 16px;
+}
+
+.bubble-assistant {
+  background-color: #F6F6F6;
+  border-left: 3px solid var(--bj-blue);
+  border-radius: 0 8px 8px 0;
+  padding: 12px 16px;
+}
+
+/* Focus styles */
+:focus-visible {
+  outline: 2px solid var(--bj-green);
+  outline-offset: 2px;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
