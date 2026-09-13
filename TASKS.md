@@ -38,10 +38,10 @@
 | # | Tâche | Rôle | Priorité | Statut | Dépendances |
 |---|---|---|---|---|---|
 | 2.1 | API EducMaster — client HTTP, synchronisation des données | backend-dev | P0 | `pending` | 1.3 |
-| 2.2 | Schéma DB complet (notes, filières, préférences, recommandations, conversations) | backend-dev | P0 | `pending` | 1.6 |
+| 2.2 | Schéma DB complet (notes, filières, préférences, recommandations, conversations) | backend-dev | P0 | `done` | 1.6 |
 | 2.3 | CRUD Catalogue de filières (référentiel national) | backend-dev | P0 | `done` | 2.2 |
 | 2.4 | API Apprenant — profil, notes, parcours | backend-dev | P0 | `done` | 2.1, 2.2 |
-| 2.5 | API Préférences — saisie, validation, historique | backend-dev | P0 | `in_progress` | 2.2, 2.4 |
+| 2.5 | API Préférences — saisie, validation, historique | backend-dev | P0 | `done` | 2.2, 2.4 |
 | 2.6 | Moteur d'orientation — algorithme de matching (notes + préférences) | backend-dev | P0 | `done` | 2.3, 2.4, 2.5 |
 | 2.7 | API Recommandations — génération, explication, historique | backend-dev | P0 | `done` | 2.6 |
 | 2.8 | Cache Redis — sessions, données EducMaster, catalogue | backend-dev | P1 | `pending` | 1.3 |
@@ -57,10 +57,10 @@
 | 3.1 | Page d'accueil — hero, services, actualités (composants DSBJ) | frontend-dev | P0 | `done` | 1.4 |
 | 3.2 | Page connexion / inscription — formulaire NIP + mot de passe | frontend-dev | P0 | `done` | 1.4, 1.7 |
 | 3.3 | Layout principal — header DSBJ, navigation, footer | frontend-dev | P0 | `done` | 1.4 |
-| 3.4 | Espace apprenant — tableau de bord, profil, notes | frontend-dev | P0 | `in_progress` | 2.4, 3.3 |
+| 3.4 | Espace apprenant — tableau de bord, profil, notes | frontend-dev | P0 | `done` | 2.4, 3.3 |
 | 3.5 | Catalogue — recherche multicritère, fiches filières, comparaison | frontend-dev | P0 | `in_progress` | 2.3, 3.3 |
-| 3.6 | Saisie des préférences — formulaire orienté, validation parent | frontend-dev | P0 | `pending` | 2.5, 3.4 |
-| 3.7 | Recommandations — affichage, explication, sélection | frontend-dev | P0 | `pending` | 2.7, 3.6 |
+| 3.6 | Saisie des préférences — formulaire orienté, validation parent | frontend-dev | P0 | `done` | 2.5, 3.4 |
+| 3.7 | Recommandations — affichage, explication, sélection | frontend-dev | P0 | `done` | 2.7, 3.6 |
 | 3.8 | Module d'information — contenus par palier, guides, vidéos | frontend-dev | P1 | `pending` | 3.3 |
 | 3.9 | PWA — service worker, mode hors-ligne, cache contenus | frontend-dev | P1 | `pending` | 3.1, 3.5, 3.8 |
 | 3.10 | Admin — gestion utilisateurs, catalogue, sync EducMaster | frontend-dev | P1 | `pending` | 2.10, 2.3, 3.3 |
@@ -111,9 +111,9 @@
 
 | # | Tâche | Rôle | Priorité | Statut | Dépendances |
 |---|---|---|---|---|---|
-| 7.1 | Tests unitaires backend (couverture > 80%) | qa-reviewer | P0 | `pending` | 2.x |
+| 7.1 | Tests unitaires backend (couverture > 80%) | qa-reviewer | P0 | `in_progress` | 2.x |
 | 7.2 | Tests unitaires frontend | qa-reviewer | P0 | `pending` | 3.x |
-| 7.3 | Tests d'intégration API | qa-reviewer | P0 | `pending` | 2.x |
+| 7.3 | Tests d'intégration API | qa-reviewer | P0 | `in_progress` | 2.x |
 | 7.4 | Tests mobile (tests d'interface) | qa-reviewer | P1 | `pending` | 4.x |
 | 7.5 | Audit sécurité —OWASP Top 10, injection, XSS | qa-reviewer | P0 | `pending` | 2.x |
 | 7.6 | Performance — optimisation requêtes, cache, lazy loading | qa-reviewer | P1 | `pending` | 2.x, 3.x |

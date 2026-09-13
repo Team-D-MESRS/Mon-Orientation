@@ -6,15 +6,22 @@
 
 ## État actuel
 
-- **Étape du pipeline** : développement MVP
-- **En cours** : bloc 2 — parcours élève (données de démo, API de saisie des préférences, moteur d'orientation v2, écrans espace apprenant / préférences / recommandations)
-- **Bloqué / en attente de** : validation du référentiel filières par le client ; accès API EducMaster (2.1) ; arbitrages SPEC §7 (saisie des vœux élève/parent, périmètre IA, langues)
-- **Prochaine action recommandée** : terminer le bloc 2 ; ensuite accès du rôle ÉTABLISSEMENT (2.10), relation Filière ↔ Établissement N-N (architecte), projet Flutter
-- **Dernière mise à jour** : 2026-09-13 15:47 — sécurité et connexion (fil principal)
+- **Étape du pipeline** : développement MVP — parcours élève web opérationnel sur données de démonstration
+- **En cours** : rien
+- **Bloqué / en attente de** : validation client du référentiel filières et du moteur (barème, matières clés, seuils : conseillers d'orientation DGES) ; arbitrages SPEC §7 (appliqué par défaut : vœux saisis par l'élève, validés par le parent) ; accès API EducMaster (2.1)
+- **Prochaine action recommandée** : 1) présenter le parcours au client et faire valider le moteur ; 2) conseiller IA réel (5.1/5.2) une fois son périmètre arbitré ; 3) rôle ÉTABLISSEMENT + rattachement parent-enfant par l'établissement (écran admin 3.10) ; 4) statistiques branchées sur l'API (6.1/6.3) ; 5) projet Flutter ; 6) tests unitaires + CI (1.8)
+- **Dernière mise à jour** : 2026-09-13 16:19 — parcours élève (fil principal)
 
 ## Historique
 
 *(plus récent en haut)*
+
+### 2026-09-13 16:19 — parcours élève (fil principal)
+- Fait (backend) : `Apprenant.palier/serie` ; un jeu de vœux par classe ; `POST /apprenant/:nip/preferences` (élève) et `/preferences/validation` (parent), validation annulée si les vœux changent ; le profil renvoie un bilan des notes. Moteur v2 : filières selon la classe et la série admise, matières clés 60 pts, vœux 30/20/10, seuils publiés, insertion si connue, 2 pistes max par famille, chaque critère expliqué (profils dans `orientation/profils-filieres.ts`, à valider par la DGES).
+- Fait (front) : espace apprenant (tableau de bord, notes, vœux en 3 étapes sauvegardés à chaque étape, recommandations expliquées), vue parent avec validation, ocre foncé pour un contraste AA.
+- Démo : `npm run prisma:seed:demo` (Fatou 3e, Koffi Tle D, Adama 4e sans compte, parent Moussa, DGES — mot de passe `Demo2026!`) ; remise à zéro : `tests/reinitialiser-demo.sh`.
+- Tests : dossier `tests/` — 75 vérifications API + 18 navigateur, toutes au vert.
+- Limite : moteur peu discriminant (nombreuses égalités, ex. 5 pistes à 53/100 pour Fatou) tant que les profils matières ne sont pas affinés.
 
 ### 2026-09-13 15:47 — sécurité et connexion (fil principal)
 - Fait (backend) : `AccesApprenantGuard` (élève = son dossier, parent = enfants rattachés, admin) sur apprenant/orientation/conseiller ; `RolesGuard` (stats = DGES/ADMIN) ; faille `explain` corrigée ; `GET /auth/moi` ; déconnexion authentifiée ; refresh réparé (session = durée du refresh, rotation, `jti`) ; inscription élève = NIP + date de naissance rattachée au dossier ; bug d'inscription parent corrigé ; `JWT_SECRET` obligatoire ; helmet ; 5 essais/min par (IP, identifiant).
