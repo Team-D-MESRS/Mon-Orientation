@@ -86,6 +86,8 @@ model Apprenant {
   sexe            String
   departement     String
   commune         String
+  palier          Palier?
+  serie           String?
   derniereSync    DateTime? @map("derniere_sync")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
@@ -190,12 +192,14 @@ model Preference {
   motivation      String?
   dateSaisie      DateTime @default(now()) @map("date_saisie")
   valideParent    Boolean  @default(false) @map("valide_parent")
+  dateValidationParent DateTime? @map("date_validation_parent")
 
   apprenant       Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
   filiere1        Filiere?  @relation("PrefFiliere1", fields: [filiereId1], references: [id])
   filiere2        Filiere?  @relation("PrefFiliere2", fields: [filiereId2], references: [id])
   filiere3        Filiere?  @relation("PrefFiliere3", fields: [filiereId3], references: [id])
 
+  @@unique([apprenantNip, palier])
   @@map("preferences")
 }
 
@@ -206,6 +210,7 @@ model Recommandation {
   filiereId       String   @map("filiere_id")
   score           Float
   explication     String?
+  criteres        Json?
   dateGeneration  DateTime @default(now()) @map("date_generation")
   active          Boolean  @default(true)
 

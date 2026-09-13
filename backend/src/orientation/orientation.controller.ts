@@ -18,9 +18,9 @@ export class OrientationController {
   }
 
   @Post(':nip/calcul')
-  @ApiOperation({ summary: 'Déclencher le calcul des recommandations' })
+  @ApiOperation({ summary: "Calculer les recommandations pour la classe actuelle de l'élève" })
   async calculer(@Param('nip') nip: string) {
-    return this.orientationService.calculerRecommandations(nip, 'TROISIEME');
+    return this.orientationService.calculerRecommandations(nip);
   }
 
   @Get(':nip/explain/:recommandationId')
