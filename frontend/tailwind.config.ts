@@ -14,6 +14,7 @@ const config: Config = {
         'bj-yellow': '#FCD116',
         'bj-red': '#E8112D',
         'bj-ochre': '#C8842A',
+        'bj-ochre-fonce': '#8C5A14',
         'bj-blue': '#1B6B93',
         'bj-gray': {
           50: '#161616',

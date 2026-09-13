@@ -163,7 +163,7 @@ export default function CataloguePage() {
                         <ShieldCheck size={14} aria-hidden="true" /> Source officielle
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1v text-xs text-bj-ochre">
+                      <span className="flex items-center gap-1v text-xs text-bj-ochre-fonce">
                         <AlertTriangle size={14} aria-hidden="true" /> À confirmer
                       </span>
                     )}

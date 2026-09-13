@@ -111,7 +111,7 @@ export default function FicheFilierePage() {
 
             {!aUneSourceOfficielle(filiere) && (
               <div role="note" className="flex gap-3v items-start p-4v mb-6v rounded-bj-sm border border-bj-ochre/40 bg-bj-ochre/10 text-sm">
-                <AlertTriangle className="text-bj-ochre shrink-0 mt-[2px]" size={18} aria-hidden="true" />
+                <AlertTriangle className="text-bj-ochre-fonce shrink-0 mt-[2px]" size={18} aria-hidden="true" />
                 <p>
                   Les informations de cette fiche proviennent de sources non officielles et doivent être confirmées
                   par le Ministère.
@@ -192,7 +192,7 @@ export default function FicheFilierePage() {
                               <ShieldCheck size={14} aria-hidden="true" /> Source officielle
                             </span>
                           ) : (
-                            <span className="flex items-center gap-1v text-bj-ochre">
+                            <span className="flex items-center gap-1v text-bj-ochre-fonce">
                               <AlertTriangle size={14} aria-hidden="true" /> Source non officielle
                             </span>
                           )}
