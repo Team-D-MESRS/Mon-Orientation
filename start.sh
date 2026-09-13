@@ -46,6 +46,8 @@ echo "  • Swagger   → http://localhost:8080/api/docs"
 echo ""
 echo "Ctrl+C pour tout arrêter"
 
-trap "echo ''; echo '🛑 Arrêt...'; kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; exit 0" INT TERM
+# kill 0 arrête tout le groupe de processus : sans ça, le serveur Node lancé par
+# « nest start --watch » survit au Ctrl+C et garde le port 8080 avec l'ancien code.
+trap "echo ''; echo '🛑 Arrêt...'; trap - INT TERM; kill 0" INT TERM
 
 wait
