@@ -89,12 +89,12 @@ La plateforme Mon Orientation est un système composé de trois couches principa
 
 | Technologie | Choix | Justification |
 |---|---|---|
-| **LLM** | OpenAI GPT-4o / Claude (à évaluer) | Conversationnel, raisonnement |
-| **Orchestration** | LangChain.js | Chaînes, RAG, mémoire |
-| **Embeddings** | OpenAI text-embedding-3-small | Recherche sémantique dans le catalogue |
-| **Vector store** | pgvector (PostgreSQL) | Embeddings en base, requêtes similarity |
+| **LLM** | Gemini (`gemini-3.6-flash`, secours `gemini-3.5-flash-lite`, API Google, SDK `@google/genai`) — prototype sur l'offre gratuite, données de démonstration uniquement ; offre payante ou modèle hébergé au Bénin pour la production | Appel de fonctions, français, sans coût pour le prototype |
+| **Orchestration** | Appel d'outils natif du SDK, boucle bornée côté NestJS (pas de LangChain) | Chaque réponse s'appuie sur nos services : traçable et auditable |
+| **Embeddings** | Reportés : inutiles pour 67 filières interrogées par outils | À prévoir avec le guide numérique (documents longs) |
+| **Vector store** | pgvector (PostgreSQL), reporté | Recherche documentaire dans le guide numérique |
 | **Vocal** | « J'aime ma langue » API (ASIN/IIDIA) | STT/TTS en langues nationales |
-| **RAG** | Catalogue formations + notes élèves | Contexte personnalisé pour le conseiller |
+| **RAG** | Outils sur le catalogue, le dossier pseudonymisé et le moteur d'orientation | Réponses personnalisées sans donner au modèle le nom ni le NIP de l'élève |
 
 ### 2.5 Infrastructure
 

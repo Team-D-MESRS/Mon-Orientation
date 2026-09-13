@@ -7,14 +7,39 @@
 ## État actuel
 
 - **Étape du pipeline** : développement MVP — parcours élève web opérationnel sur données de démonstration
-- **En cours** : rien
+- **En cours** : rien — conseiller pédagogique opérationnel sur Gemini (offre gratuite, données de démonstration uniquement)
 - **Bloqué / en attente de** : validation client du référentiel filières et du moteur (barème, matières clés, seuils : conseillers d'orientation DGES) ; arbitrages SPEC §7 (appliqué par défaut : vœux saisis par l'élève, validés par le parent) ; accès API EducMaster (2.1)
-- **Prochaine action recommandée** : 1) présenter le parcours au client et faire valider le moteur ; 2) conseiller IA réel (5.1/5.2) une fois son périmètre arbitré ; 3) rôle ÉTABLISSEMENT + rattachement parent-enfant par l'établissement (écran admin 3.10) ; 4) statistiques branchées sur l'API (6.1/6.3) ; 5) projet Flutter ; 6) tests unitaires + CI (1.8)
-- **Dernière mise à jour** : 2026-09-13 16:19 — parcours élève (fil principal)
+- **Prochaine action recommandée** : 00) l'utilisateur régénère sa clé Gemini (collée en clair dans la conversation) et met la nouvelle dans `backend/.env` ; 0) l'utilisateur complète le nom du prestataire dans `docs/Cahier_des_charges_Mon_Orientation_v1.0.docx` et le présente au MESTFP ; 1) présenter le parcours au client et faire valider le moteur ; 2) conseiller IA réel (5.1/5.2) une fois son périmètre arbitré ; 3) rôle ÉTABLISSEMENT + rattachement parent-enfant par l'établissement (écran admin 3.10) ; 4) statistiques branchées sur l'API (6.1/6.3) ; 5) projet Flutter ; 6) tests unitaires + CI (1.8)
+- **Dernière mise à jour** : 2026-09-13 23:16 — conseiller Gemini testé avec de vrais appels (fil principal)
 
 ## Historique
 
 *(plus récent en haut)*
+
+### 2026-09-13 23:16 — conseiller Gemini testé avec de vrais appels (fil principal)
+- Fait : clé `GEMINI_API_KEY` dans `backend/.env` (non versionné ; à régénérer, elle a été collée dans la conversation). Modèle principal `gemini-3.6-flash`, secours `gemini-3.5-flash-lite` (`gemini-3.8-flash` : 20 requêtes/jour en offre gratuite ; `gemini-2.5-flash` retiré pour les nouveaux utilisateurs).
+- Changements : le dossier pseudonymisé et les propositions du moteur sont joints à chaque question (outils `dossier_eleve` et `recommandations_eleve` retirés, ce qui économise un appel) ; en cas de 429/5xx, la question repart de zéro sur le modèle de secours ; une seule relance du SDK (5 par défaut).
+- Vérifié : `CONSEILLER_TEST_LLM=1 bash tests/api/conseiller.sh` 18/18, `tests/e2e/conseiller.mjs` 6/6 avec réponse réelle. Qualité : médecine avec un bac D, DTM expliqué au parent en le vouvoyant, refus des questions politiques, élève harcelé orienté vers un adulte ; ni nom ni NIP dans les réponses.
+- À savoir : ~2 000 à 3 000 jetons en entrée par appel ; le cache implicite de Gemini ne s'est pas déclenché (`cache=0`).
+
+### 2026-09-13 21:33 — conseiller : passage de Claude à Gemini (fil principal)
+- Décision (utilisateur) : Gemini, offre gratuite, à la place de Claude pour le prototype.
+- Fait : SDK `@google/genai` 2.22 (`gemini-3.8-flash`, `models.generateContent` + déclarations de fonctions en schémas JSON) ; SDK Anthropic désinstallé. Outils, pseudonymisation, consignes, limites et conversations inchangés. Clé `GEMINI_API_KEY` ; une clé invalide renvoie 400 chez Google (traitée comme « non configuré »).
+- Attention : dans l'offre gratuite, Google peut utiliser les échanges pour améliorer ses produits (page officielle des tarifs) → données de démonstration uniquement. En production : offre payante (0,75 $ / 3,75 $ par million de jetons jusqu'au 31/12/2026) ou modèle hébergé au Bénin.
+- Tests : 37 sécurité + 38 parcours + 10 conseiller (API) et 6 conseiller (navigateur) au vert, **sans clé** : réponses réelles de Gemini pas encore testées.
+
+### 2026-09-13 19:19 — conseiller pédagogique, prototype du niveau B (fil principal)
+- Décision (utilisateur) : niveau B, « le moteur propose, le conseiller explique ». Reste à faire confirmer par le client (SPEC §7, point 5), avec la décision d'hébergement des données envoyées au modèle.
+- Fait (backend) : Claude via `@anthropic-ai/sdk` 0.125 (`claude-opus-5`, effort `medium`, repli serveur `fallbacks: "default"`) ; boucle d'outils bornée à 6 appels : `rechercher_filieres`, `fiche_filiere`, `dossier_eleve` (pseudonymisé), `recommandations_eleve`, `evaluer_filiere` (nouveau `OrientationService.evaluerFiliere`) ; cache sur consignes + outils ; une conversation par session ; réservé aux élèves et parents, 10 messages/min par compte ; 503 explicite sans clé.
+- Fait (front) : onglet « Conseiller » dans l'espace (suggestions, rendu sûr des réponses : seuls les liens internes sont cliquables) ; `/conseiller` redirige les élèves et parents.
+- Choix d'architecture : outils sur nos services plutôt que LangChain + base vectorielle (ARCHITECTURE §2.4 mis à jour) ; la recherche documentaire viendra avec le guide numérique.
+- Tests : `tests/api/conseiller.sh` (10) et `tests/e2e/conseiller.mjs` (6) ; ensemble 85 API + 24 navigateur au vert, **sans clé** : les appels réels au modèle n'ont pas encore été testés.
+
+### 2026-09-13 18:27 — documentation et cahier des charges (fil principal)
+- Fait : README racine (présentation, état d'avancement, architecture, démarrage, comptes de démo, tests, dépannage) et README détaillés `backend/` (configuration, API avec droits d'accès, moteur, migrations), `frontend/` (pages, authentification client, DSBJ et accessibilité), `mobile/` (projet à initialiser, plan Flutter).
+- Fait : cahier des charges de présentation `docs/Cahier_des_charges_Mon_Orientation_v1.0.docx` + `.pdf` (13 p. A4), tiré de la note de cadrage et de SPEC.md, **sans aucune mention de l'avancement** (l'utilisateur n'a pas encore annoncé le projet au client) ; nom du prestataire à compléter (surligné). Régénérable avec `docs/outils/generer_cahier_des_charges.py` (écrase les retouches faites dans Word).
+- Divers : `backend/setup.sh` passe à `prisma migrate deploy` ; `frontend/.env.example` ajouté.
+- Suite : non commité — commit des docs quand l'utilisateur le demande.
 
 ### 2026-09-13 16:19 — parcours élève (fil principal)
 - Fait (backend) : `Apprenant.palier/serie` ; un jeu de vœux par classe ; `POST /apprenant/:nip/preferences` (élève) et `/preferences/validation` (parent), validation annulée si les vœux changent ; le profil renvoie un bilan des notes. Moteur v2 : filières selon la classe et la série admise, matières clés 60 pts, vœux 30/20/10, seuils publiés, insertion si connue, 2 pistes max par famille, chaque critère expliqué (profils dans `orientation/profils-filieres.ts`, à valider par la DGES).

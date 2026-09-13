@@ -88,7 +88,7 @@
 | # | Tâche | Rôle | Priorité | Statut | Dépendances |
 |---|---|---|---|---|---|
 | 5.1 | Architecture RAG — embeddings, vector store (pgvector) | ai-dev | P0 | `pending` | 2.3 |
-| 5.2 | Conseiller IA (texte) — prompt system, mémoire conversationnelle | ai-dev | P0 | `pending` | 5.1, 2.4, 2.5 |
+| 5.2 | Conseiller IA (texte) — prompt system, mémoire conversationnelle | ai-dev | P0 | `in_progress` | 5.1, 2.4, 2.5 |
 | 5.3 | Intégration vocale — connexion API « J'aime ma langue » (ASIN/IIDIA) | ai-dev | P2 | `pending` | 5.2 |
 | 5.4 | Supervision humaine — modération des réponses, contrôle qualité | ai-dev | P1 | `pending` | 5.2 |
 | 5.5 | Protection données — chiffrement conversations, anonymisation logs | ai-dev | P0 | `pending` | 5.2 |
