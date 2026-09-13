@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { BookOpen, FlaskConical, Heart, LayoutDashboard, Lightbulb } from 'lucide-react';
+import { BookOpen, FlaskConical, Heart, LayoutDashboard, Lightbulb, MessageCircle } from 'lucide-react';
 import { classeLisible } from '@/lib/apprenant';
 import { useEspace } from './EspaceContext';
 import { Alerte, CHAMP, Chargement } from './ui';
@@ -13,6 +13,7 @@ const ONGLETS = [
   { href: '/espace-apprenant/notes', label: 'Notes', Icone: BookOpen },
   { href: '/espace-apprenant/preferences', label: 'Vœux', Icone: Heart },
   { href: '/espace-apprenant/recommandations', label: 'Recommandations', Icone: Lightbulb },
+  { href: '/espace-apprenant/conseiller', label: 'Conseiller', Icone: MessageCircle },
 ];
 
 export function CadreEspace({ children }: { children: ReactNode }) {

@@ -143,9 +143,15 @@ export const orientationApi = {
   calculer: (nip: string) => api.post<Recommandation[]>(`/orientation/${nip}/calcul`),
 };
 
+export interface ReponseConseiller {
+  conversationId: string;
+  reponse: string;
+  outilsUtilises: string[];
+}
+
 export const conseillerApi = {
-  chat: (nip: string, message: string, langue?: string) =>
-    api.post(`/conseiller/${nip}/chat`, { message, langue }),
+  chat: (nip: string, message: string, conversationId?: string) =>
+    api.post<ReponseConseiller>(`/conseiller/${nip}/chat`, { message, ...(conversationId ? { conversationId } : {}) }),
   getHistorique: (nip: string) => api.get(`/conseiller/${nip}/historique`),
 };
 
