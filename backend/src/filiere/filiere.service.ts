@@ -68,6 +68,10 @@ export class FiliereService {
     return filiere;
   }
 
+  async findByCode(code: string) {
+    return this.prisma.filiere.findUnique({ where: { code } });
+  }
+
   async getDebouches(id: string) {
     const filiere = await this.prisma.filiere.findUnique({
       where: { id },

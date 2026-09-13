@@ -96,6 +96,38 @@ export class OrientationService {
     });
   }
 
+  /**
+   * Évalue une filière précise pour l'élève avec les règles du moteur, même hors de ses recommandations.
+   * Sert au conseiller pédagogique quand l'élève envisage une autre formation. N'enregistre rien.
+   */
+  async evaluerFiliere(nip: string, code: string) {
+    const apprenant = await this.prisma.apprenant.findUnique({
+      where: { nip },
+      include: { notes: true, preferences: true },
+    });
+    if (!apprenant) throw new NotFoundException('Apprenant non trouvé');
+    if (!apprenant.palier) throw new BadRequestException("La classe de l'élève n'est pas renseignée");
+    const filiere = await this.prisma.filiere.findUnique({ where: { code } });
+    if (!filiere) throw new NotFoundException('Filière non trouvée');
+
+    const niveau = NIVEAU_PAR_PALIER[apprenant.palier];
+    if (filiere.niveauAcces !== niveau) {
+      return { filiere, niveauEleve: niveau, accessibleAuNiveauActuel: false, score: null, admissible: false, rangVoeu: null, criteres: [] as Critere[] };
+    }
+    const preference = apprenant.preferences.find((p) => p.palier === apprenant.palier);
+    const voeux = preference ? [preference.filiereId1, preference.filiereId2, preference.filiereId3] : [];
+    const evaluation = this.evaluer(filiere, bilanNotes(apprenant.notes), voeux, apprenant.serie, niveau);
+    return {
+      filiere,
+      niveauEleve: niveau,
+      accessibleAuNiveauActuel: true,
+      score: evaluation.score,
+      admissible: evaluation.admissible,
+      rangVoeu: evaluation.rangVoeu,
+      criteres: evaluation.criteres,
+    };
+  }
+
   async explain(nip: string, recommandationId: string) {
     const reco = await this.prisma.recommandation.findFirst({
       where: { id: recommandationId, apprenantNip: nip },
