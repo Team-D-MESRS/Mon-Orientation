@@ -1,24 +1,29 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
+import { NiveauAcces, Prisma, TypeFiliere } from '@prisma/client';
 
 @Injectable()
 export class FiliereService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(filters?: {
-    type?: string;
+    type?: TypeFiliere;
+    niveau?: NiveauAcces;
     departement?: string;
     search?: string;
     page?: number;
     limit?: number;
   }) {
-    const { type, departement, search, page = 1, limit = 20 } = filters || {};
+    const { type, niveau, departement, search, page = 1, limit = 20 } = filters || {};
 
     const where: Prisma.FiliereWhereInput = {};
 
     if (type) {
-      where.type = type as any;
+      where.type = type;
+    }
+
+    if (niveau) {
+      where.niveauAcces = niveau;
     }
 
     if (departement) {
@@ -28,6 +33,7 @@ export class FiliereService {
     if (search) {
       where.OR = [
         { nom: { contains: search, mode: 'insensitive' } },
+        { code: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
         { debouches: { contains: search, mode: 'insensitive' } },
       ];
@@ -39,7 +45,7 @@ export class FiliereService {
         include: { etablissement: true },
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: { nom: 'asc' },
+        orderBy: [{ type: 'asc' }, { nom: 'asc' }],
       }),
       this.prisma.filiere.count({ where }),
     ]);

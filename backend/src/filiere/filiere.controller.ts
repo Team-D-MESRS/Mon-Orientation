@@ -1,4 +1,5 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Param, Query } from '@nestjs/common';
+import { NiveauAcces, TypeFiliere } from '@prisma/client';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { FiliereService } from './filiere.service';
 
@@ -9,24 +10,34 @@ export class FiliereController {
 
   @Get()
   @ApiOperation({ summary: 'Liste des filières (catalogue)' })
-  @ApiQuery({ name: 'type', required: false })
+  @ApiQuery({ name: 'type', required: false, enum: TypeFiliere })
+  @ApiQuery({ name: 'niveau', required: false, enum: NiveauAcces })
   @ApiQuery({ name: 'departement', required: false })
   @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'page', required: false })
   @ApiQuery({ name: 'limit', required: false })
   async findAll(
     @Query('type') type?: string,
+    @Query('niveau') niveau?: string,
     @Query('departement') departement?: string,
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
+    if (type && !(type in TypeFiliere)) {
+      throw new BadRequestException(`type doit valoir ${Object.keys(TypeFiliere).join(', ')}`);
+    }
+    if (niveau && !(niveau in NiveauAcces)) {
+      throw new BadRequestException(`niveau doit valoir ${Object.keys(NiveauAcces).join(', ')}`);
+    }
+
     return this.filiereService.findAll({
-      type,
+      type: type as TypeFiliere | undefined,
+      niveau: niveau as NiveauAcces | undefined,
       departement,
       search,
-      page: page ? parseInt(page) : 1,
-      limit: limit ? parseInt(limit) : 20,
+      page: page ? Math.max(parseInt(page) || 1, 1) : 1,
+      limit: limit ? Math.min(Math.max(parseInt(limit) || 20, 1), 100) : 20,
     });
   }
 

@@ -39,6 +39,11 @@ enum TypeEtablissement {
   UNIVERSITE
 }
 
+enum NiveauAcces {
+  APRES_BEPC
+  APRES_BAC
+}
+
 model Utilisateur {
   id                String    @id @default(uuid())
   nip               String?   @unique
@@ -126,15 +131,20 @@ model Etablissement {
 
 model Filiere {
   id                String      @id @default(uuid())
+  code              String?     @unique
   nom               String
   type              TypeFiliere
+  niveauAcces       NiveauAcces? @map("niveau_acces")
   description       String?
   diplomesDelivres  Json?       @map("diplomes_delivres")
   metiersVises      Json?       @map("metiers_vises")
   debouches         String?
   tauxInsertion     Float?      @map("taux_insertion")
   conditionsAcces   String?     @map("conditions_acces")
-  bourses           Boolean     @default(false)
+  seriesAdmises     Json?       @map("series_admises")
+  ouSeFormer        String?     @map("ou_se_former")
+  bourses           Boolean?
+  sources           Json?
   etablissementId   String?     @map("etablissement_id")
   imageUrl          String?     @map("image_url")
   createdAt         DateTime    @default(now()) @map("created_at")

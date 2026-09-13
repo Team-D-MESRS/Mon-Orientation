@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { Filiere, PageFilieres } from './filiere';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -41,9 +42,9 @@ export const authApi = {
 };
 
 export const filiereApi = {
-  list: (params?: { type?: string; search?: string; page?: number }) =>
-    api.get('/filiere', { params }),
-  get: (id: string) => api.get(`/filiere/${id}`),
+  list: (params?: { type?: string; niveau?: string; search?: string; page?: number; limit?: number }) =>
+    api.get<PageFilieres>('/filiere', { params }),
+  get: (id: string) => api.get<Filiere>(`/filiere/${id}`),
   getDebouches: (id: string) => api.get(`/filiere/${id}/debouches`),
 };
 

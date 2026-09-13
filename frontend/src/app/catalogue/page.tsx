@@ -1,125 +1,183 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Search, Filter } from 'lucide-react';
+import { Search, Info, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { filiereApi } from '@/lib/api';
+import {
+  Filiere,
+  NIVEAU_LABELS,
+  NiveauAcces,
+  TYPE_COLORS,
+  TYPE_LABELS,
+  TypeFiliere,
+  aUneSourceOfficielle,
+} from '@/lib/filiere';
 
-const filieres = [
-  { id: '1', nom: 'Baccalauréat Général - Sciences', type: 'GENERALE', debouches: 'Médecine, Ingénierie', tauxInsertion: 65, description: 'Formation généraliste scientifique' },
-  { id: '2', nom: 'Baccalauréat Général - Littéraire', type: 'GENERALE', debouches: 'Droit, Journalisme', tauxInsertion: 55, description: 'Formation littéraire et humaine' },
-  { id: '3', nom: 'Baccalauréat Technique - Électrotechnique', type: 'TECHNIQUE', debouches: 'Technicien, Installateur', tauxInsertion: 78, description: 'Électricité et systèmes automatisés' },
-  { id: '4', nom: 'Baccalauréat Technique - Génie Civil', type: 'TECHNIQUE', debouches: 'Technicien, Conducteur de travaux', tauxInsertion: 75, description: 'Construction et travaux publics' },
-  { id: '5', nom: 'CAP Métallurgie', type: 'PROFESSIONNELLE', debouches: 'Soudeur, Métallier', tauxInsertion: 82, description: 'Travail des métaux' },
-  { id: '6', nom: 'BEP Menuiserie-Ébénisterie', type: 'PROFESSIONNELLE', debouches: 'Menuisier, Ébéniste', tauxInsertion: 80, description: 'Menuiserie et bois' },
-  { id: '7', nom: 'École de Métiers - Électricité', type: 'ECOLE_METIER', debouches: 'Électricien qualifié', tauxInsertion: 88, description: 'Installation électrique pratique' },
-  { id: '8', nom: 'École de Métiers - Menuiserie', type: 'ECOLE_METIER', debouches: 'Menuisier, Fabricant', tauxInsertion: 85, description: 'Menuiserie pratique 2 ans' },
-  { id: '9', nom: 'École de Métiers - Couture', type: 'ECOLE_METIER', debouches: 'Couturier, Modéliste', tauxInsertion: 78, description: 'Couture et confection' },
-  { id: '10', nom: 'Baccalauréat Technique Agricole', type: 'TECHNIQUE_AGRICOLE', debouches: 'Agriculteur, Conseiller', tauxInsertion: 72, description: 'Agriculture moderne et élevage' },
-];
-
-const typeColors: Record<string, string> = {
-  GENERALE: 'bg-blue-100 text-blue-800',
-  TECHNIQUE: 'bg-purple-100 text-purple-800',
-  PROFESSIONNELLE: 'bg-orange-100 text-orange-800',
-  ECOLE_METIER: 'bg-green-100 text-green-800',
-  TECHNIQUE_AGRICOLE: 'bg-yellow-100 text-yellow-800',
-};
-
-const typeLabels: Record<string, string> = {
-  GENERALE: 'Général',
-  TECHNIQUE: 'Technique',
-  PROFESSIONNELLE: 'Professionnel',
-  ECOLE_METIER: 'École de Métiers',
-  TECHNIQUE_AGRICOLE: 'Technique Agricole',
-};
+const LIMITE = 100;
 
 export default function CataloguePage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
-  const [filtered, setFiltered] = useState(filieres);
+  const [niveauFilter, setNiveauFilter] = useState('');
+  const [filieres, setFilieres] = useState<Filiere[]>([]);
+  const [total, setTotal] = useState(0);
+  const [statut, setStatut] = useState<'chargement' | 'ok' | 'erreur'>('chargement');
+  const [tentative, setTentative] = useState(0);
 
   useEffect(() => {
-    let result = filieres;
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter(f =>
-        f.nom.toLowerCase().includes(q) ||
-        f.debouches.toLowerCase().includes(q) ||
-        f.description.toLowerCase().includes(q)
-      );
-    }
-    if (typeFilter) {
-      result = result.filter(f => f.type === typeFilter);
-    }
-    setFiltered(result);
-  }, [search, typeFilter]);
+    let annule = false;
+    setStatut('chargement');
+    const timer = setTimeout(
+      () => {
+        filiereApi
+          .list({
+            search: search.trim() || undefined,
+            type: typeFilter || undefined,
+            niveau: niveauFilter || undefined,
+            limit: LIMITE,
+          })
+          .then(({ data }) => {
+            if (annule) return;
+            setFilieres(data.items);
+            setTotal(data.total);
+            setStatut('ok');
+          })
+          .catch(() => {
+            if (!annule) setStatut('erreur');
+          });
+      },
+      search ? 300 : 0,
+    );
+    return () => {
+      annule = true;
+      clearTimeout(timer);
+    };
+  }, [search, typeFilter, niveauFilter, tentative]);
 
   return (
     <div className="py-8v">
       <div className="bj-container">
         <h1 className="text-3xl font-bold mb-2v">Catalogue des filières</h1>
-        <p className="text-bj-gray-500 mb-8v">
-          Explore les différentes formations disponibles au Bénin
+        <p className="text-bj-gray-500 mb-6v">
+          Explore les formations accessibles après le BEPC et après le baccalauréat au Bénin.
         </p>
 
-        {/* Search & Filters */}
+        <div className="flex gap-3v items-start p-4v mb-8v rounded-bj-sm border border-bj-blue/30 bg-bj-blue/5 text-sm">
+          <Info className="text-bj-blue shrink-0 mt-[2px]" size={18} aria-hidden="true" />
+          <p>
+            Catalogue constitué à partir de sources publiques, en attente de validation par le Ministère.
+            Chaque fiche indique ses sources.
+          </p>
+        </div>
+
         <div className="flex flex-col md:flex-row gap-4v mb-8v">
           <div className="flex-1 relative">
-            <Search className="absolute left-3v top-1/2 -translate-y-1/2 text-bj-gray-500" size={20} />
+            <Search className="absolute left-3v top-1/2 -translate-y-1/2 text-bj-gray-500" size={20} aria-hidden="true" />
+            <label htmlFor="recherche" className="sr-only">Rechercher une filière</label>
             <input
-              type="text"
-              placeholder="Rechercher une filière, un métier..."
+              id="recherche"
+              type="search"
+              placeholder="Rechercher une filière, un métier, une série..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10v pr-4v py-3v border border-bj-gray-850 rounded-bj-sm text-sm focus:outline-none focus:ring-2 focus:ring-bj-green"
+              className="w-full pl-10 pr-4v py-3v border border-bj-gray-850 rounded-bj-sm text-sm focus:outline-none focus:ring-2 focus:ring-bj-green"
             />
           </div>
+          <label htmlFor="filtre-niveau" className="sr-only">Niveau d&apos;accès</label>
           <select
+            id="filtre-niveau"
+            value={niveauFilter}
+            onChange={(e) => setNiveauFilter(e.target.value)}
+            className="px-4v py-3v border border-bj-gray-850 rounded-bj-sm text-sm focus:outline-none focus:ring-2 focus:ring-bj-green"
+          >
+            <option value="">Tous les niveaux</option>
+            {(Object.keys(NIVEAU_LABELS) as NiveauAcces[]).map((n) => (
+              <option key={n} value={n}>{NIVEAU_LABELS[n]}</option>
+            ))}
+          </select>
+          <label htmlFor="filtre-type" className="sr-only">Type de formation</label>
+          <select
+            id="filtre-type"
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             className="px-4v py-3v border border-bj-gray-850 rounded-bj-sm text-sm focus:outline-none focus:ring-2 focus:ring-bj-green"
           >
             <option value="">Tous les types</option>
-            <option value="GENERALE">Général</option>
-            <option value="TECHNIQUE">Technique</option>
-            <option value="PROFESSIONNELLE">Professionnel</option>
-            <option value="ECOLE_METIER">École de Métiers</option>
-            <option value="TECHNIQUE_AGRICOLE">Technique Agricole</option>
+            {(Object.keys(TYPE_LABELS) as TypeFiliere[]).map((t) => (
+              <option key={t} value={t}>{TYPE_LABELS[t]}</option>
+            ))}
           </select>
         </div>
 
-        <p className="text-sm text-bj-gray-500 mb-6v">{filtered.length} filière(s) trouvée(s)</p>
-
-        {/* Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6v">
-          {filtered.map((filiere) => (
-            <Link key={filiere.id} href={`/catalogue/${filiere.id}`} className="bj-card">
-              <div className="p-6v">
-                <div className="flex items-center justify-between mb-3v">
-                  <span className={`px-3v py-1v rounded-full text-xs font-medium ${typeColors[filiere.type]}`}>
-                    {typeLabels[filiere.type]}
-                  </span>
-                  <span className="text-sm font-semibold text-bj-green">
-                    {filiere.tauxInsertion}% insertion
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold mb-2v">{filiere.nom}</h3>
-                <p className="text-sm text-bj-gray-500 mb-3v">{filiere.description}</p>
-                <div className="text-xs text-bj-gray-625">
-                  <span className="font-medium">Débouchés :</span> {filiere.debouches}
-                </div>
-              </div>
-              <div className="px-6v py-3v bg-bj-gray-975 border-t border-bj-gray-925">
-                <span className="text-sm font-medium text-bj-green">Voir la fiche →</span>
-              </div>
-            </Link>
-          ))}
-        </div>
-
-        {filtered.length === 0 && (
-          <div className="text-center py-12v">
-            <p className="text-bj-gray-500 text-lg">Aucune filière trouvée pour cette recherche.</p>
+        {statut === 'erreur' && (
+          <div role="alert" className="text-center py-12v">
+            <p className="text-bj-gray-500 text-lg mb-4v">Impossible de charger le catalogue pour le moment.</p>
+            <button type="button" className="bj-btn bj-btn-secondary" onClick={() => setTentative((n) => n + 1)}>
+              Réessayer
+            </button>
           </div>
+        )}
+
+        {statut === 'chargement' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6v" aria-busy="true" aria-label="Chargement du catalogue">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-56 rounded-bj-md bg-bj-gray-950 animate-pulse" />
+            ))}
+          </div>
+        )}
+
+        {statut === 'ok' && (
+          <>
+            <p className="text-sm text-bj-gray-500 mb-6v" aria-live="polite">
+              {total} filière(s) trouvée(s)
+              {total > filieres.length && ` — ${filieres.length} premières affichées, affine ta recherche`}
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6v">
+              {filieres.map((filiere) => (
+                <Link key={filiere.id} href={`/catalogue/${filiere.id}`} className="bj-card flex flex-col">
+                  <div className="p-6v flex-1">
+                    <div className="flex items-center justify-between gap-2v mb-3v">
+                      <span className={`px-3v py-1v rounded-full text-xs font-medium ${TYPE_COLORS[filiere.type]}`}>
+                        {TYPE_LABELS[filiere.type]}
+                      </span>
+                      {filiere.niveauAcces && (
+                        <span className="text-xs text-bj-gray-500">{NIVEAU_LABELS[filiere.niveauAcces]}</span>
+                      )}
+                    </div>
+                    <h2 className="text-lg font-bold mb-2v">{filiere.nom}</h2>
+                    {filiere.description && (
+                      <p className="text-sm text-bj-gray-500 mb-3v line-clamp-3">{filiere.description}</p>
+                    )}
+                    {filiere.seriesAdmises && filiere.seriesAdmises.length > 0 && (
+                      <p className="text-xs text-bj-gray-625">
+                        <span className="font-medium">Séries admises :</span> {filiere.seriesAdmises.join(', ')}
+                      </p>
+                    )}
+                  </div>
+                  <div className="px-6v py-3v bg-bj-gray-975 border-t border-bj-gray-925 flex items-center justify-between gap-2v">
+                    <span className="text-sm font-medium text-bj-green">Voir la fiche →</span>
+                    {aUneSourceOfficielle(filiere) ? (
+                      <span className="flex items-center gap-1v text-xs text-bj-green">
+                        <ShieldCheck size={14} aria-hidden="true" /> Source officielle
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1v text-xs text-bj-ochre">
+                        <AlertTriangle size={14} aria-hidden="true" /> À confirmer
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {filieres.length === 0 && (
+              <div className="text-center py-12v">
+                <p className="text-bj-gray-500 text-lg">Aucune filière trouvée pour cette recherche.</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
