@@ -61,3 +61,7 @@ temp/
 
 # Captures des tests navigateur
 tests/e2e/captures/
+
+# Documents gardés en local, hors dépôt : cahier des charges de présentation et note de cadrage du client
+docs/
+Note_cadrage_*.docx

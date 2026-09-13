@@ -8,6 +8,7 @@
 
 - **Étape du pipeline** : développement MVP — parcours élève web opérationnel sur données de démonstration
 - **En cours** : rien — conseiller pédagogique opérationnel sur Gemini (offre gratuite, données de démonstration uniquement)
+- **Documents locaux** : le cahier des charges (`docs/`) et la note de cadrage du client restent sur la machine de l'utilisateur, hors dépôt (`.gitignore`), à sa demande.
 - **Bloqué / en attente de** : validation client du référentiel filières et du moteur (barème, matières clés, seuils : conseillers d'orientation DGES) ; arbitrages SPEC §7 (appliqué par défaut : vœux saisis par l'élève, validés par le parent) ; accès API EducMaster (2.1)
 - **Prochaine action recommandée** : 00) l'utilisateur régénère sa clé Gemini (collée en clair dans la conversation) et met la nouvelle dans `backend/.env` ; 0) l'utilisateur complète le nom du prestataire dans `docs/Cahier_des_charges_Mon_Orientation_v1.0.docx` et le présente au MESTFP ; 1) présenter le parcours au client et faire valider le moteur ; 2) conseiller IA réel (5.1/5.2) une fois son périmètre arbitré ; 3) rôle ÉTABLISSEMENT + rattachement parent-enfant par l'établissement (écran admin 3.10) ; 4) statistiques branchées sur l'API (6.1/6.3) ; 5) projet Flutter ; 6) tests unitaires + CI (1.8)
 - **Dernière mise à jour** : 2026-09-13 23:16 — conseiller Gemini testé avec de vrais appels (fil principal)
