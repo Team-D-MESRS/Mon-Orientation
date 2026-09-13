@@ -1,5 +1,6 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 import type { Filiere, PageFilieres } from './filiere';
+import type { Palier, Preference, ProfilApprenant, Recommandation } from './apprenant';
 import { CLES_JETONS, useAuthStore, type Utilisateur } from '@/stores/authStore';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -96,6 +97,15 @@ export interface ApprenantResume {
   nip: string;
   nom: string;
   prenom: string;
+  palier: Palier | null;
+  serie: string | null;
+}
+
+export interface DonneesVoeux {
+  filiereId1: string;
+  filiereId2?: string;
+  filiereId3?: string;
+  motivation?: string;
 }
 
 export interface Moi extends Utilisateur {
@@ -120,14 +130,17 @@ export const filiereApi = {
 };
 
 export const apprenantApi = {
-  getProfile: (nip: string) => api.get(`/apprenant/${nip}`),
+  getProfile: (nip: string) => api.get<ProfilApprenant>(`/apprenant/${nip}`),
   getNotes: (nip: string) => api.get(`/apprenant/${nip}/notes`),
-  getPreferences: (nip: string) => api.get(`/apprenant/${nip}/preferences`),
+  getPreferences: (nip: string) => api.get<Preference[]>(`/apprenant/${nip}/preferences`),
+  enregistrerPreferences: (nip: string, data: DonneesVoeux) =>
+    api.post<Preference[]>(`/apprenant/${nip}/preferences`, data),
+  validerPreferences: (nip: string) => api.post<Preference>(`/apprenant/${nip}/preferences/validation`),
 };
 
 export const orientationApi = {
-  getRecommandations: (nip: string) => api.get(`/orientation/${nip}/recommandations`),
-  calculer: (nip: string) => api.post(`/orientation/${nip}/calcul`),
+  getRecommandations: (nip: string) => api.get<Recommandation[]>(`/orientation/${nip}/recommandations`),
+  calculer: (nip: string) => api.post<Recommandation[]>(`/orientation/${nip}/calcul`),
 };
 
 export const conseillerApi = {

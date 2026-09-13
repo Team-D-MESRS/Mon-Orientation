@@ -1,201 +1,195 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { User, BookOpen, Heart, Lightbulb, BarChart3 } from 'lucide-react';
+import { CheckCircle2, Clock, GraduationCap, TrendingUp, User } from 'lucide-react';
+import { apprenantApi, orientationApi } from '@/lib/api';
+import {
+  classeLisible,
+  dateLisible,
+  noteLisible,
+  palierDeSaisie,
+  type Preference,
+  type ProfilApprenant,
+  type Recommandation,
+} from '@/lib/apprenant';
+import { useEspace, useProfil } from '@/components/espace/EspaceContext';
+import { BadgeType, Carte, Chargement } from '@/components/espace/ui';
 
-const notes = [
-  { matiere: 'Mathématiques', note: 15, bareme: 20 },
-  { matiere: 'Français', note: 12, bareme: 20 },
-  { matiere: 'Physique-Chimie', note: 14, bareme: 20 },
-  { matiere: 'SVT', note: 13, bareme: 20 },
-  { matiere: 'Histoire-Géographie', note: 11, bareme: 20 },
-  { matiere: 'Anglais', note: 10, bareme: 20 },
-];
+const LIEN = 'text-sm font-medium text-bj-green hover:underline';
 
-export default function EspaceApprenantPage() {
-  const [activeTab, setActiveTab] = useState<'profil' | 'notes' | 'preferences' | 'recommandations'>('profil');
+export default function TableauDeBordPage() {
+  const profil = useProfil();
+  const { estParent } = useEspace();
+  // undefined tant que les vœux ne sont pas chargés : évite d'afficher « pas encore saisi » à tort
+  const [preference, setPreference] = useState<Preference | null | undefined>(undefined);
+  const [recommandations, setRecommandations] = useState<Recommandation[] | null>(null);
 
-  const moyenneGenerale = notes.reduce((sum, n) => sum + n.note, 0) / notes.length;
+  useEffect(() => {
+    let annule = false;
+    setPreference(undefined);
+    setRecommandations(null);
+    Promise.all([apprenantApi.getPreferences(profil.nip), orientationApi.getRecommandations(profil.nip)])
+      .then(([voeux, recos]) => {
+        if (annule) return;
+        setPreference(voeux.data.find((p) => p.palier === profil.palier) ?? null);
+        setRecommandations(recos.data);
+      })
+      .catch(() => {
+        if (annule) return;
+        setPreference(null);
+        setRecommandations([]);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [profil.nip, profil.palier]);
+
+  const { bilan } = profil;
 
   return (
-    <div className="py-8v">
-      <div className="bj-container">
-        <h1 className="text-3xl font-bold mb-2v">Mon espace</h1>
-        <p className="text-bj-gray-500 mb-8v">Tableau de bord personnel</p>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6v">
+      <Carte titre="Profil" icone={<User size={18} />}>
+        <dl className="text-sm space-y-2v">
+          <Ligne libelle="Classe" valeur={classeLisible(profil)} />
+          <Ligne libelle="Département" valeur={`${profil.departement} (${profil.commune})`} />
+          <Ligne libelle="NIP" valeur={profil.nip} />
+        </dl>
+      </Carte>
 
-        {/* Tabs */}
-        <div className="flex gap-2v mb-8v overflow-x-auto">
-          {[
-            { id: 'profil', label: 'Profil', icon: User },
-            { id: 'notes', label: 'Mes notes', icon: BookOpen },
-            { id: 'preferences', label: 'Préférences', icon: Heart },
-            { id: 'recommandations', label: 'Recommandations', icon: Lightbulb },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex items-center gap-2v px-4v py-2v rounded-bj-sm text-sm font-medium transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-bj-green text-white'
-                  : 'bg-bj-gray-975 text-bj-gray-500 hover:bg-bj-gray-950'
-              }`}
-            >
-              <tab.icon size={16} />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Profil */}
-        {activeTab === 'profil' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6v">
-            <div className="bj-card p-6v">
-              <div className="flex items-center gap-3v mb-4v">
-                <div className="w-12 h-12 bg-bj-green/10 rounded-full flex items-center justify-center">
-                  <User className="text-bj-green" size={24} />
-                </div>
-                <div>
-                  <h3 className="font-bold">Adama Kouassi</h3>
-                  <p className="text-xs text-bj-gray-500">NIP: 1234567890</p>
-                </div>
-              </div>
-              <div className="space-y-2v text-sm">
-                <p><span className="text-bj-gray-500">Classe :</span> <span className="font-medium">3ème</span></p>
-                <p><span className="text-bj-gray-500">Établissement :</span> <span className="font-medium">Collège de Porto-Novo</span></p>
-                <p><span className="text-bj-gray-500">Département :</span> <span className="font-medium">Ouémé</span></p>
-              </div>
-            </div>
-
-            <div className="bj-card p-6v">
-              <h3 className="font-bold mb-4v flex items-center gap-2v">
-                <BarChart3 size={18} /> Moyenne générale
-              </h3>
-              <div className="text-4xl font-bold text-bj-green mb-2v">
-                {moyenneGenerale.toFixed(1)}/20
-              </div>
-              <div className="w-full bg-bj-gray-950 rounded-full h-3v">
-                <div
-                  className="bg-bj-green h-3v rounded-full transition-all"
-                  style={{ width: `${(moyenneGenerale / 20) * 100}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="bj-card p-6v">
-              <h3 className="font-bold mb-4v">Palier actuel</h3>
-              <div className="bg-bj-green/10 rounded-bj-md p-4v text-center">
-                <div className="text-2xl font-bold text-bj-green">3ème</div>
-                <p className="text-sm text-bj-gray-500 mt-1v">Saison d&apos;orientation</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Notes */}
-        {activeTab === 'notes' && (
-          <div className="bj-card">
-            <div className="p-6v border-b border-bj-gray-925">
-              <h2 className="font-bold">Notes par matière</h2>
-            </div>
-            <div className="divide-y divide-bj-gray-925">
-              {notes.map((n) => (
-                <div key={n.matiere} className="flex items-center justify-between px-6v py-4v">
-                  <div className="flex-1">
-                    <span className="font-medium text-sm">{n.matiere}</span>
-                  </div>
-                  <div className="flex items-center gap-4v">
-                    <div className="w-24 bg-bj-gray-950 rounded-full h-2v">
-                      <div
-                        className={`h-2v rounded-full ${n.note >= 14 ? 'bg-bj-green' : n.note >= 10 ? 'bg-bj-yellow' : 'bg-bj-red'}`}
-                        style={{ width: `${(n.note / n.bareme) * 100}%` }}
-                      />
-                    </div>
-                    <span className={`font-bold text-sm ${n.note >= 14 ? 'text-bj-green' : n.note >= 10 ? 'text-yellow-600' : 'text-bj-red'}`}>
-                      {n.note}/{n.bareme}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Préférences */}
-        {activeTab === 'preferences' && (
-          <div className="bj-card p-6v">
-            <h2 className="font-bold mb-6v">Mes préférences d&apos;orientation</h2>
-            <p className="text-sm text-bj-gray-500 mb-6v">
-              Sélectionne les filières qui t&apos;intéressent le plus pour ta future orientation.
+      <Carte titre={`Résultats ${bilan.anneeScolaire ?? ''}`} icone={<TrendingUp size={18} />}>
+        {bilan.moyenneGenerale === null ? (
+          <p className="text-sm text-bj-gray-500">Aucune note disponible pour l&apos;instant.</p>
+        ) : (
+          <>
+            <p className="text-3xl font-bold text-bj-green">
+              {noteLisible(bilan.moyenneGenerale)}
+              <span className="text-base font-medium text-bj-gray-500">/20</span>
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4v mb-6v">
-              {[
-                { rank: 1, color: 'border-bj-green bg-bj-green/5' },
-                { rank: 2, color: 'border-bj-blue bg-bj-blue/5' },
-                { rank: 3, color: 'border-bj-ochre bg-bj-ochre/5' },
-              ].map((pref) => (
-                <div key={pref.rank} className={`border-2 rounded-bj-md p-4v ${pref.color}`}>
-                  <div className="text-sm font-bold mb-2v">Choix n°{pref.rank}</div>
-                  <select className="w-full px-3v py-2v border border-bj-gray-850 rounded-bj-sm text-sm">
-                    <option>Sélectionner une filière</option>
-                    <option>Bac Général - Sciences</option>
-                    <option>Bac Général - Littéraire</option>
-                    <option>Bac Technique - Électrotechnique</option>
-                    <option>École de Métiers - Électricité</option>
-                  </select>
-                </div>
-              ))}
-            </div>
-            <button className="bj-btn bj-btn-primary">
-              Sauvegarder mes préférences
-            </button>
-          </div>
+            <p className="text-xs text-bj-gray-500 mb-4v">Moyenne générale</p>
+            {bilan.forces.length > 0 && (
+              <p className="text-sm mb-1v">
+                <span className="font-medium">{estParent ? 'Points forts' : 'Tes points forts'} :</span> {bilan.forces.join(', ')}
+              </p>
+            )}
+            {bilan.aAmeliorer.length > 0 && (
+              <p className="text-sm">
+                <span className="font-medium">À renforcer :</span> {bilan.aAmeliorer.join(', ')}
+              </p>
+            )}
+            <Link href="/espace-apprenant/notes" className={`${LIEN} inline-block mt-3v`}>
+              Détail des notes →
+            </Link>
+          </>
         )}
+      </Carte>
 
-        {/* Recommandations */}
-        {activeTab === 'recommandations' && (
-          <div className="space-y-4v">
-            <div className="bj-card p-6v">
-              <div className="flex items-center justify-between mb-4v">
-                <h3 className="font-bold text-lg">École de Métiers - Électricité</h3>
-                <span className="text-2xl font-bold text-bj-green">88%</span>
-              </div>
-              <p className="text-sm text-bj-gray-500 mb-3v">
-                Formation pratique de 2 ans en installation électrique. Taux d&apos;insertion élevé.
-              </p>
-              <div className="bg-bj-green/5 rounded-bj-sm p-3v text-sm">
-                <strong>Caractéristiques :</strong> Tes forces en Mathématiques et Physique-Chimie correspondent bien à cette filière.
-              </div>
-            </div>
+      <Carte titre="Orientation" icone={<GraduationCap size={18} />}>
+        <EtapeOrientation profil={profil} preference={preference} estParent={estParent} />
+      </Carte>
 
-            <div className="bj-card p-6v">
-              <div className="flex items-center justify-between mb-4v">
-                <h3 className="font-bold text-lg">CAP Métallurgie</h3>
-                <span className="text-2xl font-bold text-bj-green">82%</span>
-              </div>
-              <p className="text-sm text-bj-gray-500 mb-3v">
-                Certificat d&apos;aptitude professionnelle en travail des métaux.
-              </p>
-              <div className="bg-bj-green/5 rounded-bj-sm p-3v text-sm">
-                <strong>Caractéristiques :</strong> Bon taux d&apos;insertion, métier recherché au Bénin.
-              </div>
-            </div>
-
-            <div className="bj-card p-6v">
-              <div className="flex items-center justify-between mb-4v">
-                <h3 className="font-bold text-lg">Bac Technique - Électrotechnique</h3>
-                <span className="text-2xl font-bold text-bj-blue">78%</span>
-              </div>
-              <p className="text-sm text-bj-gray-500 mb-3v">
-                Formation technique spécialisée en électricité et systèmes automatisés.
-              </p>
-              <div className="bg-bj-blue/5 rounded-bj-sm p-3v text-sm">
-                <strong>Caractéristiques :</strong> Permet de poursuivre en école d&apos;ingénieur après le bac.
-              </div>
-            </div>
-          </div>
+      <section className="lg:col-span-3">
+        <div className="flex items-center justify-between mb-4v">
+          <h2 className="text-xl font-bold">{profil.palier === 'QUATRIEME' ? 'Pistes à explorer' : 'Pistes recommandées'}</h2>
+          <Link href="/espace-apprenant/recommandations" className={LIEN}>
+            Tout voir →
+          </Link>
+        </div>
+        {recommandations === null ? (
+          <Chargement />
+        ) : recommandations.length === 0 ? (
+          <p className="text-sm text-bj-gray-500">
+            Pas encore de recommandation.{' '}
+            <Link href="/espace-apprenant/recommandations" className={LIEN}>
+              Les calculer
+            </Link>
+          </p>
+        ) : (
+          <ul className="grid grid-cols-1 md:grid-cols-3 gap-4v">
+            {recommandations.slice(0, 3).map((r) => (
+              <li key={r.id}>
+                <Link href={`/catalogue/${r.filiere.id}`} className="bj-card block p-4v h-full">
+                  <BadgeType type={r.filiere.type} />
+                  <p className="font-bold mt-2v">{r.filiere.nom}</p>
+                  <p className="text-sm text-bj-gray-500 mt-1v">Compatibilité {Math.round(r.score)}/100</p>
+                </Link>
+              </li>
+            ))}
+          </ul>
         )}
-      </div>
+      </section>
     </div>
+  );
+}
+
+function Ligne({ libelle, valeur }: { libelle: string; valeur: string }) {
+  return (
+    <div className="flex justify-between gap-4v">
+      <dt className="text-bj-gray-500">{libelle}</dt>
+      <dd className="font-medium text-right">{valeur}</dd>
+    </div>
+  );
+}
+
+function EtapeOrientation({
+  profil,
+  preference,
+  estParent,
+}: {
+  profil: ProfilApprenant;
+  preference: Preference | null | undefined;
+  estParent: boolean;
+}) {
+  if (!palierDeSaisie(profil.palier)) {
+    return (
+      <>
+        <p className="text-sm mb-3v">
+          {profil.palier === 'QUATRIEME'
+            ? 'En 4e, découvre les formations qui correspondent à tes résultats, avant de choisir tes vœux en 3e.'
+            : 'Les vœux se saisissent en 3e et en Terminale.'}
+        </p>
+        <Link href="/espace-apprenant/recommandations" className="bj-btn bj-btn-primary text-sm">
+          Voir les pistes
+        </Link>
+      </>
+    );
+  }
+
+  if (preference === undefined) return <Chargement />;
+
+  if (!preference) {
+    return (
+      <>
+        <p className="text-sm mb-3v">
+          {estParent ? `${profil.prenom} n'a pas encore saisi ses vœux.` : "Tu n'as pas encore saisi tes vœux d'orientation."}
+        </p>
+        {!estParent && (
+          <Link href="/espace-apprenant/preferences" className="bj-btn bj-btn-primary text-sm">
+            Saisir mes vœux
+          </Link>
+        )}
+      </>
+    );
+  }
+
+  if (preference.valideParent) {
+    return (
+      <p className="flex items-start gap-2v text-sm text-bj-green font-medium">
+        <CheckCircle2 size={18} className="shrink-0" aria-hidden="true" />
+        Vœux validés par le parent le {dateLisible(preference.dateValidationParent as string)}.
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <p className="flex items-start gap-2v text-sm mb-3v">
+        <Clock size={18} className="shrink-0 text-bj-ochre-fonce" aria-hidden="true" />
+        {estParent ? `Les vœux de ${profil.prenom} attendent ta validation.` : 'Vœux enregistrés, en attente de validation par ton parent.'}
+      </p>
+      <Link href="/espace-apprenant/preferences" className="bj-btn bj-btn-primary text-sm">
+        {estParent ? 'Voir et valider' : 'Voir mes vœux'}
+      </Link>
+    </>
   );
 }

@@ -1,0 +1,86 @@
+import type { Filiere, NiveauAcces } from './filiere';
+
+export type Palier = 'QUATRIEME' | 'TROISIEME' | 'PREMIERE' | 'TERMINALE';
+
+export const PALIER_LABELS: Record<Palier, string> = {
+  QUATRIEME: '4e',
+  TROISIEME: '3e',
+  PREMIERE: '1re',
+  TERMINALE: 'Terminale',
+};
+
+export interface MoyenneMatiere {
+  matiere: string;
+  moyenne: number;
+  notes: { trimestre: number; note: number }[];
+}
+
+export interface Bilan {
+  anneeScolaire: string | null;
+  moyenneGenerale: number | null;
+  matieres: MoyenneMatiere[];
+  forces: string[];
+  aAmeliorer: string[];
+}
+
+export interface ProfilApprenant {
+  nip: string;
+  nom: string;
+  prenom: string;
+  dateNaissance: string;
+  sexe: string;
+  departement: string;
+  commune: string;
+  palier: Palier | null;
+  serie: string | null;
+  bilan: Bilan;
+}
+
+export interface Preference {
+  id: string;
+  palier: Palier;
+  filiereId1: string | null;
+  filiereId2: string | null;
+  filiereId3: string | null;
+  filiere1: Filiere | null;
+  filiere2: Filiere | null;
+  filiere3: Filiere | null;
+  motivation: string | null;
+  dateSaisie: string;
+  valideParent: boolean;
+  dateValidationParent: string | null;
+}
+
+export interface Critere {
+  critere: 'resultats' | 'preference' | 'condition' | 'serie' | 'insertion';
+  points: number;
+  detail: string;
+  alerte?: boolean;
+  rang?: number;
+}
+
+export interface Recommandation {
+  id: string;
+  palier: Palier;
+  filiereId: string;
+  score: number;
+  explication: string | null;
+  criteres: Critere[] | null;
+  dateGeneration: string;
+  filiere: Filiere;
+}
+
+export const ORDINAUX = ['1er', '2e', '3e'];
+
+/** Les vœux se saisissent en 3e (après le BEPC) et en Terminale (après le bac). */
+export const palierDeSaisie = (palier: Palier | null) => palier === 'TROISIEME' || palier === 'TERMINALE';
+
+export const niveauDuPalier = (palier: Palier): NiveauAcces =>
+  palier === 'QUATRIEME' || palier === 'TROISIEME' ? 'APRES_BEPC' : 'APRES_BAC';
+
+export const classeLisible = ({ palier, serie }: { palier: Palier | null; serie: string | null }) =>
+  palier ? `${PALIER_LABELS[palier]}${serie ? ` ${serie}` : ''}` : 'Classe non renseignée';
+
+export const noteLisible = (note: number) => note.toFixed(1).replace('.', ',');
+
+export const dateLisible = (iso: string) => new Date(iso).toLocaleDateString('fr-FR');
