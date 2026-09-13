@@ -7,7 +7,11 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding database...');
 
-  const adminHash = await bcrypt.hash('admin123', 12);
+  const motDePasseAdmin = process.env.SEED_ADMIN_PASSWORD ?? (process.env.NODE_ENV === 'production' ? undefined : 'admin123');
+  if (!motDePasseAdmin) {
+    throw new Error('SEED_ADMIN_PASSWORD est obligatoire en production');
+  }
+  const adminHash = await bcrypt.hash(motDePasseAdmin, 12);
   await prisma.utilisateur.upsert({
     where: { email: 'admin@monorientation.bj' },
     update: {},

@@ -1,10 +1,20 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import helmet from 'helmet';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Derrière nginx : nécessaire pour que la limitation des tentatives voie l'IP du client et non celle du proxy
+  if (process.env.TRUST_PROXY === 'true') {
+    app.set('trust proxy', 1);
+  }
+
+  // CSP désactivée : sans intérêt pour une API JSON et incompatible avec Swagger UI
+  app.use(helmet({ contentSecurityPolicy: false }));
 
   app.setGlobalPrefix('api');
 
