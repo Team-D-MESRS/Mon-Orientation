@@ -1,0 +1,222 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  APPRENANT
+  PARENT
+  ETABLISSEMENT
+  DGES
+  ADMIN
+}
+
+enum Palier {
+  QUATRIEME
+  TROISIEME
+  PREMIERE
+  TERMINALE
+}
+
+enum TypeFiliere {
+  GENERALE
+  TECHNIQUE
+  TECHNIQUE_AGRICOLE
+  PROFESSIONNELLE
+  ECOLE_METIER
+  UNIVERSITE
+}
+
+enum TypeEtablissement {
+  LYCEE_GENERAL
+  LYCEE_TECHNIQUE
+  LYCEE_PRO
+  ECOLE_METIER
+  UNIVERSITE
+}
+
+model Utilisateur {
+  id                String    @id @default(uuid())
+  nip               String?   @unique
+  email             String?   @unique
+  nom               String
+  prenom            String
+  hashMotDePasse    String    @map("hash_mot_de_passe")
+  role              Role      @default(APPRENANT)
+  actif             Boolean   @default(true)
+  derniereConnexion DateTime? @map("derniere_connexion")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  apprenant         Apprenant?
+  parentLinks       ParentApprenant[] @relation("Parent")
+  sessions          Session[]
+
+  @@map("utilisateurs")
+}
+
+model Session {
+  id            String   @id @default(uuid())
+  utilisateurId String   @map("utilisateur_id")
+  token         String   @unique
+  refreshToken  String?  @unique @map("refresh_token")
+  expiresAt     DateTime @map("expires_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Apprenant {
+  nip             String   @id
+  utilisateurId   String?  @unique @map("utilisateur_id")
+  nom             String
+  prenom          String
+  dateNaissance   DateTime @map("date_naissance")
+  sexe            String
+  departement     String
+  commune         String
+  derniereSync    DateTime? @map("derniere_sync")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  utilisateur     Utilisateur? @relation(fields: [utilisateurId], references: [id])
+  notes           Note[]
+  preferences     Preference[]
+  recommandations Recommandation[]
+  conversations   ConversationIA[]
+  parentLinks     ParentApprenant[] @relation("Apprenant")
+
+  @@map("apprenants")
+}
+
+model ParentApprenant {
+  id              String    @id @default(uuid())
+  parentUserId    String    @map("parent_user_id")
+  apprenantNip    String    @map("apprenant_nip")
+  relation        String
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  parent          Utilisateur @relation("Parent", fields: [parentUserId], references: [id], onDelete: Cascade)
+  apprenant       Apprenant   @relation("Apprenant", fields: [apprenantNip], references: [nip], onDelete: Cascade)
+
+  @@map("parent_apprenant")
+}
+
+model Etablissement {
+  id              String            @id @default(uuid())
+  educmasterId    String?           @unique @map("educmaster_id")
+  nom             String
+  type            TypeEtablissement
+  departement     String
+  commune         String
+  capacite        Int?
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  filieres        Filiere[]
+
+  @@map("etablissements")
+}
+
+model Filiere {
+  id                String      @id @default(uuid())
+  nom               String
+  type              TypeFiliere
+  description       String?
+  diplomesDelivres  Json?       @map("diplomes_delivres")
+  metiersVises      Json?       @map("metiers_vises")
+  debouches         String?
+  tauxInsertion     Float?      @map("taux_insertion")
+  conditionsAcces   String?     @map("conditions_acces")
+  bourses           Boolean     @default(false)
+  etablissementId   String?     @map("etablissement_id")
+  imageUrl          String?     @map("image_url")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  etablissement     Etablissement? @relation(fields: [etablissementId], references: [id])
+  notes             Note[]
+  preferences1      Preference[] @relation("PrefFiliere1")
+  preferences2      Preference[] @relation("PrefFiliere2")
+  preferences3      Preference[] @relation("PrefFiliere3")
+  recommandations   Recommandation[]
+  conversations     ConversationIA[]
+
+  @@map("filieres")
+}
+
+model Note {
+  id              String   @id @default(uuid())
+  apprenantNip    String   @map("apprenant_nip")
+  matiere         String
+  note            Float
+  bareme          Int      @default(20)
+  trimestre       Int
+  anneeScolaire   String   @map("annee_scolaire")
+  derniereSync    DateTime? @map("derniere_sync")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  apprenant       Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
+  filiereId       String?   @map("filiere_id")
+  filiere         Filiere?  @relation(fields: [filiereId], references: [id])
+
+  @@unique([apprenantNip, matiere, trimestre, anneeScolaire])
+  @@map("notes")
+}
+
+model Preference {
+  id              String   @id @default(uuid())
+  apprenantNip    String   @map("apprenant_nip")
+  palier          Palier
+  filiereId1      String?  @map("filiere_id_1")
+  filiereId2      String?  @map("filiere_id_2")
+  filiereId3      String?  @map("filiere_id_3")
+  motivation      String?
+  dateSaisie      DateTime @default(now()) @map("date_saisie")
+  valideParent    Boolean  @default(false) @map("valide_parent")
+
+  apprenant       Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
+  filiere1        Filiere?  @relation("PrefFiliere1", fields: [filiereId1], references: [id])
+  filiere2        Filiere?  @relation("PrefFiliere2", fields: [filiereId2], references: [id])
+  filiere3        Filiere?  @relation("PrefFiliere3", fields: [filiereId3], references: [id])
+
+  @@map("preferences")
+}
+
+model Recommandation {
+  id              String   @id @default(uuid())
+  apprenantNip    String   @map("apprenant_nip")
+  palier          Palier
+  filiereId       String   @map("filiere_id")
+  score           Float
+  explication     String?
+  dateGeneration  DateTime @default(now()) @map("date_generation")
+  active          Boolean  @default(true)
+
+  apprenant       Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
+  filiere         Filiere   @relation(fields: [filiereId], references: [id])
+
+  @@map("recommandations")
+}
+
+model ConversationIA {
+  id              String   @id @default(uuid())
+  apprenantNip    String   @map("apprenant_nip")
+  messages        Json
+  langue          String   @default("fr")
+  palier          Palier
+  dateDebut       DateTime @default(now()) @map("date_debut")
+  dateFin         DateTime? @map("date_fin")
+
+  apprenant       Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
+  filiereId       String?   @map("filiere_id")
+  filiere         Filiere?  @relation(fields: [filiereId], references: [id])
+
+  @@map("conversations_ia")
+}
