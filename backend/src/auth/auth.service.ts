@@ -141,8 +141,8 @@ export class AuthService {
         nom: true,
         prenom: true,
         role: true,
-        apprenant: { select: { nip: true, nom: true, prenom: true } },
-        parentLinks: { select: { relation: true, apprenant: { select: { nip: true, nom: true, prenom: true } } } },
+        apprenant: { select: { nip: true, nom: true, prenom: true, palier: true, serie: true } },
+        parentLinks: { select: { relation: true, apprenant: { select: { nip: true, nom: true, prenom: true, palier: true, serie: true } } } },
       },
     });
     if (!user) throw new UnauthorizedException();

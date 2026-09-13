@@ -42,7 +42,7 @@ export class ConseillerService {
           apprenantNip: nip,
           messages: newMessages,
           langue,
-          palier: 'TROISIEME',
+          palier: apprenant?.palier ?? 'TROISIEME',
         },
       });
     }
