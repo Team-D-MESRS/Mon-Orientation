@@ -1,11 +1,12 @@
 import { Controller, Get, Post, Param, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { AccesApprenantGuard } from '../auth/acces-apprenant.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { OrientationService } from './orientation.service';
 
 @ApiTags('Orientation')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), AccesApprenantGuard)
 @Controller('orientation')
 export class OrientationController {
   constructor(private orientationService: OrientationService) {}
@@ -28,6 +29,6 @@ export class OrientationController {
     @Param('nip') nip: string,
     @Param('recommandationId') recommandationId: string,
   ) {
-    return this.orientationService.explain(recommandationId);
+    return this.orientationService.explain(nip, recommandationId);
   }
 }

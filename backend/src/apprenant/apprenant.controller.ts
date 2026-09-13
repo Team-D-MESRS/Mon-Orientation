@@ -1,11 +1,12 @@
 import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
+import { AccesApprenantGuard } from '../auth/acces-apprenant.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ApprenantService } from './apprenant.service';
 
 @ApiTags('Apprenant')
 @ApiBearerAuth()
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard('jwt'), AccesApprenantGuard)
 @Controller('apprenant')
 export class ApprenantController {
   constructor(private apprenantService: ApprenantService) {}

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface RecommandationResult {
@@ -81,11 +81,12 @@ export class OrientationService {
     });
   }
 
-  async explain(recommandationId: string) {
-    const reco = await this.prisma.recommandation.findUnique({
-      where: { id: recommandationId },
-      include: { filiere: true, apprenant: true },
+  async explain(nip: string, recommandationId: string) {
+    const reco = await this.prisma.recommandation.findFirst({
+      where: { id: recommandationId, apprenantNip: nip },
+      include: { filiere: true },
     });
+    if (!reco) throw new NotFoundException('Recommandation non trouvée');
     return reco;
   }
 
