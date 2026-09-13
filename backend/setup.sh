@@ -29,7 +29,7 @@ npx prisma generate
 
 echo ""
 echo "🗄️  Migration de la base de données..."
-npx prisma migrate dev --name init
+npx prisma migrate deploy
 
 echo ""
 echo "🌱 Insertion des données de test..."
