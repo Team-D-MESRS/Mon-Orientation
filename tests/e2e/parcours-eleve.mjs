@@ -1,0 +1,108 @@
+import { mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { lancerNavigateur, rapporteur } from './cdp.mjs';
+
+const BASE = process.env.FRONT_URL ?? 'http://localhost:3000';
+const BASE_URL_CAPTURES = new URL('./captures', import.meta.url);
+const OUT = process.argv[2] ?? fileURLToPath(BASE_URL_CAPTURES);
+mkdirSync(OUT, { recursive: true });
+const nav = await lancerNavigateur();
+const r = rapporteur();
+const texte = (sel) => `(document.querySelector(${JSON.stringify(sel)})?.textContent ?? '')`;
+const contient = (t) => `document.body.textContent.includes(${JSON.stringify(t)})`;
+
+async function connecter(identifiant, cible) {
+  await nav.aller(`${BASE}/connexion`);
+  await nav.attendre("!!document.querySelector('#identifiant')");
+  await nav.saisir('#identifiant', identifiant);
+  await nav.saisir('#password', 'Demo2026!');
+  await nav.cliquer('button[type=submit]');
+  await nav.attendre(`location.pathname === ${JSON.stringify(cible)}`);
+}
+async function deconnecter() {
+  await nav.cliquerTexte('Déconnexion', 'header button');
+  await nav.attendre("location.pathname === '/' && !localStorage.getItem('refreshToken')");
+}
+async function choisirVoeu(recherche, libelle) {
+  await nav.attendre("!!document.querySelector('#recherche-voeu')");
+  await nav.saisir('#recherche-voeu', recherche);
+  await nav.attendre(`[...document.querySelectorAll('fieldset label')].some((l) => l.textContent.includes(${JSON.stringify(libelle)}))`);
+  await nav.cliquerTexte(libelle, 'fieldset label');
+  await nav.cliquerTexte('Enregistrer et continuer', 'button');
+}
+
+try {
+  await nav.taille(1280, 900);
+
+  // Élève de 3e : tableau de bord
+  await connecter('DEMO-3E-0001', '/espace-apprenant');
+  await nav.attendre(contient('Moyenne générale'));
+  r.verifier('Fatou : tableau de bord', await nav.evaluer(`${texte('main h1')} === 'Mon espace' && ${contient('Dossier de démonstration')} && ${contient('13,2')}`), await nav.evaluer(`${texte('main h1 + p')}`));
+  await nav.attendre(contient('Saisir mes vœux'));
+  r.verifier('Invitation à saisir ses vœux', true);
+  await nav.capture(`${OUT}/b2-tableau-de-bord.png`);
+
+  // Saisie des vœux en 3 étapes
+  await nav.aller(`${BASE}/espace-apprenant/preferences`);
+  await nav.attendre(contient('Étape 1 sur 3'));
+  await nav.capture(`${OUT}/b2-voeux-etape1.png`, false);
+  await choisirVoeu('série C', 'Baccalauréat série C');
+  await nav.attendre(contient('Étape 2 sur 3'));
+  await choisirVoeu('série D', 'Baccalauréat série D');
+  await nav.attendre(contient('Étape 3 sur 3'));
+  await choisirVoeu('Électricité', 'DTM — Électricité');
+  await nav.attendre(contient('Tes vœux pour la 3e'));
+  r.verifier('Vœux : récapitulatif des 3 choix', await nav.evaluer(`document.querySelectorAll('main ol > li').length === 3 && ${contient('Baccalauréat série C')} && ${contient('DTM — Électricité')}`));
+  await nav.saisir('#motivation', "J'aime les mathématiques et la physique.");
+  await nav.cliquerTexte('Enregistrer mes vœux', 'button');
+  await nav.attendre(contient('Vœux enregistrés'));
+  r.verifier('Vœux enregistrés, en attente du parent', await nav.evaluer(contient('en attente de validation')));
+  await nav.capture(`${OUT}/b2-voeux-recap.png`);
+
+  // Recommandations
+  await nav.aller(`${BASE}/espace-apprenant/recommandations`);
+  await nav.attendre("document.querySelectorAll('main ol > li').length > 0");
+  r.verifier('Recommandations : 1er choix repéré et expliqué', await nav.evaluer(`${contient('Ton 1er choix')} && ${contient('matières clés')}`), `${await nav.evaluer("document.querySelectorAll('main ol > li').length")} pistes`);
+  await nav.capture(`${OUT}/b2-recommandations.png`);
+
+  // Mobile : notes et recommandations
+  await nav.taille(390, 844, true);
+  await nav.aller(`${BASE}/espace-apprenant/notes`);
+  await nav.attendre("document.querySelectorAll('tbody tr').length > 0");
+  r.verifier('Notes : 7 matières, sans débordement horizontal de la page', await nav.evaluer("document.querySelectorAll('tbody tr').length === 7 && document.documentElement.scrollWidth <= innerWidth"), await nav.evaluer("`scrollWidth ${document.documentElement.scrollWidth} / ${innerWidth}`"));
+  await nav.capture(`${OUT}/b2-notes-mobile.png`);
+  await nav.aller(`${BASE}/espace-apprenant/recommandations`);
+  await nav.attendre("document.querySelectorAll('main ol > li').length > 0");
+  r.verifier('Recommandations mobile sans débordement', await nav.evaluer('document.documentElement.scrollWidth <= innerWidth'));
+  await nav.capture(`${OUT}/b2-recommandations-mobile.png`);
+  await nav.taille(1280, 900);
+  await deconnecter();
+
+  // Parent : validation
+  await connecter('parent.demo@monorientation.bj', '/espace-apprenant');
+  await nav.attendre(`${contient('Suivi de Fatou')} && ${contient('attendent ta validation')}`);
+  r.verifier('Parent : suivi de Fatou, vœux à valider', true);
+  await nav.aller(`${BASE}/espace-apprenant/preferences`);
+  await nav.attendre(contient('Valider les vœux de Fatou'));
+  await nav.cliquerTexte('Valider les vœux de Fatou', 'button');
+  await nav.attendre(contient('Vœux validés le'));
+  r.verifier('Parent : vœux validés', true);
+  await nav.capture(`${OUT}/b2-parent-validation.png`);
+  await deconnecter();
+
+  // Terminale D : pistes du supérieur
+  await connecter('DEMO-TLE-0001', '/espace-apprenant');
+  await nav.aller(`${BASE}/espace-apprenant/recommandations`);
+  await nav.attendre("document.querySelectorAll('main ol > li').length > 0");
+  r.verifier('Koffi (Tle D) : pistes du supérieur compatibles avec sa série', await nav.evaluer(`${contient('Ta série (D) est admise')} && !${contient('FLASH')}`), await nav.evaluer("[...document.querySelectorAll('main ol > li h3')].map((h) => h.textContent).join(' | ')"));
+  await nav.capture(`${OUT}/b2-terminale.png`);
+  await deconnecter();
+} catch (e) {
+  r.verifier('Scénario interrompu', false, e.message);
+  await nav.capture(`${OUT}/b2-echec.png`).catch(() => {});
+} finally {
+  if (nav.erreursConsole.length) console.log('Erreurs console :', nav.erreursConsole.slice(0, 6));
+  console.log(`RÉSULTAT : ${r.bilan}`);
+  await nav.fermer();
+  process.exit(r.succes ? 0 : 1);
+}

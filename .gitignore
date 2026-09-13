@@ -58,3 +58,6 @@ temp/
 
 # Artefacts TypeScript incrémental
 *.tsbuildinfo
+
+# Captures des tests navigateur
+tests/e2e/captures/
