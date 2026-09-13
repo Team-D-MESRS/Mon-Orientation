@@ -55,7 +55,7 @@
 | # | Tâche | Rôle | Priorité | Statut | Dépendances |
 |---|---|---|---|---|---|
 | 3.1 | Page d'accueil — hero, services, actualités (composants DSBJ) | frontend-dev | P0 | `done` | 1.4 |
-| 3.2 | Page connexion / inscription — formulaire NIP + mot de passe | frontend-dev | P0 | `in_progress` | 1.4, 1.7 |
+| 3.2 | Page connexion / inscription — formulaire NIP + mot de passe | frontend-dev | P0 | `done` | 1.4, 1.7 |
 | 3.3 | Layout principal — header DSBJ, navigation, footer | frontend-dev | P0 | `done` | 1.4 |
 | 3.4 | Espace apprenant — tableau de bord, profil, notes | frontend-dev | P0 | `in_progress` | 2.4, 3.3 |
 | 3.5 | Catalogue — recherche multicritère, fiches filières, comparaison | frontend-dev | P0 | `in_progress` | 2.3, 3.3 |

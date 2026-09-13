@@ -7,14 +7,21 @@
 ## État actuel
 
 - **Étape du pipeline** : développement MVP
-- **En cours** : rien ; le catalogue est branché sur l'API avec un référentiel réel de 67 filières sourcées
-- **Bloqué / en attente de** : validation du référentiel par le client (liste des établissements, taux d'insertion, offre universitaire UP/UNSTIM/UNA — introuvables publiquement) ; accès API EducMaster (2.1) ; premier commit git (aucun commit, docs non suivies)
-- **Prochaine action recommandée** : 1) tâche 2.10 — RolesGuard + contrôle d'appartenance sur `:nip` (tout utilisateur connecté lit aujourd'hui les notes de n'importe quel élève) ; 2) brancher 3.2 connexion/inscription puis 3.4 espace apprenant sur l'API ; 3) architecte : relation Filière ↔ Établissement en N-N (une filière n'a qu'un établissement, d'où le champ texte provisoire `ouSeFormer`) ; 4) créer le projet Flutter (`mobile/` = pubspec seul)
-- **Dernière mise à jour** : 2026-09-13 13:42 — référentiel filières (fil principal)
+- **En cours** : bloc 2 — parcours élève (données de démo, API de saisie des préférences, moteur d'orientation v2, écrans espace apprenant / préférences / recommandations)
+- **Bloqué / en attente de** : validation du référentiel filières par le client ; accès API EducMaster (2.1) ; arbitrages SPEC §7 (saisie des vœux élève/parent, périmètre IA, langues)
+- **Prochaine action recommandée** : terminer le bloc 2 ; ensuite accès du rôle ÉTABLISSEMENT (2.10), relation Filière ↔ Établissement N-N (architecte), projet Flutter
+- **Dernière mise à jour** : 2026-09-13 15:47 — sécurité et connexion (fil principal)
 
 ## Historique
 
 *(plus récent en haut)*
+
+### 2026-09-13 15:47 — sécurité et connexion (fil principal)
+- Fait (backend) : `AccesApprenantGuard` (élève = son dossier, parent = enfants rattachés, admin) sur apprenant/orientation/conseiller ; `RolesGuard` (stats = DGES/ADMIN) ; faille `explain` corrigée ; `GET /auth/moi` ; déconnexion authentifiée ; refresh réparé (session = durée du refresh, rotation, `jti`) ; inscription élève = NIP + date de naissance rattachée au dossier ; bug d'inscription parent corrigé ; `JWT_SECRET` obligatoire ; helmet ; 5 essais/min par (IP, identifiant).
+- Fait (front) : connexion et inscription réelles, session restaurée, rafraîchissement automatique du jeton, pages protégées (`RequireAuth`), en-tête selon le rôle.
+- Vérifié : 37 tests API + 8 tests navigateur (Chrome headless piloté en CDP).
+- Pièges : `start.sh` laissait un `node dist/main` orphelin sur :8080 (corrigé par `kill 0`) ; `nest --watch` ne relance pas son serveur sur un simple `touch`.
+- Suite : bloc 2.
 
 ### 2026-09-13 13:42 — référentiel filières (fil principal)
 - Fait : référentiel de 67 filières réelles et sourcées (`backend/prisma/data/referentiel-filieres.ts`) — 13 séries du bac + EA, 5 DT, 9 DTM LTP, 2 EFMS, 10 DTM LTA + DEAT, 6 écoles des métiers, 20 filières universitaires (UAC, INSTI, ENSET, IMSP). Chaque entrée cite ses sources (officielle ou non) ; aucun taux d'insertion (pas de donnée publique). Les 10 filières fictives sont supprimées par le seed.
