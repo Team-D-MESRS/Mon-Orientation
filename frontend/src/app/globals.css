@@ -150,3 +150,33 @@ body {
     color: #585858;
   }
 }
+
+/* Animations au défilement (composant Apparition). Les éléments ne sont masqués que si layout.tsx a posé
+   data-animations sur <html> : jamais sans JavaScript, ni quand le système demande de réduire les animations. */
+html[data-animations] [data-apparition] {
+  opacity: 0;
+  transition: opacity 700ms ease-out, transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--delai, 0ms);
+}
+html[data-animations] [data-apparition='monter'] {
+  transform: translateY(24px);
+}
+html[data-animations] [data-apparition='gauche'] {
+  transform: translateX(-32px);
+}
+html[data-animations] [data-apparition='droite'] {
+  transform: translateX(32px);
+}
+html[data-animations] [data-apparition='zoom'] {
+  transform: scale(0.9);
+}
+html[data-animations] [data-apparition][data-apparu] {
+  opacity: 1;
+  transform: none;
+}
+@media print {
+  [data-apparition] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

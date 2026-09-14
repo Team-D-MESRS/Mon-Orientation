@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowRight, GraduationCap } from 'lucide-react';
+import { Apparition } from '@/components/animation/Apparition';
 import { useCatalogueAccueil } from './useCatalogueAccueil';
 
 /** Raccourci « Que faire après mon bac ? » : une pastille par série, vers le catalogue filtré. */
@@ -22,8 +23,8 @@ export function ApresLeBac() {
       ) : (
         <ul className="grid grid-cols-4 sm:grid-cols-7 lg:grid-cols-5 gap-2v" aria-busy={!donnees}>
           {donnees
-            ? donnees.series.map((s) => (
-                <li key={s.serie}>
+            ? donnees.series.map((s, i) => (
+                <Apparition as="li" key={s.serie} effet="zoom" delai={300 + i * 35}>
                   <Link
                     href={`/catalogue?serie=${encodeURIComponent(s.serie)}&niveau=APRES_BAC`}
                     aria-label={`Bac ${s.serie} — ${s.libelle}`}
@@ -32,7 +33,7 @@ export function ApresLeBac() {
                   >
                     {s.serie}
                   </Link>
-                </li>
+                </Apparition>
               ))
             : Array.from({ length: 14 }).map((_, i) => <li key={i} className="h-10 rounded-bj-sm bg-bj-gray-950 animate-pulse" />)}
         </ul>

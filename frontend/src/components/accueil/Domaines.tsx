@@ -19,6 +19,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { Domaine } from '@/lib/filiere';
+import { Apparition } from '@/components/animation/Apparition';
+import { Compteur } from '@/components/animation/Compteur';
 import { useCatalogueAccueil } from './useCatalogueAccueil';
 
 const ICONES: Record<Domaine, LucideIcon> = {
@@ -55,18 +57,27 @@ export function Domaines() {
 
   return (
     <>
-      <p className="text-bj-gray-500 mb-8v" aria-live="polite">
-        {donnees
-          ? `${donnees.total} formations recensées dans ${donnees.domaines.length} domaines, chacune avec ses sources.`
-          : 'Chargement du catalogue…'}
+      <p className="text-bj-gray-500 mb-8v">
+        {donnees ? (
+          <>
+            {/* Compteur animé caché aux lecteurs d'écran, qui lisent la phrase fixe */}
+            <span aria-hidden="true">
+              <Compteur valeur={donnees.total} /> formations recensées dans {donnees.domaines.length} domaines, chacune avec ses sources.
+            </span>
+            <span className="sr-only">{`${donnees.total} formations recensées dans ${donnees.domaines.length} domaines, chacune avec ses sources.`}</span>
+          </>
+        ) : (
+          'Chargement du catalogue…'
+        )}
       </p>
       {/* Deux colonnes dès le téléphone (icône au-dessus du texte), pour ne pas empiler 14 tuiles */}
       <ul className="grid grid-cols-2 lg:grid-cols-4 gap-3v" aria-busy={!donnees}>
         {donnees
-          ? donnees.domaines.map((d) => {
+          ? donnees.domaines.map((d, i) => {
               const Icone = ICONES[d.code];
               return (
-                <li key={d.code}>
+                // Décalage par colonne : chaque rangée arrive de gauche à droite
+                <Apparition as="li" key={d.code} delai={(i % 4) * 90}>
                   <Link
                     href={`/catalogue?domaine=${d.code}`}
                     className="bj-card flex flex-col sm:flex-row items-start sm:items-center gap-2v sm:gap-3v p-3v sm:p-4v h-full"
@@ -81,7 +92,7 @@ export function Domaines() {
                       </span>
                     </span>
                   </Link>
-                </li>
+                </Apparition>
               );
             })
           : Array.from({ length: 8 }).map((_, i) => <li key={i} className="h-[4.5rem] rounded-bj-md bg-bj-gray-950 animate-pulse" />)}
