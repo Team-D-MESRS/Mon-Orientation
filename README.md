@@ -46,7 +46,7 @@ Elle est conçue pour le Ministère des Enseignements Secondaire, Technique et d
 
 | Composante (SPEC §5) | État |
 |---|---|
-| 5.1 Catalogue national de l'offre de formation | ✅ 67 filières réelles, chaque fiche cite ses sources ; référentiel à faire valider par le ministère |
+| 5.1 Catalogue national de l'offre de formation | ✅ 67 filières réelles, chaque fiche cite ses sources ; recherche sans accents (métiers et lieux compris), filtres par domaine, série de bac, bourses et source officielle, « Et après ce bac ? », comparateur, formations mises de côté par l'élève, partage WhatsApp et impression ; référentiel à faire valider par le ministère |
 | 5.3 Moteur d'orientation | ✅ Version 2, recommandations explicables critère par critère ; barème à valider par les conseillers d'orientation |
 | 5.5 Espace apprenant / parent | ✅ Tableau de bord, notes, vœux en 3 étapes, validation par le parent (données de démonstration) |
 | Authentification, rôles, droits d'accès | ✅ Élève, parent, DGES et admin ; rôle établissement à compléter |
@@ -72,7 +72,7 @@ flowchart LR
   DB[("PostgreSQL 16<br/>:5434")]
   R[("Redis 7<br/>:6381")]
   EM["EducMaster<br/>SIGE national"]
-  JML["« J'aime ma langue »<br/>ASIN / IIDIA"]
+  JML["« J'aime ma langue »<br/>ASIN / IIDIA<br/>(voix : partenariat à demander)"]
   LLM["Gemini — API Google<br/>(conseiller pédagogique)"]
 
   W -->|HTTPS + JWT| API
@@ -194,8 +194,12 @@ bash tests/api/securite.sh          # 37 vérifications : droits d'accès, inscr
 bash tests/api/parcours-eleve.sh    # 38 vérifications : bilan, moteur d'orientation, vœux, validation parent
 node tests/e2e/connexion.mjs        # 8 scénarios navigateur : connexion, session, pages protégées
 node tests/e2e/parcours-eleve.mjs   # 10 scénarios : parcours élève / parent / Terminale, ordinateur et mobile
-bash tests/api/conseiller.sh        # 10 vérifications sans appel au modèle ; 18 avec CONSEILLER_TEST_LLM=1 (appels réels)
+bash tests/api/conseiller.sh        # 11 vérifications sans appel au modèle ; 22 avec CONSEILLER_TEST_LLM=1 (appels réels, dont une réponse en fongbé)
 node tests/e2e/conseiller.mjs       # 6 scénarios : présentation, onglet Conseiller, sans ou avec clé API
+bash tests/api/catalogue.sh         # 58 vérifications : recherche, filtres, séries du bac, domaines, formations mises de côté
+node tests/e2e/catalogue.mjs        # 28 scénarios : filtres, comparateur, « Et après ce bac ? », partage, impression, cœurs, mobile
+node tests/e2e/pied-de-page.mjs     # 23 scénarios : pages d'information, liens du pied de page, pied de page en bas, 404
+node tests/e2e/accueil.mjs          # 10 scénarios : contenus exacts, recherche, séries, domaines, boutons selon la connexion, mobile
 ```
 
 Les prérequis et les variables sont décrits dans [tests/README.md](tests/README.md). Il n'y a pas encore de tests unitaires ni d'intégration continue (tâches 1.8 et 7.x de [TASKS.md](TASKS.md)).

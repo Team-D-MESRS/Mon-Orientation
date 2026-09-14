@@ -36,7 +36,7 @@ Elle consomme l'API décrite dans [../backend/README.md](../backend/README.md) e
 |---|---|
 | Framework | Next.js 14.2 (App Router), React 18, TypeScript 5 (strict) |
 | Styles | Tailwind CSS 3.4, avec des jetons du DSBJ (couleurs `bj-*`, espacements `1v` à `16v`, rayons `bj-sm/md/lg`) et des classes globales `.bj-*` |
-| État | Zustand (`src/stores/authStore.ts`) |
+| État | Zustand (`src/stores/` : session, formations mises de côté, sélection du comparateur) |
 | HTTP | Axios, avec intercepteurs pour le jeton et son rafraîchissement automatique |
 | Icônes | lucide-react |
 | Polices | Montserrat (texte) et Spectral (éditorial), via Google Fonts |
@@ -85,8 +85,10 @@ frontend/src/
 │   ├── layout.tsx                     layout racine : AuthInitialiser, Header, Footer, lien d'évitement
 │   ├── globals.css                    import des polices, variables, classes .bj-*
 │   ├── page.tsx                       accueil
-│   ├── catalogue/page.tsx             catalogue (recherche, filtres niveau/type)
-│   ├── catalogue/[id]/page.tsx        fiche filière (sources, avertissement si non officielle)
+│   ├── catalogue/layout.tsx           barre du comparateur, sur toutes les pages du catalogue
+│   ├── catalogue/page.tsx             catalogue : recherche et filtres, portés par l'adresse (lien partageable)
+│   ├── catalogue/[id]/page.tsx        fiche filière : sources, « Et après ce bac ? », cœur, comparer, partage, impression
+│   ├── catalogue/comparer/page.tsx    comparaison de 2 ou 3 formations (?ids=…)
 │   ├── connexion/ , inscription/      formulaires reliés à l'API
 │   ├── espace-apprenant/
 │   │   ├── layout.tsx                 RequireAuth → EspaceProvider → CadreEspace (onglets)
@@ -96,19 +98,27 @@ frontend/src/
 │   │   ├── recommandations/page.tsx   recommandations expliquées
 │   │   └── conseiller/page.tsx        conversation avec le conseiller pédagogique
 │   ├── conseiller/page.tsx            présentation du conseiller ; élèves et parents redirigés vers leur espace
+│   ├── (informations)/                guide, faq, contact, mentions-legales, donnees-personnelles, accessibilite (navigation commune)
+│   ├── not-found.tsx                  page 404 en français
 │   └── stats/ (layout + page)         tableau de bord DGES/admin (maquette, accès protégé)
 ├── components/
-│   ├── layout/                        Header (navigation selon le rôle), Footer
+│   ├── layout/                        Header et Footer (liens selon le rôle, définis dans navigation.ts), NavInformations
+│   ├── informations/                  EnTete, Bloc, Question (FAQ dépliable), ACompleter, LienExterne
 │   ├── auth/                          AuthInitialiser (restaure la session), RequireAuth (garde de page)
+│   ├── catalogue/                     CarteFiliere, BoutonFavori, BoutonComparer, BarreComparateur, Partage
 │   └── espace/                        EspaceContext (dossier consulté), CadreEspace, ui (Alerte, Carte, BadgeType…),
 │                                      TexteConseiller (rendu sûr des réponses du conseiller)
 ├── lib/
 │   ├── api.ts                         client Axios, rafraîchissement du jeton, fonctions par domaine
-│   ├── filiere.ts                     types et libellés du catalogue
+│   ├── filiere.ts                     types et libellés du catalogue (types, niveaux, domaines), normaliser() sans accents
 │   ├── apprenant.ts                   types (profil, bilan, vœux, recommandations) et formatage
 │   ├── erreurs.ts                     messageErreur() : message lisible depuis une erreur API
+│   ├── site.ts                        éditeur, coordonnées (null tant que le MESTFP ne les a pas communiquées), sites officiels
 │   └── redirection.ts                 cheminDeRetour() : ?redirect= limité aux chemins internes
-└── stores/authStore.ts                utilisateur connecté, jetons, accueilDuRole()
+└── stores/
+    ├── authStore.ts                   utilisateur connecté, jetons, accueilDuRole()
+    ├── favorisStore.ts                formations mises de côté par l'élève connecté (useFavoris)
+    └── comparateurStore.ts            sélection du comparateur, conservée dans le navigateur
 ```
 
 ---
@@ -117,17 +127,20 @@ frontend/src/
 
 | Route | Accès | État | Contenu |
 |---|---|---|---|
-| `/` | public | maquette statique | Accueil, présentation des services |
-| `/catalogue` | public | ✅ API | 67 filières, recherche (nom, code, métier), filtres niveau et type, badge source officielle / à confirmer |
-| `/catalogue/[id]` | public | ✅ API | Fiche complète : description, diplômes, métiers, conditions, séries, lieux, insertion, bourses, sources |
+| `/` | public | ✅ API | Accueil : recherche vers le catalogue, raccourci « Que faire après mon bac ? » par série, entrées par profil, étapes du parcours, domaines avec leur nombre de formations (lus dans l'API), conseiller en fongbé ; boutons selon la connexion |
+| `/catalogue` | public | ✅ API | 67 filières ; recherche sans accents (formation, métier, ville) ; filtres niveau, type, domaine, série de bac, bourses, source officielle, tous portés par l'adresse (`/catalogue?serie=D`) ; raccourci « Que faire avec mon bac D ? » pour l'élève de 1re ou de Terminale ; cœur (élève) et « Comparer » sur chaque carte |
+| `/catalogue/[id]` | public | ✅ API | Fiche complète, domaines cliquables ; « Et après ce bac ? » sur les fiches de bac ; mettre de côté (élève), comparer, partager (WhatsApp, partage du téléphone, lien), imprimer |
+| `/catalogue/comparer` | public | ✅ API | Tableau de 2 ou 3 formations sur 11 critères ; lien partageable ; sans `?ids=`, reprend la sélection faite dans le catalogue |
 | `/connexion` | public | ✅ API | NIP ou email + mot de passe ; retour à la page demandée (`?redirect=`) |
 | `/inscription` | public | ✅ API | Élève (NIP + date de naissance) ou parent (email) |
-| `/espace-apprenant` | élève, parent, admin | ✅ API | Profil, résultats, étape d'orientation, pistes du moment |
+| `/espace-apprenant` | élève, parent, admin | ✅ API | Profil, résultats, étape d'orientation, pistes du moment, formations mises de côté |
 | `/espace-apprenant/notes` | élève, parent, admin | ✅ API | Tableau par matière et trimestre (vue compacte sur mobile) |
-| `/espace-apprenant/preferences` | élève (saisie), parent (validation), admin (lecture) | ✅ API | Vœux en 3 étapes, enregistrés à chaque étape, récapitulatif, motivation |
+| `/espace-apprenant/preferences` | élève (saisie), parent (validation), admin (lecture) | ✅ API | Vœux en 3 étapes, enregistrés à chaque étape, récapitulatif, motivation ; formations mises de côté proposées en premier, recherche sans accents |
 | `/espace-apprenant/recommandations` | élève, parent, admin | ✅ API | Pistes classées, score sur 100, critères détaillés, alertes |
-| `/espace-apprenant/conseiller` | élève, parent | ✅ API | Conversation avec le conseiller : suggestions, question conservée en cas d'erreur, nouvelle conversation |
+| `/espace-apprenant/conseiller` | élève, parent | ✅ API | Conversation avec le conseiller : suggestions, question conservée en cas d'erreur, nouvelle conversation ; réponses en français ou en fongbé (choix retenu par l'appareil, réponses marquées `lang="fon"`) |
 | `/conseiller` | public | ✅ | Présentation ; élèves et parents connectés redirigés vers leur espace |
+| `/guide`, `/faq`, `/contact` | public | ✅ statique | Guide d'utilisation, questions fréquentes (dépliables), à qui s'adresser |
+| `/mentions-legales`, `/donnees-personnelles`, `/accessibilite` | public | ✅ provisoire | Pages légales à valider par le Ministère ; toute information non communiquée (contact, directeur de la publication, hébergeur, délégué aux données, durée de conservation) est signalée, jamais inventée : la renseigner dans `src/lib/site.ts` |
 | `/stats` | DGES, admin | maquette | Tableau de bord, pas encore relié à `/api/stats` |
 
 Selon le rôle, l'espace apprenant s'adapte :
@@ -192,6 +205,8 @@ Classes globales disponibles : `.bj-container`, `.bj-header` (bandeau tricolore)
 
 Tailwind ne génère que les classes qu'il trouve dans les fichiers de `src/app`, `src/components`, `src/lib` et `src/pages`. Une classe construite dynamiquement (`` `text-${x}` ``) n'est pas générée : écrivez toujours la classe complète.
 
+Les classes `.bj-*` de `globals.css` sont déclarées après les utilitaires Tailwind : à spécificité égale, elles l'emportent. Elles ne doivent donc fixer que ce qu'aucun utilitaire ne vient compléter sur le même élément. C'est pourquoi `.bj-container` ne fixe que les marges et le padding horizontaux : `bj-container py-8v` fonctionne.
+
 **Accessibilité (WCAG 2.1 AA)** :
 
 - lien « Aller au contenu principal » ;
@@ -222,7 +237,13 @@ Les tests de bout en bout se trouvent dans le dossier racine `tests/e2e/`. Ils p
 node tests/e2e/connexion.mjs        # redirections, erreurs, session, déconnexion, inscription
 node tests/e2e/parcours-eleve.mjs   # vœux en 3 étapes, recommandations, validation parent, mobile 390 px
 node tests/e2e/conseiller.mjs       # présentation, onglet Conseiller, suggestions, sans clé ou avec clé
+node tests/e2e/catalogue.mjs        # filtres, comparateur, « Et après ce bac ? », partage, impression, cœurs, mobile 390 px
+node tests/e2e/pied-de-page.mjs     # pages d'information, liens du pied de page, pied de page toujours en bas, 404
 ```
+
+Le pied de page reste en bas de l'écran sur une page courte : `body` est une colonne flexible de hauteur minimale 100 %, et `main` prend la place restante (`flex-1`). Il suit le contenu sur une page longue, et ne recouvre donc jamais la page.
+
+Sur mobile, un contenu trop large élargit la fenêtre émulée : les tests vérifient donc `innerWidth === 390`, et pas seulement `scrollWidth <= innerWidth`. Un texte `sr-only` (position absolue) placé dans un conteneur qui défile horizontalement élargit la page si ce conteneur n'est pas `relative`.
 
 Les captures d'écran sont écrites dans `tests/e2e/captures/`. Il n'y a pas encore de tests unitaires (tâche 7.2).
 
@@ -234,7 +255,7 @@ Les captures d'écran sont écrites dans `tests/e2e/captures/`. Il n'y a pas enc
 - **Conseiller** : réponses affichées d'un bloc, sans streaming ; pas encore d'historique des conversations à l'écran. Les réponses sont rendues sans HTML : seuls le gras, les listes et les liens internes (`/catalogue/…`, `/espace-apprenant/…`) sont interprétés.
 - **Accueil** : contenu statique ; le module d'information par palier reste à faire (tâche 3.8).
 - **PWA** (hors-ligne) et **multilinguisme** : dépendances installées, rien de configuré (tâches 3.9 et i18n).
-- **Catalogue** : pas encore de comparaison de filières ni de filtre par département (il faut d'abord la liste des établissements).
+- **Catalogue** : pas encore de filtre par département ni de carte (il faut d'abord la liste des établissements). La sélection du comparateur reste dans le navigateur ; les formations mises de côté sont, elles, enregistrées sur le serveur.
 - **Administration** du référentiel, des utilisateurs et des rattachements parent-enfant : à faire (tâche 3.10).
 
 ---

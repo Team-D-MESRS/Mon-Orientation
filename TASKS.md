@@ -58,7 +58,7 @@
 | 3.2 | Page connexion / inscription — formulaire NIP + mot de passe | frontend-dev | P0 | `done` | 1.4, 1.7 |
 | 3.3 | Layout principal — header DSBJ, navigation, footer | frontend-dev | P0 | `done` | 1.4 |
 | 3.4 | Espace apprenant — tableau de bord, profil, notes | frontend-dev | P0 | `done` | 2.4, 3.3 |
-| 3.5 | Catalogue — recherche multicritère, fiches filières, comparaison | frontend-dev | P0 | `in_progress` | 2.3, 3.3 |
+| 3.5 | Catalogue — recherche multicritère, fiches filières, comparaison | frontend-dev | P0 | `done` | 2.3, 3.3 |
 | 3.6 | Saisie des préférences — formulaire orienté, validation parent | frontend-dev | P0 | `done` | 2.5, 3.4 |
 | 3.7 | Recommandations — affichage, explication, sélection | frontend-dev | P0 | `done` | 2.7, 3.6 |
 | 3.8 | Module d'information — contenus par palier, guides, vidéos | frontend-dev | P1 | `pending` | 3.3 |

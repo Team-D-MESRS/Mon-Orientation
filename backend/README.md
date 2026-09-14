@@ -48,7 +48,7 @@ API REST de la plateforme nationale d'orientation scolaire. Elle gère l'authent
 backend/
 ├── prisma/
 │   ├── schema.prisma                modèle de données
-│   ├── migrations/                  init → referentiel_filieres → parcours_eleve
+│   ├── migrations/                  init → referentiel_filieres → parcours_eleve → catalogue_favoris
 │   ├── data/referentiel-filieres.ts référentiel des 67 filières (sources citées)
 │   ├── seed.ts                      admin + référentiel (idempotent)
 │   └── seed-demo.ts                 élèves, notes et comptes fictifs (interdit en production)
@@ -60,11 +60,12 @@ backend/
 │   │   ├── acces-apprenant.guard.ts accès au dossier :nip (élève, parent rattaché, admin)
 │   │   ├── roles.guard.ts           @Roles(...) : restriction par rôle
 │   │   └── throttler-identifiant.guard.ts  limitation par (IP, identifiant)
-│   ├── apprenant/                   profil + bilan des notes, vœux, validation parent
+│   ├── apprenant/                   profil + bilan des notes, vœux, validation parent, formations mises de côté
 │   │   └── bilan-notes.ts           moyennes par matière, points forts (fonction pure)
 │   ├── orientation/                 moteur d'orientation et recommandations
 │   │   └── profils-filieres.ts      matières clés et seuils par filière, compatibilité des séries
-│   ├── filiere/                     catalogue (public)
+│   ├── filiere/                     catalogue (public) : recherche sans accents, filtres, séries du bac
+│   │   └── domaines.ts              domaines (secteurs d'activité) du catalogue
 │   ├── conseiller/                  conseiller pédagogique : consignes, outils, boucle d'appels à Gemini
 │   └── stats/                       indicateurs de pilotage (DGES / admin)
 ├── setup.sh                         installation : dépendances, .env, Prisma, migrations, seed
@@ -150,7 +151,8 @@ Ne jamais versionner `.env`. En production, utiliser des secrets longs et aléat
 | `apprenants` | Dossier élève identifié par le **NIP** : identité, département, commune, **classe** (`palier`), **série** ; rattaché au plus à un compte |
 | `parent_apprenant` | Liens parent ↔ enfant (relation : père, mère, tuteur…) |
 | `notes` | Notes par matière, trimestre et année scolaire (unicité sur ces quatre champs) |
-| `filieres` | Catalogue : code unique, type, niveau d'accès, diplômes, métiers, débouchés, conditions, séries admises, lieux, bourses, taux d'insertion, **sources** |
+| `filieres` | Catalogue : code unique, type, niveau d'accès, diplômes, métiers, débouchés, conditions, séries admises, lieux, bourses, taux d'insertion, **sources**, **domaines** (tableau de codes) |
+| `favoris` | Formations mises de côté par un élève (clé : NIP + filière, 50 au plus) ; supprimées avec l'élève ou la filière |
 | `etablissements` | Établissements (prévu pour la synchronisation EducMaster) |
 | `preferences` | Vœux : jusqu'à 3 filières par élève **et par classe** (unicité), motivation, validation parent |
 | `recommandations` | Sorties du moteur : score, explication, **critères détaillés** (JSON), active ou archivée |
@@ -165,6 +167,7 @@ Ne jamais versionner `.env`. En production, utiliser des secrets longs et aléat
 | `20260913100532_init` | Schéma initial |
 | `20260913133911_referentiel_filieres` | Filière : `code`, `niveauAcces`, `seriesAdmises`, `ouSeFormer`, `sources` ; `bourses` facultatif |
 | `20260913155635_parcours_eleve` | Apprenant : `palier`, `serie` ; vœux uniques par classe, date de validation parent ; `criteres` des recommandations |
+| `20260914000931_catalogue_favoris` | Extension `unaccent` (recherche sans accents, extension « de confiance » : pas besoin d'être superutilisateur) ; Filière : `domaines` ; table `favoris` |
 
 Pour **créer une migration** dans un terminal interactif : `npm run prisma:migrate -- --name <nom>`.
 
@@ -185,6 +188,8 @@ Utiliser toujours le binaire Prisma local (`npx` depuis `backend/`). Lancé depu
 ## Référentiel des filières
 
 Le fichier `prisma/data/referentiel-filieres.ts` décrit **67 filières** constituées à partir de sources publiques : Office du Baccalauréat, gouv.bj, communiqués du MESTFP relayés par la presse, apresbac.bj pour le supérieur.
+
+Chaque filière a au moins un **domaine** parmi les 14 de `src/filiere/domaines.ts` (agriculture, numérique, santé, BTP…). Ce classement a été fait par l'équipe à partir des intitulés, et non repris des sources : il est à faire valider avec le référentiel. Le seed s'arrête si une filière n'a pas de domaine ou en a un inconnu.
 
 | Famille | Nombre | Exemples de codes |
 |---|---|---|
@@ -243,6 +248,7 @@ Les matières utilisées sont Mathématiques, PCT, SVT, Français, Anglais, Hist
 | Dossier d'un élève (`/apprenant/:nip`, `/orientation/:nip`, `/conseiller/:nip`) | L'élève lui-même, un **parent rattaché**, un administrateur (`AccesApprenantGuard`) |
 | Saisie des vœux | L'élève uniquement |
 | Validation des vœux | Le parent rattaché uniquement |
+| Formations mises de côté | Consultation : dossier ; ajout et retrait : l'élève uniquement |
 | Statistiques (`/stats`) | `DGES`, `ADMIN` (`RolesGuard`) |
 
 Les autres cas renvoient 403. Le DGES n'a pas accès aux dossiers individuels. L'accès du rôle `ETABLISSEMENT` à ses élèves reste à implémenter (tâche 2.10).
@@ -274,9 +280,14 @@ Toutes les routes sont préfixées par `/api`. « Dossier » désigne l'accès d
 
 | Méthode | Route | Accès | Description |
 |---|---|---|---|
-| GET | `/filiere` | public | Liste paginée ; filtres `type`, `niveau` (`APRES_BEPC`, `APRES_BAC`), `departement`, `search` (nom, code, description, débouchés), `page`, `limit` (100 au maximum) |
-| GET | `/filiere/:id` | public | Fiche complète (sources incluses) |
+| GET | `/filiere` | public | Liste paginée ; filtres `type`, `niveau` (`APRES_BEPC`, `APRES_BAC`), `departement`, `search`, `serie` (ex. `D`), `domaine`, `bourses` et `officielle` (`true` ou `false`), `page`, `limit` (100 au maximum). Un paramètre répété ou une valeur inconnue renvoie 400 |
+| GET | `/filiere/filtres` | public | Valeurs des filtres : domaines (libellé, nombre de filières) et séries du bac (libellé, fiche du bac) |
+| GET | `/filiere/:id` | public | Fiche complète (sources et domaines inclus) |
 | GET | `/filiere/:id/debouches` | public | Débouchés, métiers, taux d'insertion |
+
+- **Recherche** (`search`) : insensible à la casse et aux accents (« electricite », « oeuvre »). Elle porte sur le nom, le code, la description, les débouchés, les métiers, les diplômes, le lieu de formation et les domaines. Les filières dont le nom contient le texte viennent en premier.
+- **Série** (`serie`) : ne garde que les filières du supérieur qui admettent la série, avec la même règle que le moteur (`compatibiliteSerie`). Chaque résultat porte `accesSerie` : `ADMISE` ou `SOUS_CONDITIONS`. Les filières dont les séries admises ne sont pas renseignées sont écartées.
+- **Source officielle** (`officielle=false`) : liste les fiches encore à confirmer, pratique pour la relecture par le ministère.
 
 ### Apprenant
 
@@ -288,6 +299,9 @@ Toutes les routes sont préfixées par `/api`. « Dossier » désigne l'accès d
 | GET | `/apprenant/:nip/preferences` | dossier | Vœux par classe, filières incluses |
 | POST | `/apprenant/:nip/preferences` | élève | Enregistrer ses vœux, en 3e ou en Terminale ; recalcule les recommandations |
 | POST | `/apprenant/:nip/preferences/validation` | parent | Valider les vœux de l'enfant |
+| GET | `/apprenant/:nip/favoris` | dossier | Formations mises de côté, les plus récentes d'abord (`filiereId`, `ajouteLe`, `filiere`) |
+| PUT | `/apprenant/:nip/favoris/:filiereId` | élève | Mettre une formation de côté (204, sans effet si elle l'est déjà ; 400 au-delà de 50 ; 404 si la filière n'existe pas) |
+| DELETE | `/apprenant/:nip/favoris/:filiereId` | élève | Retirer une formation mise de côté (204, sans effet si elle ne l'était pas) |
 
 Corps de `POST /preferences` :
 
@@ -316,7 +330,7 @@ Chaque recommandation contient `score` (0 à 100), `explication` (texte) et `cri
 
 | Méthode | Route | Accès | Description |
 |---|---|---|---|
-| POST | `/conseiller/:nip/chat` | élève, parent rattaché (10/min par compte) | Question `{ message (≤ 2000), conversationId? }` → `{ conversationId, reponse, outilsUtilises }` ; 503 sans clé API |
+| POST | `/conseiller/:nip/chat` | élève, parent rattaché (10/min par compte) | Question `{ message (≤ 2000), conversationId?, langue? }` → `{ conversationId, reponse, outilsUtilises }`. `langue` : `fr` (par défaut) ou `fon` (réponse rédigée en fongbé, enregistrée avec la conversation) ; 503 sans clé API |
 | GET | `/conseiller/:nip/historique` | dossier | 10 dernières conversations |
 | GET | `/stats/national` | DGES, admin | Effectifs, nombre de filières et d'établissements, répartition par type |
 | GET | `/stats/departement/:code` | DGES, admin | Indicateurs d'un département |
@@ -398,7 +412,7 @@ Aucun outil ne prend de NIP en paramètre : le dossier consulté est toujours ce
 - Le client doit confirmer le niveau B, et le ministère décider de l'hébergement des données envoyées au modèle (APDP). L'offre gratuite de Gemini est exclue pour des données réelles.
 - Il manque un outil de supervision (relecture des conversations signalées ou tirées au sort) et un jeu d'une centaine de questions types validées par les conseillers d'orientation, à rejouer avant chaque mise en production.
 - Les réponses ne sont pas encore diffusées en continu (streaming).
-- Les langues nationales et la voix dépendront du projet « J'aime ma langue ».
+- Langues nationales : le fongbé écrit passe déjà par Gemini (`langue: "fon"`), avec une qualité jugée correcte sur un premier échantillon, à faire relire plus largement. Les messages fixes (refus, erreurs) restent en français. Pour la voix et les autres langues, « J'aime ma langue » n'offre pas d'API publique à ce jour (voir ARCHITECTURE §2.4).
 
 ---
 
@@ -409,7 +423,8 @@ Les tests de bout en bout se trouvent dans le dossier racine `tests/`, et s'exé
 ```bash
 bash tests/api/securite.sh        # 37 vérifications
 bash tests/api/parcours-eleve.sh  # 38 vérifications (nécessite le seed de démonstration)
-bash tests/api/conseiller.sh      # 10 vérifications sans appel au modèle ; 18 avec CONSEILLER_TEST_LLM=1 (appels réels)
+bash tests/api/conseiller.sh      # 11 vérifications sans appel au modèle ; 22 avec CONSEILLER_TEST_LLM=1 (appels réels, dont une réponse en fongbé)
+bash tests/api/catalogue.sh       # 58 vérifications : recherche, filtres, séries, domaines, formations mises de côté
 ```
 
 Il n'y a pas encore de tests unitaires (Jest n'est pas configuré) : c'est l'objet des tâches 7.1 et 7.3.

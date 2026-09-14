@@ -7,15 +7,38 @@
 ## État actuel
 
 - **Étape du pipeline** : développement MVP — parcours élève web opérationnel sur données de démonstration
-- **En cours** : rien — conseiller pédagogique opérationnel sur Gemini (offre gratuite, données de démonstration uniquement)
+- **En cours** : rien — catalogue enrichi, pages d'information et pied de page refaits, conseiller en fongbé, accueil refait (non commité)
 - **Documents locaux** : le cahier des charges (`docs/`) et la note de cadrage du client restent sur la machine de l'utilisateur, hors dépôt (`.gitignore`), à sa demande.
-- **Bloqué / en attente de** : validation client du référentiel filières et du moteur (barème, matières clés, seuils : conseillers d'orientation DGES) ; arbitrages SPEC §7 (appliqué par défaut : vœux saisis par l'élève, validés par le parent) ; accès API EducMaster (2.1)
-- **Prochaine action recommandée** : 00) l'utilisateur régénère sa clé Gemini (collée en clair dans la conversation) et met la nouvelle dans `backend/.env` ; 0) l'utilisateur complète le nom du prestataire dans `docs/Cahier_des_charges_Mon_Orientation_v1.0.docx` et le présente au MESTFP ; 1) présenter le parcours au client et faire valider le moteur ; 2) conseiller IA réel (5.1/5.2) une fois son périmètre arbitré ; 3) rôle ÉTABLISSEMENT + rattachement parent-enfant par l'établissement (écran admin 3.10) ; 4) statistiques branchées sur l'API (6.1/6.3) ; 5) projet Flutter ; 6) tests unitaires + CI (1.8)
-- **Dernière mise à jour** : 2026-09-13 23:16 — conseiller Gemini testé avec de vrais appels (fil principal)
+- **Bloqué / en attente de** : coordonnées et mentions légales à fournir par le MESTFP (contact, directeur de la publication, hébergeur, délégué aux données, durée de conservation → `frontend/src/lib/site.ts`) ; validation client du référentiel filières et du moteur (barème, matières clés, seuils : conseillers d'orientation DGES) ; arbitrages SPEC §7 (appliqué par défaut : vœux saisis par l'élève, validés par le parent) ; accès API EducMaster (2.1)
+- **Prochaine action recommandée** : 00) l'utilisateur régénère sa clé Gemini (collée en clair dans la conversation) et met la nouvelle dans `backend/.env` ; 0) l'utilisateur complète le nom du prestataire dans `docs/Cahier_des_charges_Mon_Orientation_v1.0.docx` et le présente au MESTFP ; 1) présenter le parcours au client et faire valider le moteur, ainsi que les domaines du catalogue ; 2) conseiller IA réel (5.1/5.2) une fois son périmètre arbitré ; 3) écran d'administration du référentiel (3.10 : fiches, statut « validé par le ministère », historique ; le seed réécrit aujourd'hui les fiches à chaque lancement, à adapter) + rôle ÉTABLISSEMENT et rattachement parent-enfant ; 4) statistiques branchées sur l'API (6.1/6.3) ; 5) projet Flutter ; 6) tests unitaires + CI (1.8)
+- **Dernière mise à jour** : 2026-09-14 04:15 — accueil refait (fil principal)
 
 ## Historique
 
 *(plus récent en haut)*
+
+### 2026-09-14 04:15 — accueil refait (fil principal)
+- Fait : bandeau avec recherche (formulaire GET vers `/catalogue?q=`, marche sans JavaScript) et raccourci « Que faire après mon bac ? » (une pastille par série) ; entrées par profil (4e-3e, 1re-Terminale, parent) ; 4 étapes fidèles au parcours ; domaines avec leur nombre de formations ; conseiller en fongbé (exemple validé) ; engagements. Boutons selon la connexion (Se connecter / Mon espace / Tableau de bord).
+- Retiré : « Plus de 100 filières », langues non disponibles (yoruba, bariba, dendi), lien Statistiques public, émojis. Chiffres lus dans l'API (`components/accueil/useCatalogueAccueil.ts`, une seule requête partagée). DESIGN.md (maquette de l'accueil) mis à jour.
+- Tests : `tests/e2e/accueil.mjs` 10/10, pied de page 23/23.
+
+### 2026-09-14 03:30 — conseiller en fongbé (fil principal)
+- Constat : « J'aime ma langue » (ASIN/IIDIA, lancé le 10/11/2025) collecte des voix pour entraîner des modèles, **sans API publique** ; Cloud Translation (Google) ne liste pas le fon (le site Google Traduction le traduit, mais son service web n'est pas une API utilisable). Gemini rédige en fongbé : l'utilisateur a jugé la traduction correcte sur 3 phrases.
+- Fait : paramètre `langue` (`fr` | `fon`, validé) du chat → consigne « réponds en fongbé » (`CONSIGNE_LANGUE`, après le préfixe mis en cache), langue enregistrée avec la conversation ; sélecteur Français / Fɔ̀ngbè dans l'écran du conseiller (retenu par l'appareil, `lang="fon"`, mention « rédigées automatiquement »). ARCHITECTURE §2.4 et risques corrigés.
+- Tests : conseiller API 11/11 (+ refus d'une langue inconnue ; 22 avec `CONSEILLER_TEST_LLM=1`), navigateur 8/8 ; une vraie question en fongbé : réponse en fongbé avec 5 liens vers les fiches. Un 503 passager de Gemini observé puis disparu à la relance.
+- Suite : faire relire des réponses plus longues par des locuteurs ; messages fixes (refus, erreurs) encore en français ; voix : partenariat ASIN/IIDIA ou Meta MMS (licence non commerciale).
+
+### 2026-09-14 02:40 — pages d'information et pied de page (fil principal)
+- Fait : 7 liens morts (`href="#"`) du pied de page remplacés par de vraies pages dans le groupe `(informations)` : guide, faq, contact, mentions-legales, donnees-personnelles, accessibilite (navigation commune), plus une 404 en français. Pied de page toujours en bas (body en colonne, `main` en `flex-1`), liens selon le rôle partagés avec l'en-tête (`components/layout/navigation.ts`), contrastes relevés, « Gouvernement du Bénin » → gouv.bj, ajout d'apresmonbac.bj (adresses vérifiées).
+- Décision : aucune coordonnée officielle inventée ; les valeurs manquantes (`frontend/src/lib/site.ts`, à `null`) sont signalées sur les pages. Mentions légales et données personnelles marquées « provisoire, à valider par le Ministère ».
+- Piège corrigé : `.bj-container` (déclarée après les utilitaires Tailwind) écrasait `py-*` / `my-*` posés sur le même élément (404, barre du comparateur, squelette du catalogue, `RequireAuth`, erreur de l'espace) ; elle ne fixe plus que l'horizontal.
+- Tests : `tests/e2e/pied-de-page.mjs` 23/23 ; catalogue 28, parcours 10, connexion 8, conseiller 6 toujours au vert. Le test navigateur du conseiller dépend de la réponse réelle de Gemini (lien vers une fiche attendu) : un échec isolé a été observé, puis 6/6 à la relance.
+
+### 2026-09-14 01:30 — catalogue enrichi (fil principal)
+- Fait (backend) : migration `catalogue_favoris` (extension `unaccent`, `filieres.domaines`, table `favoris`) ; recherche sans accents sur nom, métiers, diplômes, lieu, domaines, triée par pertinence ; filtres `serie` (règle `compatibiliteSerie` du moteur, champ `accesSerie`), `domaine`, `bourses`, `officielle` ; `GET /filiere/filtres` ; favoris `GET/PUT/DELETE /apprenant/:nip/favoris/:filiereId` (élève seul en écriture, 50 au plus). 14 domaines attribués aux 67 fiches (classement de l'équipe, à faire valider).
+- Fait (front) : filtres portés par l'adresse, raccourci « Que faire avec mon bac D ? », « Et après ce bac ? » sur les fiches de bac, comparateur (3 formations, `/catalogue/comparer?ids=`), cœur « Mettre de côté » repris dans les vœux et le tableau de bord, partage WhatsApp / lien, impression (`print:hidden`).
+- Piège corrigé : un `sr-only` dans un conteneur à défilement horizontal élargissait la page sur mobile (conteneur `relative`) ; les tests mobiles comparaient à `innerWidth`, qui s'élargit avec le contenu : durcis (390).
+- Tests : `tests/api/catalogue.sh` 58/58, `tests/e2e/catalogue.mjs` 28/28 ; sécurité 37, parcours 38 + 10, conseiller 10 + 6, connexion 8 toujours au vert.
 
 ### 2026-09-13 23:16 — conseiller Gemini testé avec de vrais appels (fil principal)
 - Fait : clé `GEMINI_API_KEY` dans `backend/.env` (non versionné ; à régénérer, elle a été collée dans la conversation). Modèle principal `gemini-3.6-flash`, secours `gemini-3.5-flash-lite` (`gemini-3.8-flash` : 20 requêtes/jour en offre gratuite ; `gemini-2.5-flash` retiré pour les nouveaux utilisateurs).

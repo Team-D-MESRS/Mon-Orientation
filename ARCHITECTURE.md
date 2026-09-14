@@ -93,7 +93,8 @@ La plateforme Mon Orientation est un système composé de trois couches principa
 | **Orchestration** | Appel d'outils natif du SDK, boucle bornée côté NestJS (pas de LangChain) | Chaque réponse s'appuie sur nos services : traçable et auditable |
 | **Embeddings** | Reportés : inutiles pour 67 filières interrogées par outils | À prévoir avec le guide numérique (documents longs) |
 | **Vector store** | pgvector (PostgreSQL), reporté | Recherche documentaire dans le guide numérique |
-| **Vocal** | « J'aime ma langue » API (ASIN/IIDIA) | STT/TTS en langues nationales |
+| **Langues nationales (texte)** | Gemini : le conseiller répond en fongbé (paramètre `langue`) | Qualité jugée correcte sur un premier échantillon ; à faire relire plus largement |
+| **Vocal** | À choisir. « J'aime ma langue » (ASIN/IIDIA) collecte des voix pour entraîner des modèles mais n'offre pas d'API publique (vérifié le 14/09/2026) : partenariat à demander. En attendant : Meta MMS (`mms-tts-fon`, `mms-1b-all`, fon inclus, licence CC-BY-NC 4.0 non commerciale) | STT/TTS en langues nationales |
 | **RAG** | Outils sur le catalogue, le dossier pseudonymisé et le moteur d'orientation | Réponses personnalisées sans donner au modèle le nom ni le NIP de l'élève |
 
 ### 2.5 Infrastructure
@@ -171,7 +172,14 @@ La plateforme Mon Orientation est un système composé de trois couches principa
 - `taux_insertion` (DECIMAL)
 - `conditions_acces` (TEXT)
 - `bourses` (BOOLEAN)
+- `domaines` (TEXT[]) — secteurs d'activité, filtre du catalogue (liste dans `backend/src/filiere/domaines.ts`)
 - `etablissement_id` (FK, nullable)
+
+**`favoris`** — formations mises de côté par l'élève dans le catalogue, proposées en premier lors des vœux
+- `apprenant_nip` (FK), `filiere_id` (FK) — clé primaire composée ; suppression en cascade
+- `created_at` (TIMESTAMP)
+
+La recherche du catalogue utilise l'extension PostgreSQL `unaccent` (insensible aux accents), créée par une migration.
 
 **`notes`** — notes des apprenants (sync EducMaster)
 - `id` (PK, UUID)
@@ -244,9 +252,11 @@ La plateforme Mon Orientation est un système composé de trois couches principa
 - `GET /apprenant/:nip/parcours` — historique du parcours
 - `GET /apprenant/:nip/preferences` — préférences saisies
 - `POST /apprenant/:nip/preferences` — sauvegarder les préférences
+- `GET /apprenant/:nip/favoris`, `PUT` et `DELETE /apprenant/:nip/favoris/:filiereId` — formations mises de côté
 
 **Catalogue**
-- `GET /filiere` — liste des filtres (filtres: type, departement, recherche)
+- `GET /filiere` — liste (filtres : type, niveau, département, domaine, série de bac, bourses, source officielle, recherche sans accents)
+- `GET /filiere/filtres` — valeurs des filtres (domaines avec leur nombre de filières, séries du bac)
 - `GET /filiere/:id` — détail d'une filière
 - `GET /filiere/:id/debouches` — débouchés et taux d'insertion
 - `GET /etablissement` — liste des établissements
@@ -418,4 +428,4 @@ Code push → GitHub Actions → Tests → Build → Deploy
 | Connexion internet instable (zones rurales) | Élevé | Mode hors-ligne robuste, sync différée |
 | Délai serré (MVP fin octobre) | Élevé | Scope MVP strict, features non critiques reportées |
 | Protection des données élèves | Critique | Audit sécurité, chiffrement, consentement |
-| Multi-langues : vocal en langues nationales | Moyen | Phase pilote fongbé, extensibilité prévue |
+| Multi-langues : vocal en langues nationales | Moyen | Texte en fongbé déjà possible via Gemini ; pas d'API « J'aime ma langue » à ce jour : partenariat ASIN/IIDIA à demander par le MESTFP, Meta MMS (licence non commerciale) en solution d'attente |

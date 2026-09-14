@@ -275,43 +275,39 @@ Bottom Navigation (4 tabs):
 │ [Header: République du Bénin | Mon Orientation]│
 ├──────────────────────────────────────────────┤
 │                                               │
-│         HERO                                  │
-│    "Choisis ton avenir avec confiance"        │
-│    Sous-titre : Accompagnement personnalisé   │
-│    de la 4e à la Terminale                    │
-│                                               │
-│    [Découvrir les filières]  [Mon espace]     │
-│                                               │
-├──────────────────────────────────────────────┤
-│                                               │
-│    COMMENT ÇA MARCHE ?                        │
-│    ┌──────┐  ┌──────┐  ┌──────┐  ┌──────┐  │
-│    │ 4e   │→ │ 3e   │→ │ 1re  │→ │ Term │  │
-│    │Décou-│  │Choisir│  │Prépa-│  │Décider│ │
-│    │ vrir │  │      │  │ rer  │  │      │  │
-│    └──────┘  └──────┘  └──────┘  └──────┘  │
+│  HERO                        ┌──────────────┐ │
+│  « Choisis ton avenir avec   │ Que faire     │ │
+│    confiance »               │ après mon bac?│ │
+│  De la 4e à la Terminale…    │ [A1][A2][B]…  │ │
+│  [🔍 formation, métier…][OK] │ (14 séries)   │ │
+│  ou parcourir le catalogue → │ Tu es en 3e ? │ │
+│  [Se connecter] Créer un     │ → après BEPC  │ │
+│  compte (ou [Mon espace])    └──────────────┘ │
 │                                               │
 ├──────────────────────────────────────────────┤
-│                                               │
-│    NOS SERVICES                               │
-│    ┌─────────────┐  ┌─────────────┐          │
-│    │ Catalogue   │  │ Conseiller  │          │
-│    │ 500+ filières│  │ IA (oral)  │          │
-│    └─────────────┘  └─────────────┘          │
-│    ┌─────────────┐  ┌─────────────┐          │
-│    │ Mes notes   │  │ Statistics  │          │
-│    │ EducMaster  │  │ nationales  │          │
-│    └─────────────┘  └─────────────┘          │
-│                                               │
+│  PAR OÙ COMMENCER ?                           │
+│  [4e ou 3e] [1re ou Terminale] [Parent]       │
 ├──────────────────────────────────────────────┤
-│                                               │
-│    [Callout] "Nouveau : Le conseiller IA      │
-│    parle en Fongbé, Yoruba, Bariba..."        │
-│                                               │
+│  COMMENT ÇA MARCHE ?                          │
+│  ① Explore ② Découvre tes pistes              │
+│  ③ Saisis tes vœux ④ Décide en famille        │
 ├──────────────────────────────────────────────┤
-│ [Footer DSBJ — mentions légales, contact]     │
+│  EXPLORE PAR DOMAINE                          │
+│  « 67 formations recensées dans 14 domaines » │
+│  [icône + domaine + nombre] × 14              │
+├──────────────────────────────────────────────┤
+│  NOUVEAU : LE CONSEILLER RÉPOND EN FONGBÉ     │
+│  texte + [Poser une question] | exemple       │
+│  d'échange en fongbé avec sa traduction       │
+├──────────────────────────────────────────────┤
+│  ENGAGEMENTS : sources citées · la plateforme │
+│  propose, tu décides · dossier protégé        │
+├──────────────────────────────────────────────┤
+│ [Footer DSBJ — aide, sites officiels, légal]  │
 └──────────────────────────────────────────────┘
 ```
+
+Règles de contenu (septembre 2026) : les chiffres (formations, domaines, séries) sont lus dans l'API, jamais écrits en dur ; seules les langues réellement disponibles sont annoncées (fongbé) ; les statistiques nationales, réservées à la DGES, ne figurent pas sur l'accueil.
 
 #### Page Catalogue (`/catalogue`)
 
