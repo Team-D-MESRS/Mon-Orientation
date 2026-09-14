@@ -33,3 +33,16 @@ export const CONSIGNE_INTERLOCUTEUR = {
 } as const;
 
 export type Interlocuteur = keyof typeof CONSIGNE_INTERLOCUTEUR;
+
+/**
+ * Langue des réponses, placée après le préfixe mis en cache. Le fongbé est rédigé directement par le modèle :
+ * qualité jugée correcte sur un premier échantillon (14/09/2026), à faire relire plus largement.
+ */
+export const CONSIGNE_LANGUE = {
+  fr: '',
+  fon: `Réponds en fongbé (fɔ̀ngbè, la langue fon du Bénin), même si la question est posée en français : cette consigne remplace celle d'écrire en français. Utilise l'orthographe officielle (ɖ, ɛ, ɔ et les tons). Les autres consignes de style s'appliquent : phrases courtes, 120 mots au plus. Garde tels quels les liens Markdown, les noms des formations et des établissements (« Baccalauréat série D », « FSS (UAC) ») et les sigles, que tu expliques en fongbé. Quand un mot n'a pas d'équivalent courant en fongbé, garde le mot français.`,
+} as const;
+
+export type Langue = keyof typeof CONSIGNE_LANGUE;
+
+export const LANGUES = Object.keys(CONSIGNE_LANGUE) as Langue[];

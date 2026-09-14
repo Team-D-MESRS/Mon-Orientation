@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import axios from 'axios';
 import { Bot, RotateCcw, Send } from 'lucide-react';
-import { conseillerApi } from '@/lib/api';
+import { conseillerApi, type LangueConseiller } from '@/lib/api';
 import { messageErreur } from '@/lib/erreurs';
 import { useEspace, useProfil } from '@/components/espace/EspaceContext';
 import { Alerte, CHAMP } from '@/components/espace/ui';
@@ -12,7 +12,15 @@ import { TexteConseiller } from '@/components/espace/TexteConseiller';
 interface Message {
   role: 'user' | 'assistant';
   texte: string;
+  langue?: LangueConseiller;
 }
+
+const LANGUES: { code: LangueConseiller; libelle: string }[] = [
+  { code: 'fr', libelle: 'Français' },
+  { code: 'fon', libelle: 'Fɔ̀ngbè' },
+];
+/** Préférence de confort retenue par l'appareil, pas une donnée du dossier */
+const CLE_LANGUE = 'conseiller-langue';
 
 const SUGGESTIONS_ELEVE = [
   'Pourquoi le moteur me propose ces formations ?',
@@ -43,7 +51,25 @@ export default function ConseillerPage() {
   const [saisie, setSaisie] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [langue, setLangue] = useState<LangueConseiller>('fr');
   const finRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(CLE_LANGUE) === 'fon') setLangue('fon');
+    } catch {
+      // stockage indisponible : français par défaut
+    }
+  }, []);
+
+  const choisirLangue = (code: LangueConseiller) => {
+    setLangue(code);
+    try {
+      localStorage.setItem(CLE_LANGUE, code);
+    } catch {
+      // préférence non retenue, sans conséquence
+    }
+  };
 
   // Nouvelle conversation quand le parent change d'enfant
   useEffect(() => {
@@ -72,10 +98,11 @@ export default function ConseillerPage() {
     setMessages((m) => [...m, { role: 'user', texte: question }]);
     setSaisie('');
     setEnvoi(true);
+    const langueDemandee = langue;
     try {
-      const { data } = await conseillerApi.chat(profil.nip, question, conversationId);
+      const { data } = await conseillerApi.chat(profil.nip, question, conversationId, langueDemandee);
       setConversationId(data.conversationId);
-      setMessages((m) => [...m, { role: 'assistant', texte: data.reponse }]);
+      setMessages((m) => [...m, { role: 'assistant', texte: data.reponse, langue: langueDemandee }]);
     } catch (err) {
       // La question sans réponse est retirée et remise dans le champ, pour pouvoir la renvoyer
       setMessages((m) => m.slice(0, -1));
@@ -108,7 +135,7 @@ export default function ConseillerPage() {
 
   return (
     <section className="bg-white rounded-bj-md border border-bj-gray-925 flex flex-col h-[70vh] min-h-[28rem]">
-      <div className="flex items-center justify-between gap-3v px-4v md:px-6v py-3v border-b border-bj-gray-925">
+      <div className="flex flex-wrap items-center justify-between gap-3v px-4v md:px-6v py-3v border-b border-bj-gray-925">
         <div className="flex items-center gap-3v">
           <Bot size={22} className="text-bj-green shrink-0" aria-hidden="true" />
           <div>
@@ -116,16 +143,35 @@ export default function ConseillerPage() {
             <p className="text-xs text-bj-gray-500">Assistant automatique : il explique, il ne décide pas.</p>
           </div>
         </div>
-        {messages.length > 0 && (
-          <button
-            type="button"
-            onClick={nouvelleConversation}
-            disabled={envoi}
-            className="inline-flex items-center gap-1v text-sm font-medium text-bj-green hover:underline disabled:opacity-50"
-          >
-            <RotateCcw size={14} aria-hidden="true" /> Nouvelle conversation
-          </button>
-        )}
+        <div className="flex flex-wrap items-center justify-end gap-3v">
+          <div role="group" aria-label="Langue des réponses" className="inline-flex rounded-bj-sm border border-bj-gray-850 overflow-hidden text-sm">
+            {LANGUES.map(({ code, libelle }) => (
+              <button
+                key={code}
+                type="button"
+                lang={code}
+                aria-pressed={langue === code}
+                onClick={() => choisirLangue(code)}
+                disabled={envoi}
+                className={`px-3v py-1v font-medium transition-colors disabled:opacity-60 ${
+                  langue === code ? 'bg-bj-green text-white' : 'bg-white text-bj-gray-200 hover:text-bj-green'
+                }`}
+              >
+                {libelle}
+              </button>
+            ))}
+          </div>
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={nouvelleConversation}
+              disabled={envoi}
+              className="inline-flex items-center gap-1v text-sm font-medium text-bj-green hover:underline disabled:opacity-50"
+            >
+              <RotateCcw size={14} aria-hidden="true" /> Nouvelle conversation
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto px-4v md:px-6v py-4v space-y-4v" aria-live="polite">
@@ -160,7 +206,7 @@ export default function ConseillerPage() {
             </div>
           ) : (
             <div key={i} className="flex justify-start">
-              <div className="bubble-assistant max-w-[85%]">
+              <div className="bubble-assistant max-w-[85%]" lang={m.langue === 'fon' ? 'fon' : undefined}>
                 <TexteConseiller texte={m.texte} />
               </div>
             </div>
@@ -212,6 +258,10 @@ export default function ConseillerPage() {
         {estParent
           ? "Vérifiez les informations importantes auprès de l'établissement. La décision d'orientation revient à votre enfant et à votre famille."
           : "Vérifie les informations importantes auprès de ton établissement. La décision d'orientation t'appartient, avec ta famille."}
+        {langue === 'fon' &&
+          (estParent
+            ? ' Les réponses en fongbé sont rédigées automatiquement : en cas de doute, posez la question en français.'
+            : ' Les réponses en fongbé sont rédigées automatiquement : en cas de doute, demande en français.')}
       </p>
     </section>
   );

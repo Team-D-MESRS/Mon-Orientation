@@ -4,7 +4,7 @@ import { ApiError, Content, FinishReason, FunctionCall, GenerateContentResponse,
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UtilisateurConnecte } from '../auth/utilisateur-courant.decorator';
-import { CONSIGNES_CONSEILLER, CONSIGNE_INTERLOCUTEUR, Interlocuteur } from './prompt-conseiller';
+import { CONSIGNES_CONSEILLER, CONSIGNE_INTERLOCUTEUR, CONSIGNE_LANGUE, Interlocuteur, Langue } from './prompt-conseiller';
 import { ErreurOutil, OUTILS_CONSEILLER, OutilsConseillerService } from './outils-conseiller';
 
 /** Message tel qu'enregistré en base : texte seulement, les appels d'outils ne sont pas rejoués. */
@@ -13,6 +13,7 @@ interface MessageEnregistre {
   content: string;
   horodatage: string;
   outils?: string[];
+  langue?: Langue;
 }
 
 const MAX_TOURS_MODELE = 6; // appels au modèle pour un même message de l'utilisateur
@@ -54,7 +55,7 @@ export class ConseillerService {
     if (!this.client) this.logger.warn('GEMINI_API_KEY absente : le conseiller pédagogique est désactivé');
   }
 
-  async chat(nip: string, message: string, utilisateur: UtilisateurConnecte, conversationId?: string, langue = 'fr') {
+  async chat(nip: string, message: string, utilisateur: UtilisateurConnecte, conversationId?: string, langue: Langue = 'fr') {
     const conversation = conversationId
       ? await this.prisma.conversationIA.findFirst({ where: { id: conversationId, apprenantNip: nip } })
       : null;
@@ -74,18 +75,19 @@ export class ConseillerService {
     const interlocuteur: Interlocuteur = utilisateur.role === 'PARENT' ? 'parent' : 'eleve';
     const questionPosee = new Date().toISOString();
 
-    const { texte, outilsUtilises } = await this.repondre(contents, interlocuteur, nip);
+    const { texte, outilsUtilises } = await this.repondre(contents, interlocuteur, nip, langue);
 
     const conversationMaj = [
       ...historique,
       { role: 'user', content: message, horodatage: questionPosee },
-      { role: 'assistant', content: texte, horodatage: new Date().toISOString(), outils: outilsUtilises },
+      { role: 'assistant', content: texte, horodatage: new Date().toISOString(), outils: outilsUtilises, langue },
     ] satisfies MessageEnregistre[];
     const donnees = conversationMaj as unknown as Prisma.InputJsonValue;
 
     let id: string;
     if (conversation) {
-      await this.prisma.conversationIA.update({ where: { id: conversation.id }, data: { messages: donnees } });
+      // La langue de la conversation est celle de la dernière réponse
+      await this.prisma.conversationIA.update({ where: { id: conversation.id }, data: { messages: donnees, langue } });
       id = conversation.id;
     } else {
       const apprenant = await this.prisma.apprenant.findUnique({ where: { nip }, select: { palier: true } });
@@ -107,7 +109,7 @@ export class ConseillerService {
   }
 
   /** Boucle d'appels de fonctions, bornée à MAX_TOURS_MODELE appels au modèle. */
-  private async repondre(contenusInitiaux: Content[], interlocuteur: Interlocuteur, nip: string) {
+  private async repondre(contenusInitiaux: Content[], interlocuteur: Interlocuteur, nip: string, langue: Langue) {
     let modele = this.modele;
     let contents = [...contenusInitiaux];
     let outilsUtilises: string[] = [];
@@ -115,7 +117,7 @@ export class ConseillerService {
     for (let tour = 0; tour < MAX_TOURS_MODELE; tour++) {
       let reponse: GenerateContentResponse;
       try {
-        reponse = await this.appelerModele(contents, interlocuteur, modele);
+        reponse = await this.appelerModele(contents, interlocuteur, modele, langue);
       } catch (err) {
         // Surcharge ou quota épuisé (fréquent sur l'offre gratuite) : la question repart de zéro sur le modèle de secours,
         // qui a son propre quota. De zéro, car les signatures de réflexion déjà reçues sont propres au premier modèle.
@@ -163,13 +165,18 @@ export class ConseillerService {
   }
 
   /** Un appel au modèle ; les erreurs du SDK remontent telles quelles (traduites par repondre). */
-  private async appelerModele(contents: Content[], interlocuteur: Interlocuteur, modele: string): Promise<GenerateContentResponse> {
+  private async appelerModele(
+    contents: Content[],
+    interlocuteur: Interlocuteur,
+    modele: string,
+    langue: Langue,
+  ): Promise<GenerateContentResponse> {
     const reponse = await this.client!.models.generateContent({
       model: modele,
       contents,
       config: {
         // Consignes communes en tête : Gemini réutilise automatiquement ce préfixe identique (cache implicite)
-        systemInstruction: `${CONSIGNES_CONSEILLER}\n\n${CONSIGNE_INTERLOCUTEUR[interlocuteur]}`,
+        systemInstruction: [CONSIGNES_CONSEILLER, CONSIGNE_INTERLOCUTEUR[interlocuteur], CONSIGNE_LANGUE[langue]].filter(Boolean).join('\n\n'),
         tools: [{ functionDeclarations: OUTILS_CONSEILLER }],
         maxOutputTokens: MAX_JETONS_SORTIE,
         // Une seule relance (le SDK en fait 5 par défaut) : en cas de surcharge, mieux vaut basculer vite sur le modèle de secours

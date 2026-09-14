@@ -1,5 +1,6 @@
-import { IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { IsIn, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { LANGUES, Langue } from '../prompt-conseiller';
 
 export class ChatDto {
   @ApiProperty({ example: 'Quelles filières après la 3e ?' })
@@ -13,9 +14,8 @@ export class ChatDto {
   @IsUUID('4', { message: 'conversationId invalide' })
   conversationId?: string;
 
-  @ApiPropertyOptional({ example: 'fr' })
+  @ApiPropertyOptional({ enum: LANGUES, default: 'fr', description: 'Langue des réponses : français ou fongbé' })
   @IsOptional()
-  @IsString()
-  @MaxLength(10)
-  langue?: string;
+  @IsIn(LANGUES, { message: `langue doit valoir ${LANGUES.join(' ou ')}` })
+  langue?: Langue;
 }
