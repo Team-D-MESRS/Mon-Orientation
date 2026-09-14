@@ -1,22 +1,47 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NiveauAcces, Prisma, TypeFiliere } from '@prisma/client';
+import { compatibiliteSerie } from '../orientation/profils-filieres';
+import { DOMAINES, Domaine } from './domaines';
+
+/** Accès d'une filière du supérieur pour la série de bac demandée. */
+export type AccesSerie = 'ADMISE' | 'SOUS_CONDITIONS';
+
+export interface FiltresCatalogue {
+  type?: TypeFiliere;
+  niveau?: NiveauAcces;
+  departement?: string;
+  search?: string;
+  /** Série de bac (ex. « D ») : filières du supérieur qui l'admettent, éventuellement sous conditions */
+  serie?: string;
+  domaine?: Domaine;
+  bourses?: boolean;
+  /** true : au moins une source officielle ; false : fiches à confirmer */
+  officielle?: boolean;
+  page?: number;
+  limit?: number;
+}
+
+const PREFIXE_BAC = 'BAC-';
+const ORDRE: Prisma.FiliereOrderByWithRelationInput[] = [{ type: 'asc' }, { nom: 'asc' }];
+const AVEC_SOURCE_OFFICIELLE: Prisma.FiliereWhereInput = { sources: { array_contains: [{ officielle: true }] } };
+
+/** Apostrophes typographiques ramenées à l'apostrophe droite, espaces superflus retirés. */
+const normaliserRecherche = (texte?: string) =>
+  (texte ?? '').replace(/[’‘`]/g, "'").replace(/\s+/g, ' ').trim().slice(0, 100);
+
+/** « Baccalauréat série D — Biologie – Géologie » → « Biologie – Géologie » */
+const intituleSerie = (nom: string) => (nom.split(' — ').slice(1).join(' — ') || nom).replace(/^filière /, '');
 
 @Injectable()
 export class FiliereService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(filters?: {
-    type?: TypeFiliere;
-    niveau?: NiveauAcces;
-    departement?: string;
-    search?: string;
-    page?: number;
-    limit?: number;
-  }) {
-    const { type, niveau, departement, search, page = 1, limit = 20 } = filters || {};
+  async findAll(filters?: FiltresCatalogue) {
+    const { type, niveau, departement, search, serie, domaine, bourses, officielle, page = 1, limit = 20 } = filters || {};
 
     const where: Prisma.FiliereWhereInput = {};
+    const restrictions: Prisma.FiliereWhereInput[] = [];
 
     if (type) {
       where.type = type;
@@ -30,33 +55,128 @@ export class FiliereService {
       where.etablissement = { departement };
     }
 
-    if (search) {
-      where.OR = [
-        { nom: { contains: search, mode: 'insensitive' } },
-        { code: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
-        { debouches: { contains: search, mode: 'insensitive' } },
-      ];
+    if (domaine) {
+      where.domaines = { has: domaine };
     }
 
-    const [items, total] = await Promise.all([
-      this.prisma.filiere.findMany({
-        where,
-        include: { etablissement: true },
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: [{ type: 'asc' }, { nom: 'asc' }],
-      }),
-      this.prisma.filiere.count({ where }),
-    ]);
+    if (bourses !== undefined) {
+      where.bourses = bourses;
+    }
+
+    if (officielle !== undefined) {
+      restrictions.push(
+        officielle ? AVEC_SOURCE_OFFICIELLE : { OR: [{ sources: { equals: Prisma.DbNull } }, { NOT: AVEC_SOURCE_OFFICIELLE }] },
+      );
+    }
+
+    const acces = serie ? await this.accesParSerie(serie) : undefined;
+    if (acces) {
+      restrictions.push({ id: { in: [...acces.keys()] } });
+    }
+
+    const pertinence = await this.pertinence(normaliserRecherche(search));
+    if (pertinence) {
+      restrictions.push({ id: { in: [...pertinence.keys()] } });
+    }
+
+    if (restrictions.length > 0) {
+      where.AND = restrictions;
+    }
+
+    let items: Prisma.FiliereGetPayload<{ include: { etablissement: true } }>[];
+    let total: number;
+    if (pertinence) {
+      // Recherche : les filières dont le nom contient le texte d'abord (tri stable : l'ordre habituel est conservé ensuite)
+      const toutes = await this.prisma.filiere.findMany({ where, include: { etablissement: true }, orderBy: ORDRE });
+      toutes.sort((a, b) => (pertinence.get(a.id) ?? 1) - (pertinence.get(b.id) ?? 1));
+      total = toutes.length;
+      items = toutes.slice((page - 1) * limit, page * limit);
+    } else {
+      [items, total] = await Promise.all([
+        this.prisma.filiere.findMany({
+          where,
+          include: { etablissement: true },
+          skip: (page - 1) * limit,
+          take: limit,
+          orderBy: ORDRE,
+        }),
+        this.prisma.filiere.count({ where }),
+      ]);
+    }
 
     return {
-      items,
+      items: acces ? items.map((f) => ({ ...f, accesSerie: acces.get(f.id) })) : items,
       total,
       page,
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  /**
+   * Recherche insensible à la casse et aux accents (extension unaccent) sur le nom, le code, la description,
+   * les débouchés, les métiers, les diplômes, le lieu de formation et les domaines.
+   * Renvoie, pour chaque filière trouvée, 0 si le texte figure dans son nom, 1 sinon.
+   */
+  private async pertinence(motif: string): Promise<Map<string, number> | undefined> {
+    if (!motif) return undefined;
+    const lignes = await this.prisma.$queryRaw<{ id: string; dans_nom: boolean }[]>`
+      SELECT id, strpos(lower(unaccent(nom)), lower(unaccent(${motif}::text))) > 0 AS dans_nom
+      FROM filieres
+      WHERE strpos(
+        lower(unaccent(concat_ws(' ', nom, code, description, debouches, ou_se_former,
+          metiers_vises::text, diplomes_delivres::text, array_to_string(domaines, ' ')))),
+        lower(unaccent(${motif}::text))
+      ) > 0`;
+    return new Map(lignes.map((l) => [l.id, l.dans_nom ? 0 : 1]));
+  }
+
+  /** Filières du supérieur accessibles avec la série de bac demandée. Les filières sans séries renseignées sont écartées. */
+  private async accesParSerie(serie: string): Promise<Map<string, AccesSerie>> {
+    const series = await this.series();
+    if (!series.some((s) => s.serie === serie)) {
+      throw new BadRequestException(`Série inconnue. Valeurs possibles : ${series.map((s) => s.serie).join(', ')}`);
+    }
+    const filieres = await this.prisma.filiere.findMany({
+      where: { niveauAcces: 'APRES_BAC' },
+      select: { id: true, seriesAdmises: true },
+    });
+    const acces = new Map<string, AccesSerie>();
+    for (const f of filieres) {
+      const compatibilite = compatibiliteSerie(f.seriesAdmises as string[] | null, serie);
+      if (compatibilite === 'admise') acces.set(f.id, 'ADMISE');
+      else if (compatibilite === 'sous_conditions') acces.set(f.id, 'SOUS_CONDITIONS');
+    }
+    return acces;
+  }
+
+  /** Séries du baccalauréat présentes dans le catalogue (fiches BAC-*). */
+  async series() {
+    const bacs = await this.prisma.filiere.findMany({
+      where: { code: { startsWith: PREFIXE_BAC } },
+      select: { id: true, code: true, nom: true, type: true },
+      orderBy: { code: 'asc' },
+    });
+    return bacs.map((b) => ({
+      serie: (b.code as string).slice(PREFIXE_BAC.length),
+      libelle: intituleSerie(b.nom),
+      type: b.type,
+      filiereId: b.id,
+    }));
+  }
+
+  /** Valeurs proposées par les filtres du catalogue, avec le nombre de filières par domaine. */
+  async filtres() {
+    const [series, parDomaine] = await Promise.all([
+      this.series(),
+      this.prisma.$queryRaw<{ domaine: string; total: number }[]>`
+        SELECT d AS domaine, count(*)::int AS total FROM filieres, unnest(domaines) AS d GROUP BY d`,
+    ]);
+    const totaux = new Map(parDomaine.map((d) => [d.domaine, d.total]));
+    const domaines = (Object.keys(DOMAINES) as Domaine[])
+      .map((code) => ({ code, libelle: DOMAINES[code], total: totaux.get(code) ?? 0 }))
+      .sort((a, b) => a.libelle.localeCompare(b.libelle, 'fr'));
+    return { domaines, series };
   }
 
   async findOne(id: string) {

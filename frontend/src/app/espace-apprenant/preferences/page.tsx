@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, ExternalLink, Search } from 'lucide-react';
+import { CheckCircle2, ExternalLink, Heart, Search } from 'lucide-react';
 import { apprenantApi, filiereApi } from '@/lib/api';
 import {
   ORDINAUX,
@@ -13,7 +13,7 @@ import {
   type Preference,
   type ProfilApprenant,
 } from '@/lib/apprenant';
-import { TYPE_LABELS, type Filiere, type TypeFiliere } from '@/lib/filiere';
+import { TYPE_LABELS, correspond, type Filiere, type TypeFiliere } from '@/lib/filiere';
 import { messageErreur } from '@/lib/erreurs';
 import { useEspace, useProfil } from '@/components/espace/EspaceContext';
 import { Alerte, BadgeType, CHAMP, Chargement, PastilleRang } from '@/components/espace/ui';
@@ -170,6 +170,8 @@ function SaisieDesVoeux({
   const [motivation, setMotivation] = useState(preference?.motivation ?? '');
   const [etape, setEtape] = useState(preference ? RECAPITULATIF : 1);
   const [filieres, setFilieres] = useState<Filiere[] | null>(null);
+  const [favoris, setFavoris] = useState<Set<string>>(new Set());
+  const [seulementFavoris, setSeulementFavoris] = useState(false);
   const [recherche, setRecherche] = useState('');
   const [type, setType] = useState<TypeFiliere | ''>('');
   const [envoi, setEnvoi] = useState(false);
@@ -181,7 +183,12 @@ function SaisieDesVoeux({
       .list({ niveau: niveauDuPalier(palier), limit: 100 })
       .then(({ data }) => setFilieres(data.items))
       .catch((err) => setErreur(messageErreur(err)));
-  }, [palier]);
+    // Les formations mises de côté dans le catalogue sont proposées en premier ; sans elles, la saisie reste possible
+    apprenantApi
+      .getFavoris(profil.nip)
+      .then(({ data }) => setFavoris(new Set(data.map((f) => f.filiereId))))
+      .catch(() => undefined);
+  }, [palier, profil.nip]);
 
   const parId = useMemo(() => new Map((filieres ?? []).map((f) => [f.id, f])), [filieres]);
   const types = useMemo(() => Array.from(new Set((filieres ?? []).map((f) => f.type))), [filieres]);
@@ -282,13 +289,17 @@ function SaisieDesVoeux({
   }
 
   const autresChoix = choix.filter((c, i) => c && i !== etape - 1);
-  const q = recherche.trim().toLowerCase();
-  const proposees = filieres.filter(
-    (f) =>
-      !autresChoix.includes(f.id) &&
-      (!type || f.type === type) &&
-      (!q || f.nom.toLowerCase().includes(q) || (f.description ?? '').toLowerCase().includes(q)),
-  );
+  const proposees = filieres
+    .filter(
+      (f) =>
+        !autresChoix.includes(f.id) &&
+        (!type || f.type === type) &&
+        (!seulementFavoris || favoris.has(f.id)) &&
+        correspond(f, recherche),
+    )
+    .sort((a, b) => Number(favoris.has(b.id)) - Number(favoris.has(a.id)));
+  const favorisAccessibles = filieres.filter((f) => favoris.has(f.id)).length;
+  const favorisAilleurs = favoris.size - favorisAccessibles;
   const selection = choix[etape - 1];
 
   return (
@@ -339,6 +350,36 @@ function SaisieDesVoeux({
         </select>
       </div>
 
+      {favorisAccessibles > 0 ? (
+        <div className="mb-4v flex flex-wrap items-center gap-3v">
+          <button
+            type="button"
+            aria-pressed={seulementFavoris}
+            onClick={() => setSeulementFavoris(!seulementFavoris)}
+            className={`inline-flex items-center gap-2v px-3v py-2v rounded-full border text-sm font-medium transition-colors ${
+              seulementFavoris ? 'border-bj-red bg-bj-red/5 text-bj-red' : 'border-bj-gray-850 text-bj-gray-200 hover:border-bj-red'
+            }`}
+          >
+            <Heart size={14} aria-hidden="true" fill={seulementFavoris ? 'currentColor' : 'none'} />
+            Seulement mes formations mises de côté ({favorisAccessibles})
+          </button>
+          {favorisAilleurs > 0 && (
+            <p className="text-xs text-bj-gray-500">
+              {favorisAilleurs === 1 ? 'Une autre formation mise de côté ne se choisit' : `${favorisAilleurs} autres formations mises de côté ne se choisissent`}{' '}
+              pas {palier === 'TROISIEME' ? 'après le BEPC' : 'après le bac'}.
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="mb-4v text-xs text-bj-gray-500">
+          Astuce : dans le{' '}
+          <Link href="/catalogue" className="text-bj-green hover:underline">
+            catalogue
+          </Link>
+          , appuie sur le cœur pour mettre des formations de côté : elles apparaîtront ici en premier.
+        </p>
+      )}
+
       <fieldset>
         <legend className="sr-only">Choisis une formation</legend>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3v max-h-[28rem] overflow-y-auto pr-1v">
@@ -359,8 +400,13 @@ function SaisieDesVoeux({
               />
               <span className="flex-1 min-w-0">
                 <span className="block font-medium">{f.nom}</span>
-                <span className="mt-1v flex items-center gap-2v">
+                <span className="mt-1v flex flex-wrap items-center gap-2v">
                   <BadgeType type={f.type} />
+                  {favoris.has(f.id) && (
+                    <span className="inline-flex items-center gap-1v text-xs font-medium text-bj-red">
+                      <Heart size={12} aria-hidden="true" fill="currentColor" /> Mise de côté
+                    </span>
+                  )}
                   <Link
                     href={`/catalogue/${f.id}`}
                     target="_blank"

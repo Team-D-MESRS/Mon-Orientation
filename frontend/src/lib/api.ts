@@ -1,6 +1,6 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
-import type { Filiere, PageFilieres } from './filiere';
-import type { Palier, Preference, ProfilApprenant, Recommandation } from './apprenant';
+import type { Filiere, PageFilieres, ValeursFiltres } from './filiere';
+import type { Favori, Palier, Preference, ProfilApprenant, Recommandation } from './apprenant';
 import { CLES_JETONS, useAuthStore, type Utilisateur } from '@/stores/authStore';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -122,14 +122,30 @@ export const authApi = {
   logout: () => api.post('/auth/deconnexion'),
 };
 
+export interface ParametresCatalogue {
+  type?: string;
+  niveau?: string;
+  search?: string;
+  /** Série de bac : formations du supérieur qui l'admettent */
+  serie?: string;
+  domaine?: string;
+  bourses?: boolean;
+  officielle?: boolean;
+  page?: number;
+  limit?: number;
+}
+
 export const filiereApi = {
-  list: (params?: { type?: string; niveau?: string; search?: string; page?: number; limit?: number }) =>
-    api.get<PageFilieres>('/filiere', { params }),
+  list: (params?: ParametresCatalogue) => api.get<PageFilieres>('/filiere', { params }),
+  filtres: () => api.get<ValeursFiltres>('/filiere/filtres'),
   get: (id: string) => api.get<Filiere>(`/filiere/${id}`),
   getDebouches: (id: string) => api.get(`/filiere/${id}/debouches`),
 };
 
 export const apprenantApi = {
+  getFavoris: (nip: string) => api.get<Favori[]>(`/apprenant/${nip}/favoris`),
+  ajouterFavori: (nip: string, filiereId: string) => api.put(`/apprenant/${nip}/favoris/${filiereId}`),
+  retirerFavori: (nip: string, filiereId: string) => api.delete(`/apprenant/${nip}/favoris/${filiereId}`),
   getProfile: (nip: string) => api.get<ProfilApprenant>(`/apprenant/${nip}`),
   getNotes: (nip: string) => api.get(`/apprenant/${nip}/notes`),
   getPreferences: (nip: string) => api.get<Preference[]>(`/apprenant/${nip}/preferences`),
@@ -149,9 +165,12 @@ export interface ReponseConseiller {
   outilsUtilises: string[];
 }
 
+/** Langue des réponses du conseiller */
+export type LangueConseiller = 'fr' | 'fon';
+
 export const conseillerApi = {
-  chat: (nip: string, message: string, conversationId?: string) =>
-    api.post<ReponseConseiller>(`/conseiller/${nip}/chat`, { message, ...(conversationId ? { conversationId } : {}) }),
+  chat: (nip: string, message: string, conversationId?: string, langue: LangueConseiller = 'fr') =>
+    api.post<ReponseConseiller>(`/conseiller/${nip}/chat`, { message, langue, ...(conversationId ? { conversationId } : {}) }),
   getHistorique: (nip: string) => api.get(`/conseiller/${nip}/historique`),
 };
 

@@ -1,4 +1,17 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AccesApprenantGuard } from '../auth/acces-apprenant.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -6,6 +19,11 @@ import { RolesGuard } from '../auth/roles.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ApprenantService } from './apprenant.service';
 import { PreferencesDto } from './dto/preferences.dto';
+
+const ID_FILIERE = new ParseUUIDPipe({
+  version: '4',
+  exceptionFactory: () => new BadRequestException('Identifiant de filière invalide'),
+});
 
 @ApiTags('Apprenant')
 @ApiBearerAuth()
@@ -53,5 +71,29 @@ export class ApprenantController {
   @ApiOperation({ summary: 'Validation des vœux de l\'enfant par le parent' })
   async validerPreferences(@Param('nip') nip: string) {
     return this.apprenantService.validerPreferences(nip);
+  }
+
+  @Get(':nip/favoris')
+  @ApiOperation({ summary: 'Formations mises de côté par l\'élève (visibles du parent)' })
+  async getFavoris(@Param('nip') nip: string) {
+    return this.apprenantService.getFavoris(nip);
+  }
+
+  @Put(':nip/favoris/:filiereId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(RolesGuard)
+  @Roles('APPRENANT')
+  @ApiOperation({ summary: 'Mettre une formation de côté (idempotent)' })
+  async ajouterFavori(@Param('nip') nip: string, @Param('filiereId', ID_FILIERE) filiereId: string) {
+    await this.apprenantService.ajouterFavori(nip, filiereId);
+  }
+
+  @Delete(':nip/favoris/:filiereId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(RolesGuard)
+  @Roles('APPRENANT')
+  @ApiOperation({ summary: 'Retirer une formation mise de côté (idempotent)' })
+  async retirerFavori(@Param('nip') nip: string, @Param('filiereId', ID_FILIERE) filiereId: string) {
+    await this.apprenantService.retirerFavori(nip, filiereId);
   }
 }

@@ -51,6 +51,13 @@ export interface Preference {
   dateValidationParent: string | null;
 }
 
+/** Formation mise de côté par l'élève en parcourant le catalogue */
+export interface Favori {
+  filiereId: string;
+  ajouteLe: string;
+  filiere: Filiere;
+}
+
 export interface Critere {
   critere: 'resultats' | 'preference' | 'condition' | 'serie' | 'insertion';
   points: number;

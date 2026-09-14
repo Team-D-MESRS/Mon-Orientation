@@ -97,6 +97,7 @@ model Apprenant {
   preferences     Preference[]
   recommandations Recommandation[]
   conversations   ConversationIA[]
+  favoris         Favori[]
   parentLinks     ParentApprenant[] @relation("Apprenant")
 
   @@map("apprenants")
@@ -147,6 +148,8 @@ model Filiere {
   ouSeFormer        String?     @map("ou_se_former")
   bourses           Boolean?
   sources           Json?
+  /// Codes de src/filiere/domaines.ts (secteurs d'activité, filtre du catalogue)
+  domaines          String[]    @default([])
   etablissementId   String?     @map("etablissement_id")
   imageUrl          String?     @map("image_url")
   createdAt         DateTime    @default(now()) @map("created_at")
@@ -159,8 +162,22 @@ model Filiere {
   preferences3      Preference[] @relation("PrefFiliere3")
   recommandations   Recommandation[]
   conversations     ConversationIA[]
+  favoris           Favori[]
 
   @@map("filieres")
+}
+
+/// Formations mises de côté par l'élève en parcourant le catalogue ; proposées en premier lors de la saisie des vœux
+model Favori {
+  apprenantNip    String   @map("apprenant_nip")
+  filiereId       String   @map("filiere_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  apprenant       Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
+  filiere         Filiere   @relation(fields: [filiereId], references: [id], onDelete: Cascade)
+
+  @@id([apprenantNip, filiereId])
+  @@map("favoris")
 }
 
 model Note {

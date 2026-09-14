@@ -13,6 +13,9 @@ const NIVEAU_DES_VOEUX: Partial<Record<Palier, NiveauAcces>> = {
 
 const FILIERES_DES_VOEUX = { filiere1: true, filiere2: true, filiere3: true } as const;
 
+/** Formations qu'un élève peut mettre de côté à la fois */
+export const FAVORIS_MAX = 50;
+
 @Injectable()
 export class ApprenantService {
   constructor(
@@ -126,6 +129,33 @@ export class ApprenantService {
       data: { valideParent: true, dateValidationParent: new Date() },
       include: FILIERES_DES_VOEUX,
     });
+  }
+
+  /** Formations mises de côté, les plus récentes d'abord. */
+  async getFavoris(nip: string) {
+    const favoris = await this.prisma.favori.findMany({
+      where: { apprenantNip: nip },
+      include: { filiere: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return favoris.map(({ filiereId, createdAt, filiere }) => ({ filiereId, ajouteLe: createdAt, filiere }));
+  }
+
+  /** Idempotent : une formation déjà mise de côté ne compte qu'une fois. */
+  async ajouterFavori(nip: string, filiereId: string) {
+    const filiere = await this.prisma.filiere.findUnique({ where: { id: filiereId }, select: { id: true } });
+    if (!filiere) throw new NotFoundException('Filière non trouvée');
+
+    const cle = { apprenantNip_filiereId: { apprenantNip: nip, filiereId } };
+    if (await this.prisma.favori.findUnique({ where: cle })) return;
+    if ((await this.prisma.favori.count({ where: { apprenantNip: nip } })) >= FAVORIS_MAX) {
+      throw new BadRequestException(`Tu as déjà mis ${FAVORIS_MAX} formations de côté : retires-en avant d'en ajouter.`);
+    }
+    await this.prisma.favori.upsert({ where: cle, update: {}, create: { apprenantNip: nip, filiereId } });
+  }
+
+  async retirerFavori(nip: string, filiereId: string) {
+    await this.prisma.favori.deleteMany({ where: { apprenantNip: nip, filiereId } });
   }
 
   private async palierDeSaisie(nip: string): Promise<Palier> {

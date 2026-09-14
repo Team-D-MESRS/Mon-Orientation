@@ -9,6 +9,7 @@ import {
   dateLisible,
   noteLisible,
   palierDeSaisie,
+  type Favori,
   type Preference,
   type ProfilApprenant,
   type Recommandation,
@@ -20,10 +21,27 @@ const LIEN = 'text-sm font-medium text-bj-green hover:underline';
 
 export default function TableauDeBordPage() {
   const profil = useProfil();
-  const { estParent } = useEspace();
+  const { estParent, estEleve } = useEspace();
   // undefined tant que les vœux ne sont pas chargés : évite d'afficher « pas encore saisi » à tort
   const [preference, setPreference] = useState<Preference | null | undefined>(undefined);
   const [recommandations, setRecommandations] = useState<Recommandation[] | null>(null);
+  const [favoris, setFavoris] = useState<Favori[] | null>(null);
+
+  useEffect(() => {
+    let annule = false;
+    setFavoris(null);
+    apprenantApi
+      .getFavoris(profil.nip)
+      .then(({ data }) => {
+        if (!annule) setFavoris(data);
+      })
+      .catch(() => {
+        if (!annule) setFavoris([]);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [profil.nip]);
 
   useEffect(() => {
     let annule = false;
@@ -116,6 +134,40 @@ export default function TableauDeBordPage() {
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      <section className="lg:col-span-3" aria-labelledby="titre-favoris">
+        <div className="flex items-center justify-between mb-4v">
+          <h2 id="titre-favoris" className="text-xl font-bold">
+            {estEleve ? 'Mes formations mises de côté' : 'Formations mises de côté'}
+          </h2>
+          <Link href="/catalogue" className={LIEN}>
+            Catalogue →
+          </Link>
+        </div>
+        {favoris === null ? (
+          <Chargement />
+        ) : favoris.length === 0 ? (
+          <p className="text-sm text-bj-gray-500">
+            {estEleve
+              ? 'Aucune pour l’instant. Dans le catalogue, appuie sur le cœur pour garder les formations qui t’intéressent : tu les retrouveras en saisissant tes vœux.'
+              : `${profil.prenom} n'a pas encore mis de formation de côté.`}
+          </p>
+        ) : (
+          <>
+            <ul className="grid grid-cols-1 md:grid-cols-3 gap-4v">
+              {favoris.slice(0, 6).map((f) => (
+                <li key={f.filiereId}>
+                  <Link href={`/catalogue/${f.filiereId}`} className="bj-card block p-4v h-full">
+                    <BadgeType type={f.filiere.type} />
+                    <p className="font-bold mt-2v">{f.filiere.nom}</p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            {favoris.length > 6 && <p className="text-sm text-bj-gray-500 mt-3v">Et {favoris.length - 6} autre(s).</p>}
+          </>
         )}
       </section>
     </div>

@@ -1,6 +1,7 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { REFERENTIEL_FILIERES } from './data/referentiel-filieres';
+import { estDomaine } from '../src/filiere/domaines';
 
 const prisma = new PrismaClient();
 
@@ -24,6 +25,11 @@ async function main() {
     },
   });
 
+  const sansDomaine = REFERENTIEL_FILIERES.filter((f) => f.domaines.length === 0 || !f.domaines.every(estDomaine));
+  if (sansDomaine.length > 0) {
+    throw new Error(`Domaines absents ou inconnus : ${sansDomaine.map((f) => f.code).join(', ')}`);
+  }
+
   for (const f of REFERENTIEL_FILIERES) {
     const data = {
       nom: f.nom,
@@ -39,6 +45,7 @@ async function main() {
       ouSeFormer: f.ouSeFormer ?? null,
       bourses: f.bourses ?? null,
       sources: f.sources as unknown as Prisma.InputJsonValue,
+      domaines: f.domaines,
     };
     await prisma.filiere.upsert({
       where: { code: f.code },

@@ -5,9 +5,11 @@
  * Règles :
  * - `code` est l'identifiant stable : le seed fait un upsert dessus ;
  * - une information introuvable reste absente : aucun taux d'insertion ni condition n'est inventé ;
- * - chaque entrée cite ses sources ; une entrée sans source `officielle` est à faire valider par le client.
+ * - chaque entrée cite ses sources ; une entrée sans source `officielle` est à faire valider par le client ;
+ * - `domaines` est un classement de l'équipe (src/filiere/domaines.ts), pas une donnée des sources.
  */
 import type { NiveauAcces, TypeFiliere } from '@prisma/client';
+import type { Domaine } from '../../src/filiere/domaines';
 
 export interface SourceFiliere {
   libelle: string;
@@ -30,6 +32,7 @@ export interface FiliereReferentiel {
   ouSeFormer?: string;
   bourses?: boolean;
   sources: SourceFiliere[];
+  domaines: Domaine[];
 }
 
 const CONSULTE_LE = '2026-09-13';
@@ -120,8 +123,9 @@ const COND_UNIVERSITE =
 
 const POURSUITES_A = "Poursuites d'études : droit, lettres, philosophie, communication, langues, histoire-géographie.";
 
-const serieGenerale = (code: string, intitule: string, debouches?: string): FiliereReferentiel => ({
+const serieGenerale = (code: string, intitule: string, domaines: Domaine[], debouches?: string): FiliereReferentiel => ({
   code: `BAC-${code}`,
+  domaines,
   nom: `Baccalauréat série ${code} — ${intitule}`,
   type: 'GENERALE',
   niveauAcces: 'APRES_BEPC',
@@ -140,9 +144,11 @@ const POURSUITES_TECHNIQUES =
 const serieTechnique = (
   code: string,
   intitule: string,
+  domaines: Domaine[],
   debouches?: { texte: string; source: SourceFiliere },
 ): FiliereReferentiel => ({
   code: `BAC-${code}`,
+  domaines,
   nom: `Baccalauréat série ${code} — ${intitule}`,
   type: 'TECHNIQUE',
   niveauAcces: 'APRES_BEPC',
@@ -154,8 +160,9 @@ const serieTechnique = (
   sources: [S.officeBac, S.communiqueInscriptions, ...(debouches ? [debouches.source] : [])],
 });
 
-const diplomeTechnicien = (code: string, specialite: string, secteur: string): FiliereReferentiel => ({
+const diplomeTechnicien = (code: string, specialite: string, secteur: string, domaines: Domaine[]): FiliereReferentiel => ({
   code: `DT-${code}`,
+  domaines,
   nom: `Diplôme de technicien (DT) — ${specialite}`,
   type: 'TECHNIQUE',
   niveauAcces: 'APRES_BEPC',
@@ -167,8 +174,9 @@ const diplomeTechnicien = (code: string, specialite: string, secteur: string): F
 
 // ─── Formation professionnelle (DTM en lycée technique professionnel) ────────
 
-const dtmLtp = (code: string, specialite: string, description: string, metiers: string[]): FiliereReferentiel => ({
+const dtmLtp = (code: string, specialite: string, description: string, metiers: string[], domaines: Domaine[]): FiliereReferentiel => ({
   code: `DTM-LTP-${code}`,
+  domaines,
   nom: `DTM — ${specialite}`,
   type: 'PROFESSIONNELLE',
   niveauAcces: 'APRES_BEPC',
@@ -185,6 +193,7 @@ const dtmLtp = (code: string, specialite: string, description: string, metiers: 
 
 const dtmAgricole = (code: string, specialite: string): FiliereReferentiel => ({
   code: `DTM-LTA-${code}`,
+  domaines: ['AGRICULTURE'],
   nom: `DTM — ${specialite}`,
   type: 'TECHNIQUE_AGRICOLE',
   niveauAcces: 'APRES_BEPC',
@@ -198,8 +207,9 @@ const dtmAgricole = (code: string, specialite: string): FiliereReferentiel => ({
 
 // ─── Écoles des métiers de référence ─────────────────────────────────────────
 
-const ecoleMetiers = (code: string, domaine: string): FiliereReferentiel => ({
+const ecoleMetiers = (code: string, domaine: string, domaines: Domaine[]): FiliereReferentiel => ({
   code: `EDM-${code}`,
+  domaines,
   nom: `École des métiers de référence — ${domaine}`,
   type: 'ECOLE_METIER',
   description:
@@ -215,6 +225,7 @@ const universitaire = (f: {
   etablissement: string;
   lieu: string;
   description: string;
+  domaines: Domaine[];
   series?: string[];
   diplomes?: string[];
   metiers?: string[];
@@ -222,6 +233,7 @@ const universitaire = (f: {
   sources?: SourceFiliere[];
 }): FiliereReferentiel => ({
   code: `UNIV-${f.code}`,
+  domaines: f.domaines,
   nom: `${f.nom} — ${f.etablissement}`,
   type: 'UNIVERSITE',
   niveauAcces: 'APRES_BAC',
@@ -248,29 +260,30 @@ const ENSET = "École normale supérieure de l'enseignement technique (ENSET) �
 const IMSP = "Institut de mathématiques et de sciences physiques (IMSP) — Université d'Abomey-Calavi";
 
 export const REFERENTIEL_FILIERES: FiliereReferentiel[] = [
-  serieGenerale('A1', 'Lettres – Langues', POURSUITES_A),
-  serieGenerale('A2', 'Lettres – Sciences humaines', POURSUITES_A),
-  serieGenerale('B', 'Lettres – Sciences sociales', "Poursuites d'études : sciences économiques, gestion, droit des affaires, commerce."),
+  serieGenerale('A1', 'Lettres – Langues', ['LETTRES'], POURSUITES_A),
+  serieGenerale('A2', 'Lettres – Sciences humaines', ['LETTRES'], POURSUITES_A),
+  serieGenerale('B', 'Lettres – Sciences sociales', ['GESTION', 'DROIT'], "Poursuites d'études : sciences économiques, gestion, droit des affaires, commerce."),
   serieGenerale(
     'C',
     'Sciences et Techniques',
+    ['SCIENCES'],
     "Série la plus polyvalente. Poursuites d'études : sciences de la santé, ingénierie, sciences exactes, informatique, économie, droit, agronomie.",
   ),
-  serieGenerale('D', 'Biologie – Géologie', "Poursuites d'études : médecine, agronomie, biologie, géographie, génie de l'environnement."),
+  serieGenerale('D', 'Biologie – Géologie', ['SCIENCES'], "Poursuites d'études : médecine, agronomie, biologie, géographie, génie de l'environnement."),
 
-  serieTechnique('E', 'Mathématiques et Techniques', { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
-  serieTechnique('F1', 'Construction mécanique', { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
-  serieTechnique('F2', 'Électronique', { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
-  serieTechnique('F3', 'Électrotechnique', { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
-  serieTechnique('F4', 'Génie civil', { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
-  serieTechnique('G1', 'Techniques administratives'),
-  serieTechnique('G2', 'Techniques quantitatives de gestion', {
+  serieTechnique('E', 'Mathématiques et Techniques', ['SCIENCES', 'INDUSTRIE'], { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
+  serieTechnique('F1', 'Construction mécanique', ['INDUSTRIE'], { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
+  serieTechnique('F2', 'Électronique', ['ELECTRICITE'], { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
+  serieTechnique('F3', 'Électrotechnique', ['ELECTRICITE'], { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
+  serieTechnique('F4', 'Génie civil', ['BTP'], { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
+  serieTechnique('G1', 'Techniques administratives', ['GESTION']),
+  serieTechnique('G2', 'Techniques quantitatives de gestion', ['GESTION'], {
     texte: "Poursuites d'études : comptabilité, gestion des organisations, informatique de gestion, techniques commerciales.",
     source: S.apresbacSeries,
   }),
-  serieTechnique('G3', 'Techniques commerciales'),
+  serieTechnique('G3', 'Techniques commerciales', ['GESTION']),
   {
-    ...serieTechnique('EA', 'Eau et Assainissement', {
+    ...serieTechnique('EA', 'Eau et Assainissement', ['ENVIRONNEMENT'], {
       texte: "Poursuites d'études : spécialités universitaires de l'eau et de l'assainissement.",
       source: S.bacsTechniques,
     }),
@@ -279,21 +292,21 @@ export const REFERENTIEL_FILIERES: FiliereReferentiel[] = [
     diplomesDelivres: ['Baccalauréat — filière Eau et Assainissement'],
   },
 
-  diplomeTechnicien('MECANO-SOUDURE', "Constructeur d'équipements mécano-soudés", 'industriel'),
-  diplomeTechnicien('MODE', 'Métiers de la mode', 'mode'),
-  diplomeTechnicien('DEV-WEB-MOBILE', 'Développeur web et mobile', 'numérique'),
-  diplomeTechnicien('MULTIMEDIA', 'Producteur multimédia', 'numérique'),
-  diplomeTechnicien('QUALITE-EAU', "Contrôleur de qualité de l'eau", 'environnement'),
+  diplomeTechnicien('MECANO-SOUDURE', "Constructeur d'équipements mécano-soudés", 'industriel', ['INDUSTRIE']),
+  diplomeTechnicien('MODE', 'Métiers de la mode', 'mode', ['ARTISANAT']),
+  diplomeTechnicien('DEV-WEB-MOBILE', 'Développeur web et mobile', 'numérique', ['NUMERIQUE']),
+  diplomeTechnicien('MULTIMEDIA', 'Producteur multimédia', 'numérique', ['NUMERIQUE']),
+  diplomeTechnicien('QUALITE-EAU', "Contrôleur de qualité de l'eau", 'environnement', ['ENVIRONNEMENT']),
 
-  dtmLtp('ELEC-ENERGIE', 'Électricité et systèmes énergétiques', 'Installation, maintenance et dépannage des systèmes électriques en milieu résidentiel, tertiaire et industriel.', ['Électricien']),
-  dtmLtp('ENR', 'Énergies renouvelables', "Installation et maintenance d'équipements solaires photovoltaïques et thermiques.", ['Installateur solaire']),
-  dtmLtp('FROID-CLIM', 'Froid, climatisation et installations sanitaires', 'Installation et maintenance des équipements frigorifiques, de climatisation et sanitaires.', ['Technicien frigoriste']),
-  dtmLtp('MAINT-MULTIMEDIA', 'Maintenance électronique et multimédia', "Réparation d'appareils audio, vidéo et informatiques.", ['Technicien de maintenance électronique']),
-  dtmLtp('RESEAUX-CYBER', 'Réseaux informatiques et cybersécurité', 'Déploiement de réseaux informatiques et protection des données.', ['Technicien réseaux']),
-  dtmLtp('MECA-AUTO', 'Mécanique automobile', 'Entretien et diagnostic des véhicules.', ['Mécanicien automobile']),
-  dtmLtp('GROS-OEUVRE', 'Construction bâtiment — gros œuvre', 'Fondations, maçonnerie et béton armé.', ['Technicien du bâtiment']),
-  dtmLtp('TOPOGRAPHIE', 'Topographie', 'Levés topographiques et cartographie.', ['Topographe']),
-  dtmLtp('ETUDES-BATIMENT', "Technicien d'études du bâtiment", 'Dessin assisté par ordinateur, planification et estimation des coûts.', ["Technicien d'études du bâtiment"]),
+  dtmLtp('ELEC-ENERGIE', 'Électricité et systèmes énergétiques', 'Installation, maintenance et dépannage des systèmes électriques en milieu résidentiel, tertiaire et industriel.', ['Électricien'], ['ELECTRICITE']),
+  dtmLtp('ENR', 'Énergies renouvelables', "Installation et maintenance d'équipements solaires photovoltaïques et thermiques.", ['Installateur solaire'], ['ELECTRICITE']),
+  dtmLtp('FROID-CLIM', 'Froid, climatisation et installations sanitaires', 'Installation et maintenance des équipements frigorifiques, de climatisation et sanitaires.', ['Technicien frigoriste'], ['ELECTRICITE', 'BTP']),
+  dtmLtp('MAINT-MULTIMEDIA', 'Maintenance électronique et multimédia', "Réparation d'appareils audio, vidéo et informatiques.", ['Technicien de maintenance électronique'], ['ELECTRICITE', 'NUMERIQUE']),
+  dtmLtp('RESEAUX-CYBER', 'Réseaux informatiques et cybersécurité', 'Déploiement de réseaux informatiques et protection des données.', ['Technicien réseaux'], ['NUMERIQUE']),
+  dtmLtp('MECA-AUTO', 'Mécanique automobile', 'Entretien et diagnostic des véhicules.', ['Mécanicien automobile'], ['INDUSTRIE']),
+  dtmLtp('GROS-OEUVRE', 'Construction bâtiment — gros œuvre', 'Fondations, maçonnerie et béton armé.', ['Technicien du bâtiment'], ['BTP']),
+  dtmLtp('TOPOGRAPHIE', 'Topographie', 'Levés topographiques et cartographie.', ['Topographe'], ['BTP']),
+  dtmLtp('ETUDES-BATIMENT', "Technicien d'études du bâtiment", 'Dessin assisté par ordinateur, planification et estimation des coûts.', ["Technicien d'études du bâtiment"], ['BTP']),
 
   {
     code: 'EFMS-HYGIENISTE-ASSAINISSEMENT',
@@ -303,6 +316,7 @@ export const REFERENTIEL_FILIERES: FiliereReferentiel[] = [
     description: "Formation médico-sociale sanctionnée par un diplôme d'État (intitulé exact à confirmer).",
     diplomesDelivres: ["Diplôme d'État"],
     metiersVises: ["Hygiéniste d'assainissement"],
+    domaines: ['SANTE', 'ENVIRONNEMENT'],
     conditionsAcces: 'Titulaire du BEPC, âgé de 15 à 25 ans au 31/12/2025 (inscription à titre payant, rentrée 2026-2027).',
     ouSeFormer: 'École de formation médico-sociale (EFMS) de Parakou et son annexe de Djougou.',
     sources: [S.communiqueInscriptions],
@@ -315,6 +329,7 @@ export const REFERENTIEL_FILIERES: FiliereReferentiel[] = [
     description: "Formation médico-sociale sanctionnée par un diplôme d'État (intitulé exact à confirmer).",
     diplomesDelivres: ["Diplôme d'État"],
     metiersVises: ['Hygiéniste de salles'],
+    domaines: ['SANTE'],
     conditionsAcces: 'Titulaire du BEPC, âgé de 17 à 25 ans au 31/12/2025 (inscription à titre payant, rentrée 2026-2027).',
     ouSeFormer: 'École de formation médico-sociale (EFMS) de Parakou et son annexe de Djougou.',
     sources: [S.communiqueInscriptions],
@@ -341,33 +356,34 @@ export const REFERENTIEL_FILIERES: FiliereReferentiel[] = [
     conditionsAcces: "Titulaire du BEPC, du BEAT (brevet d'études agricoles tropicales) ou d'un diplôme équivalent reconnu.",
     ouSeFormer: 'Lycée agricole Mèdji de Sékou (Allada), notamment.',
     sources: [S.gouvDeat, S.wikiSekou],
+    domaines: ['AGRICULTURE'],
   },
 
-  ecoleMetiers('NUMERIQUE', 'Numérique'),
-  ecoleMetiers('BTP', 'Bâtiment et travaux publics'),
-  ecoleMetiers('ELECTRONIQUE', 'Électronique et électrotechnique'),
-  ecoleMetiers('AUTOMOBILE', 'Automobile et équipements industriels'),
-  ecoleMetiers('BOIS-ALUMINIUM', 'Bois et aluminium'),
-  ecoleMetiers('TOURISME-HOTELLERIE', 'Tourisme, hôtellerie et restauration'),
+  ecoleMetiers('NUMERIQUE', 'Numérique', ['NUMERIQUE']),
+  ecoleMetiers('BTP', 'Bâtiment et travaux publics', ['BTP']),
+  ecoleMetiers('ELECTRONIQUE', 'Électronique et électrotechnique', ['ELECTRICITE']),
+  ecoleMetiers('AUTOMOBILE', 'Automobile et équipements industriels', ['INDUSTRIE']),
+  ecoleMetiers('BOIS-ALUMINIUM', 'Bois et aluminium', ['ARTISANAT', 'BTP']),
+  ecoleMetiers('TOURISME-HOTELLERIE', 'Tourisme, hôtellerie et restauration', ['TOURISME']),
 
-  universitaire({ code: 'FSS-MEDECINE', nom: 'Médecine générale', etablissement: 'FSS (UAC)', lieu: FSS, description: 'Études de médecine en 7 ans.', series: ['C', 'D'], metiers: ['Médecin'] }),
-  universitaire({ code: 'FSS-PHARMACIE', nom: 'Pharmacie', etablissement: 'FSS (UAC)', lieu: FSS, description: 'Études de pharmacie en 6 ans.', series: ['C', 'D'], metiers: ["Pharmacien d'officine", 'Pharmacien hospitalier'] }),
-  universitaire({ code: 'FSS-DENTAIRE', nom: 'Chirurgie dentaire', etablissement: 'FSS (UAC)', lieu: FSS, description: 'Études de chirurgie dentaire en 6 ans.', series: ['C', 'D'], metiers: ['Chirurgien-dentiste'] }),
-  universitaire({ code: 'EPAC-GIT', nom: 'Génie informatique et télécommunications', etablissement: 'EPAC (UAC)', lieu: EPAC, description: "Formation en génie informatique et télécommunications à l'École polytechnique d'Abomey-Calavi.", series: ['C', 'D'] }),
-  universitaire({ code: 'EPAC-GC', nom: 'Génie civil', etablissement: 'EPAC (UAC)', lieu: EPAC, description: "Formation en génie civil à l'École polytechnique d'Abomey-Calavi.", series: ['C', 'D'] }),
-  universitaire({ code: 'EPAC-GEE', nom: 'Génie électrique et énergétique', etablissement: 'EPAC (UAC)', lieu: EPAC, description: "Formation en génie électrique et énergétique à l'École polytechnique d'Abomey-Calavi.", series: ['C', 'D'] }),
-  universitaire({ code: 'FAST-MPC', nom: 'Mathématiques, physique, chimie', etablissement: 'FAST (UAC)', lieu: FAST, description: 'Parcours de sciences fondamentales : mathématiques, physique, chimie.', series: ['C', 'D'] }),
-  universitaire({ code: 'FAST-SVT', nom: 'Biologie, biochimie et géologie', etablissement: 'FAST (UAC)', lieu: FAST, description: 'Parcours de sciences de la vie et de la Terre : biologie, biochimie, géologie.', series: ['C', 'D'] }),
-  universitaire({ code: 'FASEG-ECONOMIE', nom: 'Sciences économiques', etablissement: 'FASEG (UAC)', lieu: FASEG, description: 'Formation en sciences économiques.', series: ['Toutes séries'] }),
-  universitaire({ code: 'FASEG-GESTION', nom: 'Gestion, finance et comptabilité', etablissement: 'FASEG (UAC)', lieu: FASEG, description: 'Gestion des entreprises, finance et banque, comptabilité et audit.', series: ['Toutes séries'] }),
-  universitaire({ code: 'FADESP-DROIT', nom: 'Droit et science politique', etablissement: 'FADESP (UAC)', lieu: FADESP, description: 'Droit privé, droit public, science politique, relations internationales.', series: ['A1', 'A2', 'B', 'Autres séries sous conditions'] }),
-  universitaire({ code: 'FLASH-LETTRES', nom: 'Lettres, langues et philosophie', etablissement: 'FLASH (UAC)', lieu: FLASH, description: 'Lettres modernes, anglais, philosophie.', series: ['A1', 'A2'] }),
-  universitaire({ code: 'FLASH-SHS', nom: 'Histoire, géographie et sciences sociales', etablissement: 'FLASH (UAC)', lieu: FLASH, description: 'Histoire, géographie et aménagement du territoire, sociologie-anthropologie, psychologie.', series: ['A1', 'A2'] }),
-  universitaire({ code: 'IFRI-INFORMATIQUE', nom: 'Informatique', etablissement: 'IFRI (UAC)', lieu: IFRI, description: 'Licence en informatique.', series: ['C', 'D'], diplomes: ['Licence en informatique'] }),
-  universitaire({ code: 'ENEAM-STATISTIQUE', nom: 'Statistique et planification', etablissement: 'ENEAM (UAC)', lieu: ENEAM, description: 'Formation en statistique et planification.', series: ['C', 'D', 'G2'] }),
-  universitaire({ code: 'ENEAM-GESTION', nom: 'Management, administration des affaires, finances-comptabilité', etablissement: 'ENEAM (UAC)', lieu: ENEAM, description: 'Management des organisations, administration des affaires, finances-comptabilité.', series: ['C', 'D', 'G2'] }),
-  universitaire({ code: 'INSTI-MAINT-INDUSTRIELLE', nom: 'Maintenance industrielle', etablissement: 'INSTI (UNSTIM)', lieu: INSTI, description: "Filière réservée aux titulaires d'un baccalauréat technique.", series: ['Baccalauréats techniques uniquement'], sources: [S.bacsTechniques] }),
-  universitaire({ code: 'INSTI-MAINT-AUTOMOBILE', nom: 'Maintenance automobile', etablissement: 'INSTI (UNSTIM)', lieu: INSTI, description: "Filière réservée aux titulaires d'un baccalauréat technique.", series: ['Baccalauréats techniques uniquement'], sources: [S.bacsTechniques] }),
-  universitaire({ code: 'ENSET', nom: "Professorat de l'enseignement technique", etablissement: 'ENSET (UNSTIM)', lieu: ENSET, description: "École normale formant les enseignants de l'enseignement technique ; 14 filières accessibles sur concours.", metiers: ["Professeur de l'enseignement technique"], conditions: 'Admission sur concours.', sources: [S.bacsTechniques] }),
-  universitaire({ code: 'IMSP-PREPA', nom: "Classes préparatoires aux études d'ingénieur", etablissement: 'IMSP (UAC)', lieu: IMSP, description: 'Classes préparatoires ouvertes notamment aux bacheliers des séries E et F.', series: ['E', 'F1', 'F2', 'F3', 'F4'], sources: [S.bacsTechniques] }),
+  universitaire({ code: 'FSS-MEDECINE', domaines: ['SANTE'], nom: 'Médecine générale', etablissement: 'FSS (UAC)', lieu: FSS, description: 'Études de médecine en 7 ans.', series: ['C', 'D'], metiers: ['Médecin'] }),
+  universitaire({ code: 'FSS-PHARMACIE', domaines: ['SANTE'], nom: 'Pharmacie', etablissement: 'FSS (UAC)', lieu: FSS, description: 'Études de pharmacie en 6 ans.', series: ['C', 'D'], metiers: ["Pharmacien d'officine", 'Pharmacien hospitalier'] }),
+  universitaire({ code: 'FSS-DENTAIRE', domaines: ['SANTE'], nom: 'Chirurgie dentaire', etablissement: 'FSS (UAC)', lieu: FSS, description: 'Études de chirurgie dentaire en 6 ans.', series: ['C', 'D'], metiers: ['Chirurgien-dentiste'] }),
+  universitaire({ code: 'EPAC-GIT', domaines: ['NUMERIQUE'], nom: 'Génie informatique et télécommunications', etablissement: 'EPAC (UAC)', lieu: EPAC, description: "Formation en génie informatique et télécommunications à l'École polytechnique d'Abomey-Calavi.", series: ['C', 'D'] }),
+  universitaire({ code: 'EPAC-GC', domaines: ['BTP'], nom: 'Génie civil', etablissement: 'EPAC (UAC)', lieu: EPAC, description: "Formation en génie civil à l'École polytechnique d'Abomey-Calavi.", series: ['C', 'D'] }),
+  universitaire({ code: 'EPAC-GEE', domaines: ['ELECTRICITE'], nom: 'Génie électrique et énergétique', etablissement: 'EPAC (UAC)', lieu: EPAC, description: "Formation en génie électrique et énergétique à l'École polytechnique d'Abomey-Calavi.", series: ['C', 'D'] }),
+  universitaire({ code: 'FAST-MPC', domaines: ['SCIENCES'], nom: 'Mathématiques, physique, chimie', etablissement: 'FAST (UAC)', lieu: FAST, description: 'Parcours de sciences fondamentales : mathématiques, physique, chimie.', series: ['C', 'D'] }),
+  universitaire({ code: 'FAST-SVT', domaines: ['SCIENCES'], nom: 'Biologie, biochimie et géologie', etablissement: 'FAST (UAC)', lieu: FAST, description: 'Parcours de sciences de la vie et de la Terre : biologie, biochimie, géologie.', series: ['C', 'D'] }),
+  universitaire({ code: 'FASEG-ECONOMIE', domaines: ['GESTION'], nom: 'Sciences économiques', etablissement: 'FASEG (UAC)', lieu: FASEG, description: 'Formation en sciences économiques.', series: ['Toutes séries'] }),
+  universitaire({ code: 'FASEG-GESTION', domaines: ['GESTION'], nom: 'Gestion, finance et comptabilité', etablissement: 'FASEG (UAC)', lieu: FASEG, description: 'Gestion des entreprises, finance et banque, comptabilité et audit.', series: ['Toutes séries'] }),
+  universitaire({ code: 'FADESP-DROIT', domaines: ['DROIT'], nom: 'Droit et science politique', etablissement: 'FADESP (UAC)', lieu: FADESP, description: 'Droit privé, droit public, science politique, relations internationales.', series: ['A1', 'A2', 'B', 'Autres séries sous conditions'] }),
+  universitaire({ code: 'FLASH-LETTRES', domaines: ['LETTRES'], nom: 'Lettres, langues et philosophie', etablissement: 'FLASH (UAC)', lieu: FLASH, description: 'Lettres modernes, anglais, philosophie.', series: ['A1', 'A2'] }),
+  universitaire({ code: 'FLASH-SHS', domaines: ['LETTRES'], nom: 'Histoire, géographie et sciences sociales', etablissement: 'FLASH (UAC)', lieu: FLASH, description: 'Histoire, géographie et aménagement du territoire, sociologie-anthropologie, psychologie.', series: ['A1', 'A2'] }),
+  universitaire({ code: 'IFRI-INFORMATIQUE', domaines: ['NUMERIQUE'], nom: 'Informatique', etablissement: 'IFRI (UAC)', lieu: IFRI, description: 'Licence en informatique.', series: ['C', 'D'], diplomes: ['Licence en informatique'] }),
+  universitaire({ code: 'ENEAM-STATISTIQUE', domaines: ['GESTION', 'SCIENCES'], nom: 'Statistique et planification', etablissement: 'ENEAM (UAC)', lieu: ENEAM, description: 'Formation en statistique et planification.', series: ['C', 'D', 'G2'] }),
+  universitaire({ code: 'ENEAM-GESTION', domaines: ['GESTION'], nom: 'Management, administration des affaires, finances-comptabilité', etablissement: 'ENEAM (UAC)', lieu: ENEAM, description: 'Management des organisations, administration des affaires, finances-comptabilité.', series: ['C', 'D', 'G2'] }),
+  universitaire({ code: 'INSTI-MAINT-INDUSTRIELLE', domaines: ['INDUSTRIE'], nom: 'Maintenance industrielle', etablissement: 'INSTI (UNSTIM)', lieu: INSTI, description: "Filière réservée aux titulaires d'un baccalauréat technique.", series: ['Baccalauréats techniques uniquement'], sources: [S.bacsTechniques] }),
+  universitaire({ code: 'INSTI-MAINT-AUTOMOBILE', domaines: ['INDUSTRIE'], nom: 'Maintenance automobile', etablissement: 'INSTI (UNSTIM)', lieu: INSTI, description: "Filière réservée aux titulaires d'un baccalauréat technique.", series: ['Baccalauréats techniques uniquement'], sources: [S.bacsTechniques] }),
+  universitaire({ code: 'ENSET', domaines: ['ENSEIGNEMENT'], nom: "Professorat de l'enseignement technique", etablissement: 'ENSET (UNSTIM)', lieu: ENSET, description: "École normale formant les enseignants de l'enseignement technique ; 14 filières accessibles sur concours.", metiers: ["Professeur de l'enseignement technique"], conditions: 'Admission sur concours.', sources: [S.bacsTechniques] }),
+  universitaire({ code: 'IMSP-PREPA', domaines: ['SCIENCES'], nom: "Classes préparatoires aux études d'ingénieur", etablissement: 'IMSP (UAC)', lieu: IMSP, description: 'Classes préparatoires ouvertes notamment aux bacheliers des séries E et F.', series: ['E', 'F1', 'F2', 'F3', 'F4'], sources: [S.bacsTechniques] }),
 ];
