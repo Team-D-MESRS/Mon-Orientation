@@ -17,13 +17,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr">
-      <body>
+      {/* Colonne pleine hauteur : sur une page courte, le pied de page reste en bas de l'écran */}
+      <body className="min-h-screen flex flex-col">
         <AuthInitialiser />
         <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white">
           Aller au contenu principal
         </a>
         <Header />
-        <main id="main" role="main">
+        <main id="main" role="main" className="flex-1">
           {children}
         </main>
         <Footer />

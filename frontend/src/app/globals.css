@@ -19,21 +19,26 @@ body {
 }
 
 /* DSBJ-style components */
+/* Horizontal seulement : déclarée après les utilitaires Tailwind, la classe écraserait sinon py-* et my-* sur le même élément */
 .bj-container {
   max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 16px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 16px;
+  padding-right: 16px;
 }
 
 @media (min-width: 768px) {
   .bj-container {
-    padding: 0 24px;
+    padding-left: 24px;
+    padding-right: 24px;
   }
 }
 
 @media (min-width: 1024px) {
   .bj-container {
-    padding: 0 32px;
+    padding-left: 32px;
+    padding-right: 32px;
   }
 }
 
@@ -126,5 +131,22 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Impression d'une fiche ou d'une comparaison : en-tête, pied de page et boutons sont masqués (print:hidden) */
+@media print {
+  body {
+    background: white;
+  }
+  .bj-card {
+    box-shadow: none;
+    transform: none;
+  }
+  .liens-imprimes a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.75em;
+    word-break: break-all;
+    color: #585858;
   }
 }

@@ -1,64 +1,98 @@
+'use client';
+
+import type { ReactNode } from 'react';
 import Link from 'next/link';
+import { ExternalLink } from 'lucide-react';
+import { useAuthStore } from '@/stores/authStore';
+import { LIENS_EXTERNES } from '@/lib/site';
+import { PAGES_AIDE, PAGES_LEGALES, liensVisibles } from './navigation';
+
+const LIEN = 'hover:text-white hover:underline underline-offset-2 transition-colors';
+
+const SITES_OFFICIELS = [
+  { href: LIENS_EXTERNES.mestfp, label: 'MESTFP' },
+  { href: LIENS_EXTERNES.educmaster, label: 'EducMaster' },
+  { href: LIENS_EXTERNES.apresMonBac, label: 'Après mon bac' },
+  { href: LIENS_EXTERNES.gouvernement, label: 'Gouvernement du Bénin' },
+];
+
+function Colonne({ id, titre, children }: { id: string; titre: string; children: ReactNode }) {
+  return (
+    <nav aria-labelledby={id}>
+      <h2 id={id} className="font-bold text-sm mb-4v">
+        {titre}
+      </h2>
+      <ul className="space-y-2v text-sm text-bj-gray-750">{children}</ul>
+    </nav>
+  );
+}
 
 export function Footer() {
+  const user = useAuthStore((s) => s.user);
+
   return (
-    <footer className="bg-bj-gray-50 text-white py-12v">
+    <footer className="bg-bj-gray-50 text-white py-12v print:hidden">
       <div className="bj-container">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8v mb-8v">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8v mb-8v">
           <div>
-            <div className="flex items-center gap-3v mb-4v">
-              <div className="w-10 h-10 bg-bj-green rounded-full flex items-center justify-center font-bold text-sm">
-                MO
-              </div>
+            <Link href="/" className="flex items-center gap-3v mb-4v w-fit">
+              <div className="w-10 h-10 bg-bj-green rounded-full flex items-center justify-center font-bold text-sm">MO</div>
               <div>
                 <div className="font-bold text-sm">Mon Orientation</div>
                 <div className="text-xs text-bj-gray-750">Plateforme nationale</div>
               </div>
-            </div>
-            <p className="text-sm text-bj-gray-625">
-              Accompagnement personnalisé dans l&apos;orientation scolaire pour les élèves du Bénin.
-            </p>
+            </Link>
+            <p className="text-sm text-bj-gray-750">Accompagnement personnalisé dans l&apos;orientation scolaire pour les élèves du Bénin.</p>
           </div>
 
-          <div>
-            <h4 className="font-bold text-sm mb-4v">Services</h4>
-            <ul className="space-y-2v text-sm text-bj-gray-750">
-              <li><Link href="/catalogue" className="hover:text-bj-green transition-colors">Catalogue des filières</Link></li>
-              <li><Link href="/conseiller" className="hover:text-bj-green transition-colors">Conseiller IA</Link></li>
-              <li><Link href="/espace-apprenant" className="hover:text-bj-green transition-colors">Mon espace</Link></li>
-              <li><Link href="/stats" className="hover:text-bj-green transition-colors">Statistiques</Link></li>
-            </ul>
-          </div>
+          <Colonne id="pied-services" titre="Services">
+            {liensVisibles(user).map((l) => (
+              <li key={l.href}>
+                <Link href={l.href} className={LIEN}>
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+          </Colonne>
 
-          <div>
-            <h4 className="font-bold text-sm mb-4v">Informations</h4>
-            <ul className="space-y-2v text-sm text-bj-gray-750">
-              <li><a href="#" className="hover:text-bj-green transition-colors">Guide d&apos;utilisation</a></li>
-              <li><a href="#" className="hover:text-bj-green transition-colors">FAQ</a></li>
-              <li><a href="#" className="hover:text-bj-green transition-colors">Contact</a></li>
-              <li><a href="#" className="hover:text-bj-green transition-colors">Données personnelles</a></li>
-            </ul>
-          </div>
+          <Colonne id="pied-aide" titre="Aide">
+            {PAGES_AIDE.map((l) => (
+              <li key={l.href}>
+                <Link href={l.href} className={LIEN}>
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+          </Colonne>
 
-          <div>
-            <h4 className="font-bold text-sm mb-4v">Gouvernement</h4>
-            <ul className="space-y-2v text-sm text-bj-gray-750">
-              <li><a href="https://www.enseignementsecondaire.gouv.bj" className="hover:text-bj-green transition-colors" target="_blank" rel="noopener noreferrer">MESTFP</a></li>
-              <li><a href="https://www.educmaster.bj" className="hover:text-bj-green transition-colors" target="_blank" rel="noopener noreferrer">EducMaster</a></li>
-              <li><a href="https://www.benin.bj" className="hover:text-bj-green transition-colors" target="_blank" rel="noopener noreferrer">Gouvernement du Bénin</a></li>
-            </ul>
-          </div>
+          <Colonne id="pied-officiels" titre="Sites officiels">
+            {SITES_OFFICIELS.map((l) => (
+              <li key={l.href}>
+                <a href={l.href} target="_blank" rel="noopener noreferrer" className={`${LIEN} inline-flex items-center gap-1v`}>
+                  {l.label}
+                  <ExternalLink size={12} aria-hidden="true" />
+                  <span className="sr-only">(nouvel onglet)</span>
+                </a>
+              </li>
+            ))}
+          </Colonne>
         </div>
 
         <div className="border-t border-bj-gray-425 pt-6v flex flex-col md:flex-row items-center justify-between gap-4v">
-          <p className="text-xs text-bj-gray-625">
+          <p className="text-xs text-bj-gray-750 text-center md:text-left">
             © 2026 Mon Orientation — Ministère de l&apos;Enseignement Secondaire, Technique et de la Formation Professionnelle
           </p>
-          <div className="flex gap-4v text-xs text-bj-gray-625">
-            <a href="#" className="hover:text-bj-green transition-colors">Mentions légales</a>
-            <a href="#" className="hover:text-bj-green transition-colors">Accessibilité</a>
-            <a href="#" className="hover:text-bj-green transition-colors">Données personnelles</a>
-          </div>
+          <nav aria-label="Informations légales">
+            <ul className="flex flex-wrap justify-center gap-x-4v gap-y-2v text-xs text-bj-gray-750">
+              {PAGES_LEGALES.map((l) => (
+                <li key={l.href}>
+                  <Link href={l.href} className={LIEN}>
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
         </div>
       </div>
     </footer>

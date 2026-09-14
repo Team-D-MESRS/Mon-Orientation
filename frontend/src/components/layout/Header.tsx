@@ -5,14 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { LogOut, Menu, X } from 'lucide-react';
 import { authApi } from '@/lib/api';
-import { useAuthStore, type Role } from '@/stores/authStore';
-
-const LIENS: { href: string; label: string; roles?: Role[] }[] = [
-  { href: '/catalogue', label: 'Catalogue' },
-  { href: '/conseiller', label: 'Conseiller IA' },
-  { href: '/espace-apprenant', label: 'Mon espace', roles: ['APPRENANT', 'PARENT', 'ADMIN'] },
-  { href: '/stats', label: 'Statistiques', roles: ['DGES', 'ADMIN'] },
-];
+import { useAuthStore } from '@/stores/authStore';
+import { liensVisibles } from './navigation';
 
 export function Header() {
   const router = useRouter();
@@ -21,8 +15,7 @@ export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [deconnexionEnCours, setDeconnexionEnCours] = useState(false);
 
-  // Un visiteur voit « Mon espace », qui le mène à la connexion
-  const liens = LIENS.filter((l) => !l.roles || (user ? l.roles.includes(user.role) : l.href === '/espace-apprenant'));
+  const liens = liensVisibles(user);
 
   const deconnecter = async () => {
     await authApi.logout().catch(() => undefined);
@@ -41,7 +34,7 @@ export function Header() {
   }, [deconnexionEnCours, pathname, logout]);
 
   return (
-    <header className="bj-header sticky top-0 z-50">
+    <header className="bj-header sticky top-0 z-50 print:hidden">
       <div className="bj-container">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-3v">
