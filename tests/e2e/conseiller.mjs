@@ -42,6 +42,17 @@ try {
   );
   r.verifier('Suggestions de questions proposées', await nav.evaluer(`[...document.querySelectorAll('section button')].filter((b) => b.textContent.includes('?')).length >= 3`));
 
+  // Langue des réponses : choix retenu par l'appareil (sans question envoyée, pour ménager le quota du modèle)
+  const langueActive = "document.querySelector('[aria-label=\"Langue des réponses\"] button[aria-pressed=\"true\"]')?.textContent";
+  r.verifier('Langue des réponses : français par défaut', await nav.evaluer(`${langueActive} === 'Français'`));
+  await nav.cliquerTexte('Fɔ̀ngbè', '[aria-label="Langue des réponses"] button');
+  await nav.attendre(`${langueActive} === 'Fɔ̀ngbè' && ${contient('en fongbé sont rédigées automatiquement')}`);
+  await nav.aller(`${BASE}/espace-apprenant/conseiller`);
+  await nav.attendre(`${langueActive} === 'Fɔ̀ngbè'`);
+  r.verifier('Fongbé choisi, avec avertissement, et retenu après rechargement', true);
+  await nav.cliquerTexte('Français', '[aria-label="Langue des réponses"] button');
+  await nav.attendre(`${langueActive} === 'Français'`);
+
   await nav.cliquerTexte(QUESTION, 'section button');
   await nav.attendre(`${contient('pas encore configuré')} || !!document.querySelector('[role=alert]') || (document.querySelectorAll('.bubble-assistant').length > 0 && !${contient('Le conseiller réfléchit')})`, 150000);
   const alerte = await nav.evaluer("document.querySelector('[role=alert]')?.textContent ?? ''");

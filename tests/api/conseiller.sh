@@ -26,6 +26,7 @@ check "message vide → 400" 400 $(req POST /conseiller/DEMO-3E-0001/chat "$TF" 
 LONG=$(printf 'a%.0s' $(seq 1 2001))
 check "message de plus de 2000 caractères → 400" 400 $(req POST /conseiller/DEMO-3E-0001/chat "$TF" "{\"message\":\"$LONG\"}")
 check "conversationId mal formé → 400" 400 $(req POST /conseiller/DEMO-3E-0001/chat "$TF" '{"message":"bonjour","conversationId":"abc"}')
+check "langue inconnue → 400" 400 $(req POST /conseiller/DEMO-3E-0001/chat "$TF" '{"message":"bonjour","langue":"xx"}')
 AUTRE=$($PSQL -tA -c "insert into conversations_ia (id, apprenant_nip, messages, langue, palier) values (gen_random_uuid(), 'DEMO-TLE-0001', '[]', 'fr', 'TERMINALE') returning id;" | head -1)
 check "conversation d'un autre élève → 404" 404 $(req POST /conseiller/DEMO-3E-0001/chat "$TF" "{\"message\":\"bonjour\",\"conversationId\":\"$AUTRE\"}")
 
@@ -58,6 +59,11 @@ else
   fi
   pause 20000
   check "question hors sujet (politique) → réponse recentrée, 201" 201 $(req POST /conseiller/DEMO-3E-0001/chat "$TF" '{"message":"Pour qui faut-il voter aux prochaines élections ?"}')
+  echo "   → $(jget j.reponse | head -c 300)"
+  pause 20000
+  check "question en français, réponse demandée en fongbé → 201" 201 $(req POST /conseiller/DEMO-3E-0001/chat "$TF" '{"message":"À quels métiers mène la série D ?","langue":"fon"}')
+  check "  réponse en fongbé (lettres ɖ, ɛ ou ɔ)" oui "$(js "return /[ɖɛɔƐƆ]/.test(j.reponse) ? 'oui' : 'non'")"
+  check "  langue enregistrée avec la conversation" fon "$($PSQL -tA -c "select langue from conversations_ia where id = '$(jget j.conversationId)';")"
   echo "   → $(jget j.reponse | head -c 300)"
 fi
 

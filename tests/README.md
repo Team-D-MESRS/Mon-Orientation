@@ -18,10 +18,16 @@ node tests/e2e/parcours-eleve.mjs   # parcours complet élève / parent / Termin
 bash tests/api/conseiller.sh        # conseiller : droits, validation, conversations, limitation (sans appel au modèle)
 CONSEILLER_TEST_LLM=1 bash tests/api/conseiller.sh   # + appels réels au modèle (clé GEMINI_API_KEY requise, quota gratuit limité)
 node tests/e2e/conseiller.mjs       # conseiller dans le navigateur (sans clé : message explicite ; avec clé : réponse)
-bash tests/reinitialiser-demo.sh    # remet la démo à zéro (le test navigateur laisse des vœux validés)
+bash tests/api/catalogue.sh         # recherche sans accents, filtres, séries du bac, domaines, formations mises de côté
+node tests/e2e/catalogue.mjs        # filtres, comparateur, « Et après ce bac ? », partage, impression, cœurs, mobile
+node tests/e2e/pied-de-page.mjs     # pages d'information, liens du pied de page (aucun lien mort), pied de page en bas, 404
+node tests/e2e/accueil.mjs          # accueil : contenus exacts, recherche, séries, domaines, boutons selon la connexion, mobile
+bash tests/reinitialiser-demo.sh    # remet la démo à zéro : vœux, recommandations, conversations, formations mises de côté
 ```
 
-Les captures d'écran sont écrites dans `tests/e2e/captures/` (non versionné). Variables utiles : `API_URL`, `FRONT_URL`, `PG_CONTAINER`, `CHROME`.
+Lancer `reinitialiser-demo.sh` avant `parcours-eleve.mjs` : ce test saisit les vœux de Fatou depuis l'étape 1. Les tests navigateur utilisent tous le port 9333 de Chrome : ils se lancent l'un après l'autre.
+
+Les captures d'écran sont écrites dans `tests/e2e/captures/` (non versionné). Variables utiles : `API_URL`, `FRONT_URL`, `PG_CONTAINER`, `CHROME`, `ADMIN_PASSWORD` (compte admin du seed, `admin123` par défaut en développement).
 
 Les scripts d'API créent leurs propres données de test (préfixe `TEST-B1-`) ou réinitialisent les dossiers `DEMO-`, puis nettoient derrière eux.
 

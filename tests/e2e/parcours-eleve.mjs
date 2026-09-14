@@ -69,11 +69,12 @@ try {
   await nav.taille(390, 844, true);
   await nav.aller(`${BASE}/espace-apprenant/notes`);
   await nav.attendre("document.querySelectorAll('tbody tr').length > 0");
-  r.verifier('Notes : 7 matières, sans débordement horizontal de la page', await nav.evaluer("document.querySelectorAll('tbody tr').length === 7 && document.documentElement.scrollWidth <= innerWidth"), await nav.evaluer("`scrollWidth ${document.documentElement.scrollWidth} / ${innerWidth}`"));
+  // En émulation mobile, un contenu trop large élargit la fenêtre (innerWidth > 390) : on compare à la largeur de l'écran
+  r.verifier('Notes : 7 matières, sans débordement horizontal de la page', await nav.evaluer("document.querySelectorAll('tbody tr').length === 7 && innerWidth === 390 && document.documentElement.scrollWidth <= 390"), await nav.evaluer("`scrollWidth ${document.documentElement.scrollWidth} / ${innerWidth}`"));
   await nav.capture(`${OUT}/b2-notes-mobile.png`);
   await nav.aller(`${BASE}/espace-apprenant/recommandations`);
   await nav.attendre("document.querySelectorAll('main ol > li').length > 0");
-  r.verifier('Recommandations mobile sans débordement', await nav.evaluer('document.documentElement.scrollWidth <= innerWidth'));
+  r.verifier('Recommandations mobile sans débordement', await nav.evaluer('innerWidth === 390 && document.documentElement.scrollWidth <= 390'), await nav.evaluer("`scrollWidth ${document.documentElement.scrollWidth} / ${innerWidth}`"));
   await nav.capture(`${OUT}/b2-recommandations-mobile.png`);
   await nav.taille(1280, 900);
   await deconnecter();
