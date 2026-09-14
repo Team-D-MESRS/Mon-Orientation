@@ -2,7 +2,7 @@
 
 ## Contexte
 
-Ce projet est développé avec Claude Code, potentiellement depuis plusieurs comptes Claude différents (bascule en cas de limite d'usage atteinte). Toute nouvelle session — quel que soit le compte connecté — doit pouvoir reprendre le travail immédiatement.
+Ce projet est développé avec Claude, potentiellement depuis plusieurs comptes Claude différents (bascule en cas de limite d'usage atteinte). Toute nouvelle session — quel que soit le compte connecté — doit pouvoir reprendre le travail immédiatement.
 
 ## À faire en priorité au démarrage de toute session
 
