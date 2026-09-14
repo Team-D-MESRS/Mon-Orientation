@@ -207,6 +207,8 @@ Tailwind ne génère que les classes qu'il trouve dans les fichiers de `src/app`
 
 Les classes `.bj-*` de `globals.css` sont déclarées après les utilitaires Tailwind : à spécificité égale, elles l'emportent. Elles ne doivent donc fixer que ce qu'aucun utilitaire ne vient compléter sur le même élément. C'est pourquoi `.bj-container` ne fixe que les marges et le padding horizontaux : `bj-container py-8v` fonctionne.
 
+Animations au défilement (accueil) : le composant `Apparition` (`src/components/animation/`) fait apparaître un bloc en fondu quand il entre à l'écran (effets `monter`, `gauche`, `droite`, `zoom`, `delai` pour décaler une série), et `Compteur` fait défiler un nombre. Les éléments ne sont masqués que si le script de `layout.tsx` a posé `data-animations` sur `<html>` avant le premier affichage. Sans JavaScript, à l'impression et avec la préférence système « réduire les animations », tout reste visible et immobile. Placer `Apparition` sur l'élément qui enveloppe une `.bj-card` plutôt que sur la carte elle-même, pour garder son effet au survol.
+
 **Accessibilité (WCAG 2.1 AA)** :
 
 - lien « Aller au contenu principal » ;

@@ -7,7 +7,7 @@
 ## État actuel
 
 - **Étape du pipeline** : développement MVP — parcours élève web opérationnel sur données de démonstration
-- **En cours** : rien — catalogue enrichi, pages d'information et pied de page refaits, conseiller en fongbé, accueil refait (non commité)
+- **En cours** : rien — tout est commité et poussé sur `origin/main` (Team-D-MESRS/Mon-Orientation)
 - **Documents locaux** : le cahier des charges (`docs/`) et la note de cadrage du client restent sur la machine de l'utilisateur, hors dépôt (`.gitignore`), à sa demande.
 - **Bloqué / en attente de** : coordonnées et mentions légales à fournir par le MESTFP (contact, directeur de la publication, hébergeur, délégué aux données, durée de conservation → `frontend/src/lib/site.ts`) ; validation client du référentiel filières et du moteur (barème, matières clés, seuils : conseillers d'orientation DGES) ; arbitrages SPEC §7 (appliqué par défaut : vœux saisis par l'élève, validés par le parent) ; accès API EducMaster (2.1)
 - **Prochaine action recommandée** : 00) l'utilisateur régénère sa clé Gemini (collée en clair dans la conversation) et met la nouvelle dans `backend/.env` ; 0) l'utilisateur complète le nom du prestataire dans `docs/Cahier_des_charges_Mon_Orientation_v1.0.docx` et le présente au MESTFP ; 1) présenter le parcours au client et faire valider le moteur, ainsi que les domaines du catalogue ; 2) conseiller IA réel (5.1/5.2) une fois son périmètre arbitré ; 3) écran d'administration du référentiel (3.10 : fiches, statut « validé par le ministère », historique ; le seed réécrit aujourd'hui les fiches à chaque lancement, à adapter) + rôle ÉTABLISSEMENT et rattachement parent-enfant ; 4) statistiques branchées sur l'API (6.1/6.3) ; 5) projet Flutter ; 6) tests unitaires + CI (1.8)
@@ -16,6 +16,15 @@
 ## Historique
 
 *(plus récent en haut)*
+
+### 2026-09-14 05:40 — animations au défilement sur l'accueil (fil principal)
+- Fait : composants `Apparition` (fondu au défilement, IntersectionObserver, sans bibliothèque) et `Compteur` (`frontend/src/components/animation/`) ; cascade du bandeau, cartes et domaines décalés, bulles du conseiller l'une après l'autre, compteur du nombre de formations.
+- Garde-fous : masquage seulement si `layout.tsx` pose `data-animations` avant le premier affichage (pas sans JavaScript, pas avec « réduire les animations », jamais à l'impression) ; compteur caché aux lecteurs d'écran, qui lisent la phrase fixe.
+- Tests : `accueil.mjs` 14 vérifications (défilement complet, animations réduites, pas d'erreur d'hydratation) ; `cdp.mjs` émule les préférences système.
+
+### 2026-09-14 05:00 — tableau de bord sans redondance (fil principal)
+- Constat : la « double page » signalée (« Tableau de bord personnel », Adama Kouassi) était un onglet périmé du navigateur ; cette maquette du premier commit n'existe plus (ni code, ni cache, ni JS servi).
+- Fait : carte « Profil » supprimée (elle répétait classe et NIP de l'en-tête) ; le département passe dans l'en-tête de l'espace ; rangée du haut en 2 cartes (Résultats, Orientation). Test du parcours complété.
 
 ### 2026-09-14 04:15 — accueil refait (fil principal)
 - Fait : bandeau avec recherche (formulaire GET vers `/catalogue?q=`, marche sans JavaScript) et raccourci « Que faire après mon bac ? » (une pastille par série) ; entrées par profil (4e-3e, 1re-Terminale, parent) ; 4 étapes fidèles au parcours ; domaines avec leur nombre de formations ; conseiller en fongbé (exemple validé) ; engagements. Boutons selon la connexion (Se connecter / Mon espace / Tableau de bord).

@@ -307,7 +307,7 @@ Bottom Navigation (4 tabs):
 └──────────────────────────────────────────────┘
 ```
 
-Règles de contenu (septembre 2026) : les chiffres (formations, domaines, séries) sont lus dans l'API, jamais écrits en dur ; seules les langues réellement disponibles sont annoncées (fongbé) ; les statistiques nationales, réservées à la DGES, ne figurent pas sur l'accueil.
+Règles de contenu (septembre 2026) : les chiffres (formations, domaines, séries) sont lus dans l'API, jamais écrits en dur ; seules les langues réellement disponibles sont annoncées (fongbé) ; les statistiques nationales, réservées à la DGES, ne figurent pas sur l'accueil. Animations discrètes au défilement : fondu avec léger glissement, éléments d'une même série décalés, compteur du nombre de formations. Elles sont désactivées quand le système demande de réduire les animations.
 
 #### Page Catalogue (`/catalogue`)
 

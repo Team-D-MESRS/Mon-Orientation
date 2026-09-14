@@ -199,7 +199,7 @@ node tests/e2e/conseiller.mjs       # 6 scénarios : présentation, onglet Conse
 bash tests/api/catalogue.sh         # 58 vérifications : recherche, filtres, séries du bac, domaines, formations mises de côté
 node tests/e2e/catalogue.mjs        # 28 scénarios : filtres, comparateur, « Et après ce bac ? », partage, impression, cœurs, mobile
 node tests/e2e/pied-de-page.mjs     # 23 scénarios : pages d'information, liens du pied de page, pied de page en bas, 404
-node tests/e2e/accueil.mjs          # 10 scénarios : contenus exacts, recherche, séries, domaines, boutons selon la connexion, mobile
+node tests/e2e/accueil.mjs          # 14 scénarios : contenus exacts, recherche, séries, domaines, animations au défilement (et réduites), boutons selon la connexion, mobile
 ```
 
 Les prérequis et les variables sont décrits dans [tests/README.md](tests/README.md). Il n'y a pas encore de tests unitaires ni d'intégration continue (tâches 1.8 et 7.x de [TASKS.md](TASKS.md)).

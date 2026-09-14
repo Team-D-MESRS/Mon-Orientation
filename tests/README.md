@@ -21,7 +21,7 @@ node tests/e2e/conseiller.mjs       # conseiller dans le navigateur (sans clé :
 bash tests/api/catalogue.sh         # recherche sans accents, filtres, séries du bac, domaines, formations mises de côté
 node tests/e2e/catalogue.mjs        # filtres, comparateur, « Et après ce bac ? », partage, impression, cœurs, mobile
 node tests/e2e/pied-de-page.mjs     # pages d'information, liens du pied de page (aucun lien mort), pied de page en bas, 404
-node tests/e2e/accueil.mjs          # accueil : contenus exacts, recherche, séries, domaines, boutons selon la connexion, mobile
+node tests/e2e/accueil.mjs          # accueil : contenus exacts, recherche, séries, domaines, animations au défilement (et réduites), boutons selon la connexion, mobile
 bash tests/reinitialiser-demo.sh    # remet la démo à zéro : vœux, recommandations, conversations, formations mises de côté
 ```
 
