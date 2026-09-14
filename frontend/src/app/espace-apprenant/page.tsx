@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Clock, GraduationCap, TrendingUp, User } from 'lucide-react';
+import { CheckCircle2, Clock, GraduationCap, TrendingUp } from 'lucide-react';
 import { apprenantApi, orientationApi } from '@/lib/api';
 import {
-  classeLisible,
   dateLisible,
   noteLisible,
   palierDeSaisie,
@@ -66,15 +65,8 @@ export default function TableauDeBordPage() {
   const { bilan } = profil;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6v">
-      <Carte titre="Profil" icone={<User size={18} />}>
-        <dl className="text-sm space-y-2v">
-          <Ligne libelle="Classe" valeur={classeLisible(profil)} />
-          <Ligne libelle="Département" valeur={`${profil.departement} (${profil.commune})`} />
-          <Ligne libelle="NIP" valeur={profil.nip} />
-        </dl>
-      </Carte>
-
+    // Identité, classe, département et NIP figurent déjà dans l'en-tête de l'espace (CadreEspace)
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6v">
       <Carte titre={`Résultats ${bilan.anneeScolaire ?? ''}`} icone={<TrendingUp size={18} />}>
         {bilan.moyenneGenerale === null ? (
           <p className="text-sm text-bj-gray-500">Aucune note disponible pour l&apos;instant.</p>
@@ -106,7 +98,7 @@ export default function TableauDeBordPage() {
         <EtapeOrientation profil={profil} preference={preference} estParent={estParent} />
       </Carte>
 
-      <section className="lg:col-span-3">
+      <section className="md:col-span-2">
         <div className="flex items-center justify-between mb-4v">
           <h2 className="text-xl font-bold">{profil.palier === 'QUATRIEME' ? 'Pistes à explorer' : 'Pistes recommandées'}</h2>
           <Link href="/espace-apprenant/recommandations" className={LIEN}>
@@ -137,7 +129,7 @@ export default function TableauDeBordPage() {
         )}
       </section>
 
-      <section className="lg:col-span-3" aria-labelledby="titre-favoris">
+      <section className="md:col-span-2" aria-labelledby="titre-favoris">
         <div className="flex items-center justify-between mb-4v">
           <h2 id="titre-favoris" className="text-xl font-bold">
             {estEleve ? 'Mes formations mises de côté' : 'Formations mises de côté'}
@@ -170,15 +162,6 @@ export default function TableauDeBordPage() {
           </>
         )}
       </section>
-    </div>
-  );
-}
-
-function Ligne({ libelle, valeur }: { libelle: string; valeur: string }) {
-  return (
-    <div className="flex justify-between gap-4v">
-      <dt className="text-bj-gray-500">{libelle}</dt>
-      <dd className="font-medium text-right">{valeur}</dd>
     </div>
   );
 }

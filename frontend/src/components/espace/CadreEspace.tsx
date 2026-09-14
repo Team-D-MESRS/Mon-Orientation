@@ -50,7 +50,7 @@ export function CadreEspace({ children }: { children: ReactNode }) {
             <h1 className="text-3xl font-bold mb-1v">{titre}</h1>
             {profil && (
               <p className="text-bj-gray-500">
-                {profil.prenom} {profil.nom} · {classeLisible(profil)} · NIP {profil.nip}
+                {profil.prenom} {profil.nom} · {classeLisible(profil)} · {profil.departement} ({profil.commune}) · NIP {profil.nip}
               </p>
             )}
           </div>
