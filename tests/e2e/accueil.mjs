@@ -29,6 +29,20 @@ const accueil = async () => {
   await nav.aller(`${BASE}/`);
   await nav.attendre(`${series}.length === 14 && ${domaines}.length === 14`);
 };
+// Fait défiler toute la page par paliers (déclenche les apparitions), puis revient en haut
+const defiler = () =>
+  nav.evaluer(`(async () => {
+    for (let y = 0; y <= document.documentElement.scrollHeight; y += innerHeight / 2) {
+      scrollTo(0, y);
+      await new Promise((r) => setTimeout(r, 120));
+    }
+    scrollTo(0, 0);
+    return true;
+  })()`);
+const tousApparus = "document.querySelectorAll('[data-apparition]:not([data-apparu])').length === 0";
+// data-apparu est posé au début de l'animation : attendre la fin des transitions (délai le plus long + durée) avant une capture
+const finAnimations = () => nav.evaluer('new Promise((r) => setTimeout(() => r(true), 2000))');
+const opaciteDomaine = "getComputedStyle(document.querySelector('main a[href=\"/catalogue?domaine=NUMERIQUE\"]').closest('li')).opacity";
 
 try {
   await nav.taille(1280, 900);
@@ -37,14 +51,42 @@ try {
     'Contenus exacts : ni « 100 filières », ni langues non disponibles, ni lien Statistiques',
     await nav.evaluer(`!${dansMain('100 filières')} && !${dansMain('Bariba')} && !${dansMain('Yoruba')} && !document.querySelector('main a[href="/stats"]')`),
   );
+  // Phrase fixe, lue par les lecteurs d'écran : le compteur visible part de 0 et ne défile qu'au scroll
+  const phraseFixe =
+    "([...document.querySelectorAll('main p')].find((e) => e.textContent.includes('formations recensées'))?.querySelector('.sr-only')?.textContent ?? '')";
   r.verifier(
     'Chiffres lus dans le catalogue',
-    await nav.evaluer(`/\\d+ formations recensées dans 14 domaines/.test(document.querySelector('main').textContent)`),
-    await nav.evaluer("document.querySelector('main').textContent.match(/\\d+ formations recensées[^.]*/)?.[0]"),
+    await nav.evaluer(`/^[1-9]\\d* formations recensées dans 14 domaines/.test(${phraseFixe})`),
+    await nav.evaluer(phraseFixe),
   );
   r.verifier('Visiteur : « Se connecter » et « Créer un compte »', await nav.evaluer(`${dansMain('Se connecter')} && !!document.querySelector('main a[href="/inscription"]')`));
   r.verifier('Exemple du conseiller marqué en fongbé (lang="fon")', await nav.evaluer(`!!document.querySelector('main [lang="fon"]')`));
+
+  // Animations au défilement
+  r.verifier(
+    'Animations actives ; hors de l’écran, les tuiles de domaine attendent le défilement',
+    await nav.evaluer(`document.documentElement.hasAttribute('data-animations') && ${opaciteDomaine} === '0'`),
+  );
+  await defiler();
+  await nav.attendre(tousApparus, 10000);
+  await nav.attendre(`${opaciteDomaine} === '1'`, 5000);
+  await finAnimations();
+  r.verifier(
+    'Au défilement, tous les blocs apparaissent et le compteur atteint le total',
+    await nav.evaluer(
+      "(() => { const p = [...document.querySelectorAll('main p')].find((e) => e.textContent.includes('formations recensées')); return p.querySelector('[aria-hidden] .tabular-nums').textContent === p.querySelector('.sr-only').textContent.split(' ')[0]; })()",
+    ),
+  );
   await nav.capture(`${OUT}/a1-accueil.png`);
+
+  // Préférence système « réduire les animations » : rien n'est masqué ni animé
+  await nav.media('', [{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+  await accueil();
+  r.verifier(
+    'Animations réduites : tout est visible d’emblée',
+    await nav.evaluer(`!document.documentElement.hasAttribute('data-animations') && ${opaciteDomaine} === '1'`),
+  );
+  await nav.media('');
 
   await nav.saisir('#recherche-accueil', 'medecine');
   await nav.cliquer('form[role=search] button[type=submit]');
@@ -76,7 +118,11 @@ try {
   await nav.taille(390, 844, true);
   await accueil();
   r.verifier('Mobile : pas de débordement horizontal', await nav.evaluer('innerWidth === 390 && document.documentElement.scrollWidth <= 390'));
+  await defiler();
+  await nav.attendre(tousApparus, 10000);
+  await finAnimations();
   await nav.capture(`${OUT}/a2-accueil-mobile.png`);
+  r.verifier('Aucune erreur d’hydratation', !nav.erreursConsole.some((e) => /hydrat|did not match/i.test(e)));
 } catch (e) {
   r.verifier('Scénario interrompu', false, e.message);
   await nav.capture(`${OUT}/a-echec.png`).catch(() => {});

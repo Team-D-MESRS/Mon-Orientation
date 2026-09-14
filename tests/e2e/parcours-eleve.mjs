@@ -38,6 +38,11 @@ try {
   await connecter('DEMO-3E-0001', '/espace-apprenant');
   await nav.attendre(contient('Moyenne générale'));
   r.verifier('Fatou : tableau de bord', await nav.evaluer(`${texte('main h1')} === 'Mon espace' && ${contient('Dossier de démonstration')} && ${contient('13,2')}`), await nav.evaluer(`${texte('main h1 + p')}`));
+  // Identité, classe, département et NIP dans l'en-tête uniquement (plus de carte « Profil » qui les répétait)
+  r.verifier(
+    'En-tête avec le département, NIP affiché une seule fois',
+    await nav.evaluer(`${texte('main h1 + p')}.includes('Littoral') && document.querySelector('main').textContent.split('DEMO-3E-0001').length === 2`),
+  );
   await nav.attendre(contient('Saisir mes vœux'));
   r.verifier('Invitation à saisir ses vœux', true);
   await nav.capture(`${OUT}/b2-tableau-de-bord.png`);

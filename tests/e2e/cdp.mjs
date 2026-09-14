@@ -57,9 +57,12 @@ export async function lancerNavigateur() {
     async taille(largeur, hauteur, mobile = false) {
       await envoyer('Emulation.setDeviceMetricsOverride', { width: largeur, height: hauteur, deviceScaleFactor: 1, mobile });
     },
-    /** Média CSS émulé : 'print' pour vérifier l'impression, '' pour revenir à l'écran */
-    async media(type) {
-      await envoyer('Emulation.setEmulatedMedia', { media: type });
+    /**
+     * Média CSS émulé : 'print' pour vérifier l'impression, '' pour revenir à l'écran ; préférences système
+     * éventuelles, ex. [{ name: 'prefers-reduced-motion', value: 'reduce' }]
+     */
+    async media(type, preferences = []) {
+      await envoyer('Emulation.setEmulatedMedia', { media: type, features: preferences });
     },
     async aller(url) {
       await envoyer('Page.navigate', { url });
