@@ -126,6 +126,9 @@ export class OutilsConseillerService {
       diplomesDelivres: f.diplomesDelivres,
       metiersVises: f.metiersVises,
       debouches: f.debouches,
+      // Secondaire technique : contenu détaillé des catalogues officiels des nouveaux métiers (DTM),
+      // à préférer à metiersVises/debouches quand il est présent (missions, compétences, débouchés détaillés…)
+      contenuMetier: f.contenuMetier ?? undefined,
       conditionsAcces: f.conditionsAcces ?? 'non renseignées',
       seriesAdmises: f.seriesAdmises,
       // Supérieur : données du guide officiel du MESRS (null pour les formations après le BEPC)
@@ -134,7 +137,14 @@ export class OutilsConseillerService {
       matieresClassement: f.matieresClassement,
       placesAvecBourse: f.quotaBourses,
       aidesOuPlacesPartiellementPayantes: f.quotaAides,
-      ouSeFormer: f.ouSeFormer ?? 'non renseigné',
+      // Lieux officiels (répertoires des lycées, écoles des métiers) ; ouSeFormer n'en est qu'une précision
+      lieuxDeFormation: f.offres.map(({ etablissement: e }) => ({
+        etablissement: e.nom,
+        commune: e.commune ?? 'implantation non précisée',
+        departement: e.departement ?? 'non précisé',
+        internat: e.internat ?? 'non précisé',
+      })),
+      ouSeFormer: f.ouSeFormer ?? (f.offres.length > 0 ? null : 'non renseigné'),
       bourses: f.bourses ?? 'non renseigné',
       tauxInsertion: f.tauxInsertion ?? 'aucune donnée publique',
       sourceOfficielle: sources.some((s) => s.officielle),

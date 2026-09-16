@@ -15,7 +15,7 @@ const LIMITE = 48;
 const CHAMP = 'w-full px-4v py-3v border border-bj-gray-850 rounded-bj-sm text-sm bg-white focus:outline-none focus:ring-2 focus:ring-bj-green';
 
 /** Filtres portés par l'adresse de la page : une recherche filtrée se partage par simple lien. */
-const CLES = ['q', 'niveau', 'type', 'domaine', 'serie', 'bourses', 'officielle'] as const;
+const CLES = ['q', 'niveau', 'type', 'domaine', 'departement', 'serie', 'bourses', 'officielle'] as const;
 type Cle = (typeof CLES)[number];
 
 function requeteDepuis(chaine: string): ParametresCatalogue {
@@ -25,6 +25,7 @@ function requeteDepuis(chaine: string): ParametresCatalogue {
     niveau: p.get('niveau') || undefined,
     type: p.get('type') || undefined,
     domaine: p.get('domaine') || undefined,
+    departement: p.get('departement') || undefined,
     serie: p.get('serie') || undefined,
     bourses: p.get('bourses') === 'true' || undefined,
     officielle: p.get('officielle') === 'true' || undefined,
@@ -103,7 +104,7 @@ function Catalogue() {
     filiereApi
       .filtres()
       .then(({ data }) => setValeurs(data))
-      .catch(() => setValeurs({ domaines: [], series: [] }));
+      .catch(() => setValeurs({ domaines: [], series: [], departements: [] }));
   }, []);
 
   // Élève de Première ou de Terminale : raccourci vers les formations accessibles avec sa série
@@ -192,7 +193,7 @@ function Catalogue() {
             />
           </div>
 
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3v">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3v">
             <div>
               <label htmlFor="filtre-niveau" className="sr-only">Niveau d&apos;accès</label>
               <select
@@ -223,6 +224,22 @@ function Catalogue() {
                 {valeurs?.domaines.map((d) => (
                   <option key={d.code} value={d.code}>
                     {d.libelle} ({d.total})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="filtre-departement" className="sr-only">Département</label>
+              <select
+                id="filtre-departement"
+                value={params.get('departement') ?? ''}
+                onChange={(e) => modifier({ departement: e.target.value })}
+                className={CHAMP}
+              >
+                <option value="">Tous les départements</option>
+                {valeurs?.departements.map((d) => (
+                  <option key={d.nom} value={d.nom}>
+                    {d.nom} ({d.total})
                   </option>
                 ))}
               </select>

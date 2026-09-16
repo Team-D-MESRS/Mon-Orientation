@@ -74,7 +74,7 @@ try {
   );
 
   await nav.saisir('#recherche', 'electricite');
-  await nav.attendre(`location.search.includes('q=electricite') && ${contient('Électricité et systèmes énergétiques')} && !${contient(`${TOTAL} filière(s)`)}`);
+  await nav.attendre(`location.search.includes('q=electricite') && ${contient("Métiers de l'électricité")} && !${contient(`${TOTAL} filière(s)`)}`);
   r.verifier('Recherche sans accent : « electricite » trouve le DTM Électricité', true, await nav.evaluer(`${nbCartes} + ' fiche(s)'`));
 
   await nav.cliquerTexte('Effacer les filtres', 'button');
@@ -87,6 +87,15 @@ try {
   await nav.cliquerTexte('Avec bourses', 'label');
   await nav.attendre(`location.search.includes('bourses=true') && ${contient(`${NB_BOURSES} filière(s) trouvée(s)`)}`);
   r.verifier(`Filtre bourses (${NB_BOURSES})`, true);
+  await nav.cliquerTexte('Effacer les filtres', 'button');
+  await nav.attendre(contient(`${TOTAL} filière(s) trouvée(s)`));
+  const NB_BORGOU = await totalDe('departement=Borgou');
+  await nav.saisir('#filtre-departement', 'Borgou');
+  await nav.attendre(`location.search.includes('departement=Borgou') && ${contient(`${NB_BORGOU} filière(s) trouvée(s)`)}`);
+  r.verifier(
+    `Filtre département : Borgou (${NB_BORGOU}), parmi les 12 départements`,
+    await nav.evaluer("document.querySelectorAll('#filtre-departement option').length === 13"),
+  );
 
   // Pagination : 48 formations à la fois
   await nav.aller(`${BASE}/catalogue?serie=D`);
@@ -153,6 +162,16 @@ try {
   await nav.cliquerTexte('Vider', '[aria-label="Comparateur de formations"] button');
   await nav.attendre(`!${barre}`);
   r.verifier('Vider la sélection masque la barre', true);
+
+  // ── Fiche d'un DTM : où se former, par département, internat, école des métiers
+  await nav.aller(`${BASE}/catalogue/${await idDe('DTM-LTP-ELEC-ENERGIE')}`);
+  await nav.attendre(contient('9 établissements'));
+  r.verifier(
+    'Fiche DTM : 9 lieux par département, internat signalé, école des métiers à part',
+    await nav.evaluer(
+      `${contient('LTP Natitingou')} && ${contient('Atacora')} && ${contient('Internat')} && ${contient('Écoles des métiers (implantation non publiée)')} && !${contient('LTP Kandi')}`,
+    ),
+  );
 
   // ── Fiche d'un bac : « Et après ? », partage, impression
   await nav.aller(`${BASE}/catalogue/${await idDe('BAC-D')}`);

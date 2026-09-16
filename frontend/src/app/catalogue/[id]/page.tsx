@@ -20,7 +20,19 @@ import {
   Wallet,
 } from 'lucide-react';
 import { filiereApi } from '@/lib/api';
-import { DOMAINE_LABELS, Filiere, NIVEAU_LABELS, TYPE_COLORS, TYPE_LABELS, aUneSourceOfficielle, avecAdmission, serieDuBac } from '@/lib/filiere';
+import {
+  ContenuMetier as ContenuMetierType,
+  DOMAINE_LABELS,
+  ElementListe,
+  Filiere,
+  LieuDeFormation,
+  NIVEAU_LABELS,
+  TYPE_COLORS,
+  TYPE_LABELS,
+  aUneSourceOfficielle,
+  avecAdmission,
+  serieDuBac,
+} from '@/lib/filiere';
 import { useFavoris } from '@/stores/favorisStore';
 import { BoutonComparer } from '@/components/catalogue/BoutonComparer';
 import { BoutonFavori } from '@/components/catalogue/BoutonFavori';
@@ -49,6 +61,100 @@ function Liste({ elements }: { elements: string[] | null }) {
         <li key={e}>{e}</li>
       ))}
     </ul>
+  );
+}
+
+/** Liste plate, ou liste de groupes titrés (« Emploi salarié » / « Auto-emploi »…) telle que publiée. */
+function Elements({ elements }: { elements: ElementListe[] }) {
+  if (elements.every((e) => typeof e === 'string')) {
+    return (
+      <ul className="list-disc pl-6v space-y-1v">
+        {(elements as string[]).map((e) => (
+          <li key={e}>{e}</li>
+        ))}
+      </ul>
+    );
+  }
+  return (
+    <div className="space-y-3v">
+      {elements.map((e) =>
+        typeof e === 'string' ? (
+          <p key={e}>{e}</p>
+        ) : (
+          <div key={e.titre}>
+            <p className="font-medium mb-1v">{e.titre}</p>
+            <ul className="list-disc pl-6v space-y-1v">
+              {e.elements.map((x) => (
+                <li key={x}>{x}</li>
+              ))}
+            </ul>
+          </div>
+        ),
+      )}
+    </div>
+  );
+}
+
+function SousTitre({ children }: { children: ReactNode }) {
+  return <h3 className="font-bold text-sm mb-2v mt-5v first:mt-0">{children}</h3>;
+}
+
+/** Contenu d'une fiche des catalogues officiels des nouveaux métiers (DTM). */
+function LeMetier({ contenu }: { contenu: ContenuMetierType }) {
+  return (
+    <div>
+      {contenu.secteur && <p>{contenu.secteur}</p>}
+      <p className={contenu.secteur ? 'mt-3v' : ''}>{contenu.description}</p>
+      {contenu.profilSortie && <p className="mt-3v text-sm text-bj-gray-500">{contenu.profilSortie}</p>}
+
+      {contenu.missions && (
+        <>
+          <SousTitre>Missions principales</SousTitre>
+          <Elements elements={contenu.missions} />
+        </>
+      )}
+
+      {contenu.competences.length > 0 && (
+        <>
+          <SousTitre>Compétences</SousTitre>
+          {contenu.competencesIntro && <p className="mb-2v text-sm text-bj-gray-500">{contenu.competencesIntro}</p>}
+          <Elements elements={contenu.competences} />
+        </>
+      )}
+
+      {contenu.qualites && (
+        <>
+          <SousTitre>Qualités requises</SousTitre>
+          <Elements elements={contenu.qualites} />
+        </>
+      )}
+
+      {contenu.secteursActivite && (
+        <>
+          <SousTitre>Secteurs d&apos;activité</SousTitre>
+          <Elements elements={contenu.secteursActivite} />
+        </>
+      )}
+
+      <SousTitre>Débouchés</SousTitre>
+      <Elements elements={contenu.debouches} />
+
+      {contenu.employeurs && (
+        <>
+          <SousTitre>Entreprises et structures qui recrutent</SousTitre>
+          <Elements elements={contenu.employeurs} />
+        </>
+      )}
+
+      {(contenu.partenariats || contenu.perspectives) && (
+        <>
+          <SousTitre>{contenu.catalogue === 'LTA' ? 'Partenariat avec le milieu professionnel' : 'Partenariats'}</SousTitre>
+          {contenu.partenariatsIntro && <p className="mb-2v text-sm text-bj-gray-500">{contenu.partenariatsIntro}</p>}
+          {contenu.partenariats && <Elements elements={contenu.partenariats} />}
+          {contenu.perspectives && <Elements elements={contenu.perspectives} />}
+        </>
+      )}
+    </div>
   );
 }
 
@@ -87,6 +193,43 @@ function ParUniversite({ filieres }: { filieres: Filiere[] }) {
         </details>
       ))}
     </div>
+  );
+}
+
+/** Établissements où la formation est ouverte, par département ; les écoles des métiers, sans adresse publiée, à la fin. */
+function LieuxDeFormation({ offres, precision }: { offres: LieuDeFormation[]; precision: string | null }) {
+  const groupes = new Map<string, LieuDeFormation[]>();
+  for (const o of offres) {
+    const departement = o.etablissement.departement ?? '';
+    groupes.set(departement, [...(groupes.get(departement) ?? []), o]);
+  }
+  return (
+    <>
+      <p className="text-sm text-bj-gray-500 mb-4v">
+        {offres.length === 1 ? 'Un établissement' : `${offres.length} établissements`} d&apos;après les documents officiels du
+        ministère.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6v gap-y-6v">
+        {Array.from(groupes.entries()).map(([departement, liste]) => (
+          <div key={departement || 'ecoles-des-metiers'} className="break-inside-avoid">
+            <h3 className="text-sm font-bold mb-2v">{departement || 'Écoles des métiers (implantation non publiée)'}</h3>
+            <ul className="space-y-2v">
+              {liste.map(({ etablissement: e }) => (
+                <li key={e.code}>
+                  <span className="font-medium">{e.nom}</span>
+                  {e.commune && <span className="text-bj-gray-500"> — {e.commune}</span>}
+                  {e.internat && (
+                    <span className="ml-2v inline-block px-2v rounded-full border border-bj-green bg-white text-xs font-medium text-bj-green">Internat</span>
+                  )}
+                  {e.quartier && <span className="block text-xs text-bj-gray-500">{e.quartier}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      {precision && <p className="mt-4v text-sm text-bj-gray-500">{precision}</p>}
+    </>
   );
 }
 
@@ -288,11 +431,17 @@ export default function FicheFilierePage() {
                 <Liste elements={filiere.diplomesDelivres} />
               </Section>
 
-              <Section icone={<Briefcase size={18} />} titre="Métiers visés et débouchés">
-                {filiere.metiersVises && filiere.metiersVises.length > 0 && <Liste elements={filiere.metiersVises} />}
-                {filiere.debouches && <p className={filiere.metiersVises?.length ? 'mt-3v' : ''}>{filiere.debouches}</p>}
-                {!filiere.metiersVises?.length && !filiere.debouches && <p className="text-bj-gray-500">{NON_RENSEIGNE}</p>}
-              </Section>
+              {filiere.contenuMetier ? (
+                <Section icone={<Briefcase size={18} />} titre="Le métier">
+                  <LeMetier contenu={filiere.contenuMetier} />
+                </Section>
+              ) : (
+                <Section icone={<Briefcase size={18} />} titre="Métiers visés et débouchés">
+                  {filiere.metiersVises && filiere.metiersVises.length > 0 && <Liste elements={filiere.metiersVises} />}
+                  {filiere.debouches && <p className={filiere.metiersVises?.length ? 'mt-3v' : ''}>{filiere.debouches}</p>}
+                  {!filiere.metiersVises?.length && !filiere.debouches && <p className="text-bj-gray-500">{NON_RENSEIGNE}</p>}
+                </Section>
+              )}
 
               {serie && (
                 <Section icone={<CornerDownRight size={18} />} titre="Et après ce bac ?">
@@ -319,7 +468,11 @@ export default function FicheFilierePage() {
               )}
 
               <Section icone={<MapPin size={18} />} titre="Où se former">
-                <p className={filiere.ouSeFormer ? '' : 'text-bj-gray-500'}>{filiere.ouSeFormer ?? NON_RENSEIGNE}</p>
+                {filiere.offres && filiere.offres.length > 0 ? (
+                  <LieuxDeFormation offres={filiere.offres} precision={filiere.ouSeFormer} />
+                ) : (
+                  <p className={filiere.ouSeFormer ? '' : 'text-bj-gray-500'}>{filiere.ouSeFormer ?? NON_RENSEIGNE}</p>
+                )}
               </Section>
 
               <Section icone={<BarChart3 size={18} />} titre="Taux d'insertion">
@@ -359,7 +512,7 @@ export default function FicheFilierePage() {
                 {filiere.sources && filiere.sources.length > 0 ? (
                   <ul className="space-y-3v text-sm liens-imprimes">
                     {filiere.sources.map((s) => (
-                      <li key={s.url} className="flex flex-col gap-1v">
+                      <li key={s.libelle} className="flex flex-col gap-1v">
                         <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-bj-blue hover:underline">
                           {s.libelle}
                         </a>

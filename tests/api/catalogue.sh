@@ -33,10 +33,10 @@ check "« % » n'est pas un joker" 0 "$(liste "search=%25" >/dev/null; jget 'j.t
 check "injection SQL sans effet" 0 "$(liste "search=$(enc "' OR 1=1 --")" >/dev/null; jget 'j.total')"
 check "paramètre répété → 400" 400 $(req GET "/filiere?search=a&search=b")
 P1=$(req GET "/filiere?search=dtm&limit=10&page=1" >/dev/null; js 'return j.items.map(f=>f.id).join(",")')
-check "recherche paginée : 20 DTM" 20 "$(jget 'j.total')"
+check "recherche paginée : 23 DTM" 23 "$(jget 'j.total')"
 P2=$(req GET "/filiere?search=dtm&limit=10&page=2" >/dev/null; js 'return j.items.map(f=>f.id).join(",")')
 check "  page 2 : les 10 suivants, sans doublon" true "$(node -e 'const [a,b]=process.argv.slice(1).map(s=>s.split(","));console.log(b.length===10&&!b.some(x=>a.includes(x)))' "$P1" "$P2")"
-check "recherche + type : 10 DTM agricoles" 10 "$(liste "search=dtm&type=TECHNIQUE_AGRICOLE" >/dev/null; jget 'j.total')"
+check "recherche + type : 11 DTM agricoles" 11 "$(liste "search=dtm&type=TECHNIQUE_AGRICOLE" >/dev/null; jget 'j.total')"
 
 echo "── Séries du bac"
 check "bac D" 200 $(liste "serie=D")
@@ -72,8 +72,27 @@ liste "officielle=true" >/dev/null
 NO=$(jget 'j.total')
 check "source officielle" true "$(js 'return j.total>0&&j.items.every(f=>f.sources.some(s=>s.officielle))')"
 liste "officielle=false" >/dev/null
-check "à confirmer : aucune source officielle" true "$(js 'return j.total>0&&j.items.every(f=>!f.sources?.some(s=>s.officielle))')"
+check "à confirmer : plus aucune fiche visible sans source officielle" 0 "$(jget 'j.total')"
 check "  officielles + à confirmer = tout le catalogue ($NT)" "$NT" "$((NO + $(jget 'j.total')))"
+
+echo "── Lieux de formation (répertoires officiels des lycées, écoles des métiers)"
+fiche() { req GET "/filiere/$(id_code "$1")"; }
+fiche DTM-LTP-ELEC-ENERGIE >/dev/null
+check "DTM Métiers de l'électricité : 8 lycées du répertoire + EMEDD" 9 "$(js 'return j.offres.length')"
+check "  LTP Natitingou (Atacora), avec internat" "Atacora true" "$(js 'const o=j.offres.find(o=>o.etablissement.nom==="LTP Natitingou");return o.etablissement.departement+" "+o.etablissement.internat')"
+check "  l'école des métiers, sans adresse publiée, en dernier" "EMEDD null" "$(js 'const e=j.offres.at(-1).etablissement;return e.code+" "+e.departement')"
+check "  Kandi n'est pas retenu (liste du catalogue copiée d'un métier à l'autre)" false "$(js 'return j.offres.some(o=>o.etablissement.nom==="LTP Kandi")')"
+check "DT Fabrication mécanique (répertoire seul) : 5 lycées" 5 "$(fiche DT-FABRICATION-MECANIQUE >/dev/null; js 'return j.offres.length')"
+check "DTM Accueil touristique : LTP THR et EM THR" "EM-THR LTP-THR-EFS-D-AKASSATO" "$(fiche DTM-LTP-ACCUEIL-TOURISTIQUE >/dev/null; js 'return j.offres.map(o=>o.etablissement.code).sort().join(" ")')"
+check "fiche sans lieu connu : précision affichée à la place" true "$(fiche DTM-LTP-QUALITE-EAU >/dev/null; js 'return j.offres.length===0&&j.ouSeFormer.includes("communiqué N°0902")')"
+check "recherche par commune : « Kandi » trouve le DTM géomètre-topographe" true "$(liste "search=Kandi" >/dev/null; contient DTM-LTP-TOPOGRAPHIE)"
+liste "departement=Borgou&niveau=APRES_BEPC" >/dev/null
+check "département Borgou : l'EFMS de Parakou y est" true "$(contient EFMS-HYGIENISTE-SALLES)"
+check "  la maintenance automobile n'y est pas (ASBA, Kpondéhou, Pobè)" false "$(contient DTM-LTP-MECA-AUTO)"
+NB=$(jget 'j.total')
+req GET /filiere/filtres >/dev/null
+check "filtres : les 12 départements" 12 "$(js 'return j.departements.length')"
+check "  Borgou compte autant de formations que le filtre (supérieur compris)" true "$(js 'return j.departements.find(d=>d.nom==="Borgou").total>='$NB)"
 
 echo "── Supérieur (guide officiel du MESRS 2026-2027)"
 check "225 formations du supérieur" 225 "$(liste "type=UNIVERSITE" >/dev/null; jget 'j.total')"

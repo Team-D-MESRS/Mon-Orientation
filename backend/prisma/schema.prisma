@@ -131,13 +131,35 @@ model Etablissement {
   /// Non renseignés par le guide du MESRS
   departement     String?
   commune         String?
+  /// Répertoires officiels des lycées techniques (DESTFP) ; inconnus pour les écoles des métiers
+  quartier        String?
+  internat        Boolean?
+  externat        Boolean?
   capacite        Int?
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
 
   filieres        Filiere[]
+  offres          OffreFormation[]
 
   @@map("etablissements")
+}
+
+/// Lieu où se prépare une formation du secondaire technique : une même fiche s'ouvre dans plusieurs
+/// établissements. Sources : répertoires officiels des LTP et LTA ; écoles des métiers d'après le
+/// catalogue des nouveaux métiers. Le supérieur garde son établissement unique (Filiere.etablissementId).
+model OffreFormation {
+  filiereId       String   @map("filiere_id")
+  etablissementId String   @map("etablissement_id")
+  duree           String?
+  source          String
+
+  filiere         Filiere       @relation(fields: [filiereId], references: [id], onDelete: Cascade)
+  etablissement   Etablissement @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
+
+  @@id([filiereId, etablissementId])
+  @@index([etablissementId])
+  @@map("offres_formation")
 }
 
 model Filiere {
@@ -170,6 +192,9 @@ model Filiere {
   /// Fiche retirée des listes, des recommandations et des comptages, mais toujours consultable par
   /// son lien : les séries générales du bac restent la clé de tri du filtre « Et après ce bac ? »
   masquee           Boolean     @default(false)
+  /// Fiche métier des catalogues officiels des nouveaux métiers (DTM) : secteur, missions, compétences,
+  /// qualités requises, débouchés, employeurs… Forme décrite dans prisma/data/fiches-metiers.ts
+  contenuMetier     Json?       @map("contenu_metier")
   etablissementId   String?     @map("etablissement_id")
   imageUrl          String?     @map("image_url")
   createdAt         DateTime    @default(now()) @map("created_at")
@@ -183,6 +208,7 @@ model Filiere {
   recommandations   Recommandation[]
   conversations     ConversationIA[]
   favoris           Favori[]
+  offres            OffreFormation[]
 
   @@map("filieres")
 }

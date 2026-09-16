@@ -26,6 +26,8 @@ const PROFILS: [RegExp, ProfilFiliere][] = [
   [/^BAC-EA$/, { matieresCles: VIVANT, seuil: 12 }],
   [/^DT-MODE$/, { matieresCles: [] }],
   [/^DT-/, { matieresCles: SCIENCES }],
+  // Secteur tourisme : le communiqué N°0902 exige anglais ET allemand ou espagnol (paire complète : lot 4)
+  [/^DTM-LTP-ACCUEIL-TOURISTIQUE$/, { matieresCles: ['Anglais'], seuil: 10 }],
   [/^DTM-LTP-/, { matieresCles: SCIENCES, seuil: 10 }],
   [/^DTM-LTA-/, { matieresCles: VIVANT, seuil: 10 }],
   [/^DEAT$/, { matieresCles: VIVANT }],

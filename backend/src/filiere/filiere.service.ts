@@ -24,6 +24,16 @@ export interface FiltresCatalogue {
 
 const PREFIXE_BAC = 'BAC-';
 const ORDRE: Prisma.FiliereOrderByWithRelationInput[] = [{ type: 'asc' }, { nom: 'asc' }];
+/** Lieux de formation d'une fiche, par département puis par nom ; les écoles des métiers, sans adresse connue, en dernier. */
+const LIEUX_DE_FORMATION = {
+  select: {
+    duree: true,
+    etablissement: {
+      select: { code: true, nom: true, type: true, departement: true, commune: true, quartier: true, internat: true, externat: true },
+    },
+  },
+  orderBy: [{ etablissement: { departement: { sort: 'asc', nulls: 'last' } } }, { etablissement: { nom: 'asc' } }],
+} satisfies Prisma.Filiere$offresArgs;
 const AVEC_SOURCE_OFFICIELLE: Prisma.FiliereWhereInput = { sources: { array_contains: [{ officielle: true }] } };
 
 /** Apostrophes typographiques ramenées à l'apostrophe droite, espaces superflus retirés. */
@@ -54,7 +64,10 @@ export class FiliereService {
     }
 
     if (departement) {
-      where.etablissement = { departement };
+      // Supérieur : son établissement ; secondaire technique : l'un de ses lieux de formation
+      restrictions.push({
+        OR: [{ etablissement: { departement } }, { offres: { some: { etablissement: { departement } } } }],
+      });
     }
 
     if (domaine) {
@@ -117,7 +130,8 @@ export class FiliereService {
 
   /**
    * Recherche insensible à la casse et aux accents (extension unaccent) sur le nom, le code, la description,
-   * les débouchés, les métiers, les diplômes, le lieu de formation et les domaines.
+   * les débouchés, les métiers, les diplômes, le lieu de formation, les domaines, et le nom, la commune ou
+   * le département des établissements où la formation est ouverte.
    * Renvoie, pour chaque filière trouvée, 0 si le texte figure dans son nom, 1 sinon.
    */
   private async pertinence(motif: string): Promise<Map<string, number> | undefined> {
@@ -129,7 +143,12 @@ export class FiliereService {
         lower(unaccent(concat_ws(' ', nom, code, description, debouches, ou_se_former,
           metiers_vises::text, diplomes_delivres::text, array_to_string(domaines, ' ')))),
         lower(unaccent(${motif}::text))
-      ) > 0`;
+      ) > 0
+      OR EXISTS (
+        SELECT 1 FROM offres_formation o JOIN etablissements e ON e.id = o.etablissement_id
+        WHERE o.filiere_id = filieres.id
+          AND strpos(lower(unaccent(concat_ws(' ', e.nom, e.commune, e.departement))), lower(unaccent(${motif}::text))) > 0
+      )`;
     return new Map(lignes.map((l) => [l.id, l.dans_nom ? 0 : 1]));
   }
 
@@ -169,30 +188,39 @@ export class FiliereService {
 
   /** Valeurs proposées par les filtres du catalogue, avec le nombre de filières par domaine. */
   async filtres() {
-    const [series, parDomaine] = await Promise.all([
+    const [series, parDomaine, departements] = await Promise.all([
       this.series(),
       this.prisma.$queryRaw<{ domaine: string; total: number }[]>`
         SELECT d AS domaine, count(*)::int AS total FROM filieres, unnest(domaines) AS d
         WHERE NOT masquee GROUP BY d`,
+      // Formations ouvertes dans chaque département : lieux du secondaire technique, établissement du supérieur
+      this.prisma.$queryRaw<{ nom: string; total: number }[]>`
+        SELECT e.departement AS nom, count(DISTINCT f.id)::int AS total
+        FROM filieres f
+        LEFT JOIN offres_formation o ON o.filiere_id = f.id
+        JOIN etablissements e ON e.id = COALESCE(o.etablissement_id, f.etablissement_id)
+        WHERE NOT f.masquee AND e.departement IS NOT NULL
+        GROUP BY e.departement
+        ORDER BY e.departement`,
     ]);
     const totaux = new Map(parDomaine.map((d) => [d.domaine, d.total]));
     const domaines = (Object.keys(DOMAINES) as Domaine[])
       .map((code) => ({ code, libelle: DOMAINES[code], total: totaux.get(code) ?? 0 }))
       .sort((a, b) => a.libelle.localeCompare(b.libelle, 'fr'));
-    return { domaines, series };
+    return { domaines, series, departements };
   }
 
   async findOne(id: string) {
     const filiere = await this.prisma.filiere.findUnique({
       where: { id },
-      include: { etablissement: true },
+      include: { etablissement: true, offres: LIEUX_DE_FORMATION },
     });
     if (!filiere) throw new NotFoundException('Filière non trouvée');
     return filiere;
   }
 
   async findByCode(code: string) {
-    return this.prisma.filiere.findUnique({ where: { code } });
+    return this.prisma.filiere.findUnique({ where: { code }, include: { offres: LIEUX_DE_FORMATION } });
   }
 
   async getDebouches(id: string) {

@@ -1,8 +1,12 @@
 /**
- * Référentiel des filières après le BEPC — constitué le 13/09/2026 à partir de sources publiques,
- * en attendant le référentiel officiel du MESTFP (secondaire, technique).
- * Les filières du supérieur viennent du guide officiel du MESRS 2026-2027 : guide-mesrs-2026-2027.json,
- * produit par outils/extraire-guide-mesrs.py.
+ * Référentiel des filières après le BEPC.
+ *
+ * - Secondaire technique : documents officiels remis le 16/09/2026 — communiqué N°0902 du MESRS (offre
+ *   d'inscription 2026-2027 et conditions chiffrées), répertoires des lycées techniques, catalogues des
+ *   nouveaux métiers. Les lieux de formation et le contenu métier sont rattachés par le seed
+ *   (correspondances-eftp.ts) ; ce fichier ne porte que la fiche elle-même.
+ * - Séries générales du bac : masquées, le site mettant en avant la formation technique.
+ * - Supérieur : guide officiel du MESRS 2026-2027 (guide-mesrs-2026-2027.json, outils/extraire-guide-mesrs.py).
  *
  * Règles :
  * - `code` est l'identifiant stable : le seed fait un upsert dessus ;
@@ -41,16 +45,13 @@ export interface FiliereReferentiel {
 
 const CONSULTE_LE = '2026-09-13';
 
+const REMIS_LE = '2026-09-16';
+const SITE_MESRS = 'https://www.enseignementsuperieur.gouv.bj';
+
 const S = {
   officeBac: {
     libelle: 'Office du Baccalauréat — Différentes séries et filières du baccalauréat',
     url: 'https://www.officedubacbenin.bj/spip.php?article10=',
-    consulteLe: CONSULTE_LE,
-    officielle: true,
-  },
-  gouvAgricole: {
-    libelle: 'Gouvernement du Bénin — Formations agricoles : nouvelles filières 2026-2027',
-    url: 'https://www.gouv.bj/article/3635/formations-agricoles-benin-decouvrez-nouvelles-filieres-avenir-annee-2026-2027/',
     consulteLe: CONSULTE_LE,
     officielle: true,
   },
@@ -60,23 +61,36 @@ const S = {
     consulteLe: CONSULTE_LE,
     officielle: true,
   },
-  pagEcolesMetiers: {
-    libelle: "Bénin Révélé (PAG) — 30 lycées techniques agricoles et 7 écoles de métiers de référence",
-    url: 'https://beninrevele.bj/projet/159/mise-place-lycees-techniques-agricoles-modernes-ecoles-metiers-reference/',
-    consulteLe: CONSULTE_LE,
+  // Documents officiels remis le 16/09/2026 (conservés hors dépôt, dossier news/) : le lien mène au site du ministère
+  communiqueN0902: {
+    libelle: "MESRS — Communiqué N°0902 : registres d'inscription à titre payant dans les LTP, les LTA et l'EFMS, rentrées 2026 et 2027",
+    url: SITE_MESRS,
+    consulteLe: REMIS_LE,
     officielle: true,
   },
-  communiqueInscriptions: {
-    libelle: 'Bénin Web TV — Communiqué MESTFP du 16/07/2026 : inscriptions à titre payant LTP, LTA et EFMS 2026-2027',
-    url: 'https://beninwebtv.bj/benin-ouverture-des-inscriptions-a-titre-payant-dans-les-lycees-techniques-et-lecole-de-formation-medico-sociale-pour-2026-2027/',
-    consulteLe: CONSULTE_LE,
-    officielle: false,
+  repertoireLtp: {
+    libelle: 'MESRS / DESTFP — Répertoire des lycées techniques professionnels',
+    url: SITE_MESRS,
+    consulteLe: REMIS_LE,
+    officielle: true,
   },
-  dtmLtp: {
-    libelle: 'Les 4 Vérités — Neuf nouvelles filières professionnelles (18/08/2026)',
-    url: 'https://www.les4verites.bj/neuf-nouvelles-filieres-professionnelles-pour-coller-aux-besoins-des-entreprises/',
-    consulteLe: CONSULTE_LE,
-    officielle: false,
+  repertoireLta: {
+    libelle: 'MESRS / DESTFP — Répertoire des lycées techniques agricoles',
+    url: SITE_MESRS,
+    consulteLe: REMIS_LE,
+    officielle: true,
+  },
+  catalogueLtp: {
+    libelle: 'MESTFP / DESTFP — Nouveaux métiers des lycées techniques professionnels (DTM)',
+    url: SITE_MESRS,
+    consulteLe: REMIS_LE,
+    officielle: true,
+  },
+  catalogueLta: {
+    libelle: 'MESTFP / DESTFP — Nouveaux métiers des lycées techniques agricoles (DTM), rentrée 2026',
+    url: SITE_MESRS,
+    consulteLe: REMIS_LE,
+    officielle: true,
   },
   wikiSecondaire: {
     libelle: 'Wikipédia — Enseignement secondaire au Bénin',
@@ -104,10 +118,14 @@ const S = {
   },
 } satisfies Record<string, SourceFiliere>;
 
-const COND_BAC_TECHNIQUE =
-  "Titulaire du BEPC, âgé de 14 à 22 ans au 31/12/2025, avec au moins 12/20 dans les matières de spécialité (conditions publiées pour l'inscription à titre payant en lycée technique, rentrée 2026-2027).";
-const COND_DTM =
-  "Titulaire du BEPC ou du CAP, âgé de 14 à 25 ans au 31/12/2025, avec au moins 10/20 dans les matières clés (conditions publiées pour l'inscription à titre payant, rentrée 2026-2027).";
+// Conditions officielles de l'inscription à titre payant (communiqué N°0902 du MESRS, rentrées 2026 et 2027).
+// La moyenne exigée vaut pour CHACUNE des deux matières, et non pour leur moyenne.
+const ITP = 'Inscription à titre payant (communiqué N°0902, rentrées 2026 et 2027)';
+const COND_BAC_INDUSTRIEL = `${ITP} : titulaire du BEPC ou d'un diplôme reconnu équivalent, âgé de 14 ans au moins et 22 ans au plus au 31/12/2025, avec une moyenne annuelle d'au moins 12/20 en mathématiques et 12/20 en physique, chimie et technologie (PCT).`;
+const COND_BAC_GESTION = `${ITP} : titulaire du BEPC ou d'un diplôme reconnu équivalent, âgé de 14 ans au moins et 22 ans au plus au 31/12/2025. Le communiqué ne fixe pas de moyenne minimale pour les séries de gestion.`;
+const COND_DTM_INDUSTRIEL = `${ITP} : titulaire du BEPC ou du CAP, âgé de 14 ans au moins et 25 ans au plus au 31/12/2025, avec une moyenne annuelle d'au moins 10/20 en mathématiques et 10/20 en physique, chimie et technologie (PCT).`;
+const COND_DTM_AGRICOLE = `${ITP} : titulaire du BEPC ou du CAP, âgé de 14 ans au moins et 25 ans au plus au 31/12/2025, avec une moyenne annuelle d'au moins 10/20 en mathématiques et 10/20 en sciences de la vie et de la Terre (SVT).`;
+const COND_DTM_TOURISME = `${ITP} : titulaire du BEPC ou du CAP, âgé de 14 ans au moins et 25 ans au plus au 31/12/2025, avec une moyenne annuelle d'au moins 10/20 en anglais et 10/20 en allemand ou en espagnol.`;
 
 // ─── Enseignement secondaire général ─────────────────────────────────────────
 
@@ -134,10 +152,13 @@ const serieGenerale = (code: string, intitule: string, domaines: Domaine[], debo
 const POURSUITES_TECHNIQUES =
   "Poursuites d'études ouvertes aux bacheliers techniques : maintenance industrielle et maintenance automobile (INSTI), concours de l'ENSET, classes préparatoires aux études d'ingénieur (IMSP).";
 
+// Les lieux de formation ne sont pas écrits ici : le seed les rattache depuis les répertoires officiels
+// (voir correspondances-eftp.ts). `ouSeFormer` ne porte qu'une précision, quand aucun lieu n'est connu.
 const serieTechnique = (
   code: string,
   intitule: string,
   domaines: Domaine[],
+  conditionsAcces?: string,
   debouches?: { texte: string; source: SourceFiliere },
 ): FiliereReferentiel => ({
   code: `BAC-${code}`,
@@ -145,12 +166,11 @@ const serieTechnique = (
   nom: `Baccalauréat série ${code} — ${intitule}`,
   type: 'TECHNIQUE',
   niveauAcces: 'APRES_BEPC',
-  description: `Second cycle de l'enseignement secondaire technique, série ${code} : ${intitule}.`,
+  description: `Second cycle de l'enseignement secondaire technique (baccalauréat technologique), série ${code} : ${intitule}. Formation en trois ans dans les lycées techniques professionnels.`,
   diplomesDelivres: [`Baccalauréat série ${code}`],
   debouches: debouches?.texte,
-  conditionsAcces: COND_BAC_TECHNIQUE,
-  ouSeFormer: 'Lycées techniques (liste des établissements à obtenir auprès du MESTFP).',
-  sources: [S.officeBac, S.communiqueInscriptions, ...(debouches ? [debouches.source] : [])],
+  conditionsAcces,
+  sources: [S.officeBac, S.communiqueN0902, S.repertoireLtp, ...(debouches ? [debouches.source] : [])],
 });
 
 const diplomeTechnicien = (code: string, specialite: string, secteur: string, domaines: Domaine[]): FiliereReferentiel => ({
@@ -159,27 +179,32 @@ const diplomeTechnicien = (code: string, specialite: string, secteur: string, do
   nom: `Diplôme de technicien (DT) — ${specialite}`,
   type: 'TECHNIQUE',
   niveauAcces: 'APRES_BEPC',
-  description: `Formation de technicien, secteur ${secteur}. Le DT est considéré comme l'équivalent du baccalauréat pour les filières techniques. Intitulé repris d'un relais presse du communiqué ministériel : à confirmer.`,
+  description: `Formation de technicien, secteur ${secteur}, en trois ans dans les lycées techniques professionnels. Plusieurs formations du supérieur admettent les titulaires du DT au même titre que les bacheliers (guide du MESRS).`,
   diplomesDelivres: ['Diplôme de technicien (DT)'],
-  ouSeFormer: 'Lycées techniques professionnels (établissements à préciser).',
-  sources: [S.communiqueInscriptions, S.wikiSecondaire],
+  sources: [S.communiqueN0902, S.repertoireLtp],
 });
 
 // ─── Formation professionnelle (DTM en lycée technique professionnel) ────────
 
-const dtmLtp = (code: string, specialite: string, description: string, metiers: string[], domaines: Domaine[]): FiliereReferentiel => ({
+const dtmLtp = (
+  code: string,
+  specialite: string,
+  description: string,
+  metiers: string[],
+  domaines: Domaine[],
+  conditionsAcces = COND_DTM_INDUSTRIEL,
+): FiliereReferentiel => ({
   code: `DTM-LTP-${code}`,
   domaines,
   nom: `DTM — ${specialite}`,
   type: 'PROFESSIONNELLE',
   niveauAcces: 'APRES_BEPC',
-  description: `${description} Filière ouverte à la rentrée 2026-2027 dans les lycées techniques professionnels (intitulé exact à confirmer).`,
+  description,
   diplomesDelivres: ['Diplôme de technicien aux métiers (DTM)'],
   metiersVises: metiers,
   debouches: 'Emploi salarié ou création de sa propre entreprise.',
-  conditionsAcces: COND_DTM,
-  ouSeFormer: 'Lycées techniques professionnels (LTP) du pays.',
-  sources: [S.dtmLtp, S.communiqueInscriptions],
+  conditionsAcces,
+  sources: [S.catalogueLtp, S.communiqueN0902, S.repertoireLtp],
 });
 
 // ─── Enseignement technique agricole ─────────────────────────────────────────
@@ -190,12 +215,11 @@ const dtmAgricole = (code: string, specialite: string): FiliereReferentiel => ({
   nom: `DTM — ${specialite}`,
   type: 'TECHNIQUE_AGRICOLE',
   niveauAcces: 'APRES_BEPC',
-  description: 'Formation professionnelle agricole ouverte à la rentrée 2026-2027 dans les lycées techniques agricoles.',
+  description:
+    'Formation professionnelle agricole en trois ans dans les lycées techniques agricoles, selon les nouveaux curricula en vigueur depuis la rentrée 2026.',
   diplomesDelivres: ['Diplôme de technicien aux métiers (DTM)'],
-  conditionsAcces: COND_DTM,
-  ouSeFormer:
-    'Lycées techniques agricoles (LTA) — 30 établissements prévus par le programme gouvernemental ; liste à obtenir auprès du MESTFP.',
-  sources: [S.gouvAgricole, S.communiqueInscriptions],
+  conditionsAcces: COND_DTM_AGRICOLE,
+  sources: [S.catalogueLta, S.communiqueN0902, S.repertoireLta],
 });
 
 // Les écoles des métiers de référence ne sont plus des fiches de formation : le catalogue officiel
@@ -214,81 +238,118 @@ export const REFERENTIEL_FILIERES: FiliereReferentiel[] = [
   ),
   serieGenerale('D', 'Biologie – Géologie', ['SCIENCES'], "Poursuites d'études : médecine, agronomie, biologie, géographie, génie de l'environnement."),
 
-  serieTechnique('E', 'Mathématiques et Techniques', ['SCIENCES', 'INDUSTRIE'], { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
-  serieTechnique('F1', 'Construction mécanique', ['INDUSTRIE'], { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
-  serieTechnique('F2', 'Électronique', ['ELECTRICITE'], { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
-  serieTechnique('F3', 'Électrotechnique', ['ELECTRICITE'], { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
-  serieTechnique('F4', 'Génie civil', ['BTP'], { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
-  serieTechnique('G1', 'Techniques administratives', ['GESTION']),
-  serieTechnique('G2', 'Techniques quantitatives de gestion', ['GESTION'], {
+  {
+    ...serieTechnique('E', 'Mathématiques et Techniques', ['SCIENCES', 'INDUSTRIE'], undefined, {
+      texte: POURSUITES_TECHNIQUES,
+      source: S.bacsTechniques,
+    }),
+    ouSeFormer:
+      "Aucun lycée technique public ne l'ouvre d'après le répertoire officiel des LTP, et la série E ne figure pas dans l'offre d'inscription 2026-2027 du communiqué N°0902.",
+    sources: [S.officeBac, S.bacsTechniques],
+  },
+  serieTechnique('F1', 'Construction mécanique', ['INDUSTRIE'], COND_BAC_INDUSTRIEL, { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
+  {
+    ...serieTechnique('F2', 'Électronique', ['ELECTRICITE'], COND_BAC_INDUSTRIEL, { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
+    ouSeFormer:
+      "Série ouverte dans l'offre d'inscription 2026-2027 (communiqué N°0902), mais aucun lycée ne la propose dans le répertoire officiel des LTP : se renseigner auprès de la direction départementale de l'enseignement technique.",
+  },
+  serieTechnique('F3', 'Électrotechnique', ['ELECTRICITE'], COND_BAC_INDUSTRIEL, { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
+  serieTechnique('F4', 'Génie civil', ['BTP'], COND_BAC_INDUSTRIEL, { texte: POURSUITES_TECHNIQUES, source: S.bacsTechniques }),
+  serieTechnique('G1', 'Techniques administratives', ['GESTION'], COND_BAC_GESTION),
+  serieTechnique('G2', 'Techniques quantitatives de gestion', ['GESTION'], COND_BAC_GESTION, {
     texte: "Poursuites d'études : comptabilité, gestion des organisations, informatique de gestion, techniques commerciales.",
     source: S.apresbacSeries,
   }),
-  serieTechnique('G3', 'Techniques commerciales', ['GESTION']),
+  serieTechnique('G3', 'Techniques commerciales', ['GESTION'], COND_BAC_GESTION),
   {
-    ...serieTechnique('EA', 'Eau et Assainissement', ['ENVIRONNEMENT'], {
+    // Absente de l'offre du communiqué N°0902 : ses conditions d'inscription ne sont pas publiées
+    ...serieTechnique('EA', 'Eau et Assainissement', ['ENVIRONNEMENT'], undefined, {
       texte: "Poursuites d'études : spécialités universitaires de l'eau et de l'assainissement.",
       source: S.bacsTechniques,
     }),
     nom: 'Baccalauréat — filière Eau et Assainissement',
-    description: "Filière de l'enseignement secondaire technique consacrée à l'eau et à l'assainissement.",
+    description:
+      "Filière de l'enseignement secondaire technique consacrée à l'eau et à l'assainissement, en trois ans dans les lycées techniques professionnels.",
     diplomesDelivres: ['Baccalauréat — filière Eau et Assainissement'],
+    sources: [S.officeBac, S.repertoireLtp, S.bacsTechniques],
   },
 
   diplomeTechnicien('MECANO-SOUDURE', "Constructeur d'équipements mécano-soudés", 'industriel', ['INDUSTRIE']),
-  diplomeTechnicien('MODE', 'Métiers de la mode', 'mode', ['ARTISANAT']),
-  diplomeTechnicien('DEV-WEB-MOBILE', 'Développeur web et mobile', 'numérique', ['NUMERIQUE']),
+  diplomeTechnicien('MODE', 'Métiers de la mode et du vêtement', 'mode', ['ARTISANAT']),
+  diplomeTechnicien('DEV-WEB-MOBILE', "Développeur d'applications web et mobile", 'numérique', ['NUMERIQUE']),
   diplomeTechnicien('MULTIMEDIA', 'Producteur multimédia', 'numérique', ['NUMERIQUE']),
+  {
+    ...diplomeTechnicien('FABRICATION-MECANIQUE', 'Fabrication mécanique', 'industriel', ['INDUSTRIE']),
+    description:
+      "Formation de technicien en fabrication mécanique (FM), filière sciences et techniques industrielles. Cette spécialité figure au répertoire officiel des lycées techniques professionnels mais pas dans l'offre d'inscription 2026-2027 du communiqué N°0902 : se renseigner auprès du lycée avant de la choisir.",
+    sources: [S.repertoireLtp],
+  },
 
-  dtmLtp('ELEC-ENERGIE', 'Électricité et systèmes énergétiques', 'Installation, maintenance et dépannage des systèmes électriques en milieu résidentiel, tertiaire et industriel.', ['Électricien'], ['ELECTRICITE']),
+  dtmLtp('ELEC-ENERGIE', "Métiers de l'électricité", 'Installation, maintenance et dépannage des systèmes électriques en milieu résidentiel, tertiaire et industriel.', ['Électricien'], ['ELECTRICITE']),
   dtmLtp('ENR', 'Énergies renouvelables', "Installation et maintenance d'équipements solaires photovoltaïques et thermiques.", ['Installateur solaire'], ['ELECTRICITE']),
-  dtmLtp('FROID-CLIM', 'Froid, climatisation et installations sanitaires', 'Installation et maintenance des équipements frigorifiques, de climatisation et sanitaires.', ['Technicien frigoriste'], ['ELECTRICITE', 'BTP']),
-  dtmLtp('MAINT-MULTIMEDIA', 'Maintenance électronique et multimédia', "Réparation d'appareils audio, vidéo et informatiques.", ['Technicien de maintenance électronique'], ['ELECTRICITE', 'NUMERIQUE']),
-  dtmLtp('RESEAUX-CYBER', 'Réseaux informatiques et cybersécurité', 'Déploiement de réseaux informatiques et protection des données.', ['Technicien réseaux'], ['NUMERIQUE']),
-  dtmLtp('MECA-AUTO', 'Mécanique automobile', 'Entretien et diagnostic des véhicules.', ['Mécanicien automobile'], ['INDUSTRIE']),
-  dtmLtp('GROS-OEUVRE', 'Construction bâtiment — gros œuvre', 'Fondations, maçonnerie et béton armé.', ['Technicien du bâtiment'], ['BTP']),
-  dtmLtp('TOPOGRAPHIE', 'Topographie', 'Levés topographiques et cartographie.', ['Topographe'], ['BTP']),
+  dtmLtp('FROID-CLIM', "Froid sanitaire et conditionnement d'air", 'Installation et maintenance des équipements frigorifiques, de climatisation et sanitaires.', ['Technicien frigoriste'], ['ELECTRICITE', 'BTP']),
+  dtmLtp('MAINT-MULTIMEDIA', "Maintenance d'équipements électroniques, option multimédia", "Réparation d'appareils audio, vidéo et informatiques.", ['Technicien de maintenance électronique'], ['ELECTRICITE', 'NUMERIQUE']),
+  dtmLtp('RESEAUX-CYBER', 'Réseau et sécurité informatique', 'Déploiement de réseaux informatiques et protection des données.', ['Technicien réseaux'], ['NUMERIQUE']),
+  dtmLtp('MECA-AUTO', 'Maintenance de voitures particulières', 'Entretien et diagnostic des véhicules.', ['Mécanicien automobile'], ['INDUSTRIE']),
+  dtmLtp('GROS-OEUVRE', 'Réalisation de gros œuvres', 'Fondations, maçonnerie et béton armé.', ['Technicien du bâtiment'], ['BTP']),
+  dtmLtp('TOPOGRAPHIE', 'Géomètre-topographe', 'Levés topographiques et cartographie.', ['Topographe'], ['BTP']),
   dtmLtp('ETUDES-BATIMENT', "Technicien d'études du bâtiment", 'Dessin assisté par ordinateur, planification et estimation des coûts.', ["Technicien d'études du bâtiment"], ['BTP']),
-  // 12e métier du communiqué N°0902 : annoncé comme DTM et non comme DT, contrairement à la presse
-  dtmLtp('QUALITE-EAU', "Contrôleur de la qualité de l'eau", "Contrôle de la qualité de l'eau de consommation et des rejets, prélèvements et analyses.", ["Contrôleur de la qualité de l'eau"], ['ENVIRONNEMENT']),
+  dtmLtp('BOIS', 'Fabrication et équipement en bois', "Fabrication de meubles, de menuiseries et d'équipements en bois.", [], ['ARTISANAT', 'BTP']),
+  dtmLtp('ACCUEIL-TOURISTIQUE', 'Accueil touristique', "Accueil, information et orientation des touristes et des visiteurs.", [], ['TOURISME'], COND_DTM_TOURISME),
+  {
+    // 12e métier du communiqué N°0902 : annoncé comme DTM et non comme DT, contrairement à la presse
+    ...dtmLtp('QUALITE-EAU', "Contrôleur de la qualité de l'eau", "Contrôle de la qualité de l'eau de consommation et des rejets, prélèvements et analyses.", ["Contrôleur de la qualité de l'eau"], ['ENVIRONNEMENT']),
+    ouSeFormer:
+      "Métier annoncé dans l'offre d'inscription 2026-2027 (communiqué N°0902), sans lycée dans le répertoire officiel ni fiche dans le catalogue des nouveaux métiers : se renseigner auprès de la direction départementale de l'enseignement technique.",
+    sources: [S.communiqueN0902],
+  },
 
   {
     code: 'EFMS-HYGIENISTE-ASSAINISSEMENT',
     nom: "Hygiéniste d'assainissement — École de formation médico-sociale",
     type: 'PROFESSIONNELLE',
     niveauAcces: 'APRES_BEPC',
-    description: "Formation médico-sociale sanctionnée par un diplôme d'État (intitulé exact à confirmer).",
+    description: "Formation médico-sociale en trois ans, sanctionnée par un diplôme d'État.",
     diplomesDelivres: ["Diplôme d'État"],
     metiersVises: ["Hygiéniste d'assainissement"],
     domaines: ['SANTE', 'ENVIRONNEMENT'],
-    conditionsAcces: 'Titulaire du BEPC, âgé de 15 à 25 ans au 31/12/2025 (inscription à titre payant, rentrée 2026-2027).',
-    ouSeFormer: 'École de formation médico-sociale (EFMS) de Parakou et son annexe de Djougou.',
-    sources: [S.communiqueInscriptions],
+    conditionsAcces: `${ITP} : titulaire du BEPC ou d'un diplôme reconnu équivalent, âgé de 15 ans au moins et 25 ans au plus au 31/12/2025.`,
+    ouSeFormer: "Le communiqué N°0902 mentionne aussi une annexe de l'EFMS de Parakou à Djougou.",
+    sources: [S.communiqueN0902, S.repertoireLtp],
   },
   {
     code: 'EFMS-HYGIENISTE-SALLES',
     nom: 'Hygiéniste de salles — École de formation médico-sociale',
     type: 'PROFESSIONNELLE',
     niveauAcces: 'APRES_BEPC',
-    description: "Formation médico-sociale sanctionnée par un diplôme d'État (intitulé exact à confirmer).",
+    description: "Formation médico-sociale en un an, sanctionnée par un diplôme d'État.",
     diplomesDelivres: ["Diplôme d'État"],
     metiersVises: ['Hygiéniste de salles'],
     domaines: ['SANTE'],
-    conditionsAcces: 'Titulaire du BEPC, âgé de 17 à 25 ans au 31/12/2025 (inscription à titre payant, rentrée 2026-2027).',
-    ouSeFormer: 'École de formation médico-sociale (EFMS) de Parakou et son annexe de Djougou.',
-    sources: [S.communiqueInscriptions],
+    conditionsAcces: `${ITP} : titulaire du BEPC ou d'un diplôme reconnu équivalent, âgé de 17 ans au moins et 25 ans au plus au 31/12/2025.`,
+    ouSeFormer: "Le communiqué N°0902 mentionne aussi une annexe de l'EFMS de Parakou à Djougou.",
+    sources: [S.communiqueN0902, S.repertoireLtp],
   },
 
   dtmAgricole('AVICULTURE', 'Aviculture, cuniculture et élevages non conventionnels'),
-  dtmAgricole('BOVINS', 'Élevage de bovins et de petits ruminants'),
+  dtmAgricole('BOVINS', 'Élevage de bovins et petits ruminants'),
   dtmAgricole('PORCINS', 'Élevage de porcins'),
   dtmAgricole('PISCICULTURE', 'Pisciculture et aquaculture'),
   dtmAgricole('HORTICULTURE', 'Horticulture vivrière et ornementale'),
   dtmAgricole('CEREALES', 'Production céréalière et légumineuse'),
   dtmAgricole('RACINES-TUBERCULES', 'Production de racines et tubercules'),
   dtmAgricole('FIBRES', 'Production de plantes à fibres et textiles'),
-  dtmAgricole('ARBORICULTURE', 'Arboriculture fruitière, forestière et produits forestiers non ligneux'),
-  dtmAgricole('PALMIER-COCOTIER', 'Palmier à huile et cocotier'),
+  dtmAgricole('ARBORICULTURE', 'Arboriculture fruitière, forestière et produits non ligneux'),
+  // Intitulé du catalogue ; le communiqué N°0902 dit « Production de palmier à huile et cocotier »
+  dtmAgricole('PALMIER-COCOTIER', 'Production de plantes oléagineuses'),
+  {
+    // 11e métier agricole du communiqué N°0902, absent du répertoire et du catalogue
+    ...dtmAgricole('MACHINISME', 'Maintenance des matériels et machines agricoles'),
+    domaines: ['AGRICULTURE', 'INDUSTRIE'],
+    ouSeFormer:
+      "Métier annoncé dans l'offre d'inscription 2026-2027 (communiqué N°0902), sans lycée dans le répertoire officiel ni fiche dans le catalogue des nouveaux métiers : se renseigner auprès de la direction départementale de l'enseignement technique.",
+    sources: [S.communiqueN0902],
+  },
   {
     code: 'DEAT',
     nom: "Diplôme d'études agricoles tropicales (DEAT)",

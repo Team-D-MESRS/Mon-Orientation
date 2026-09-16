@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertTriangle, ArrowLeft, ShieldCheck, X } from 'lucide-react';
 import { filiereApi } from '@/lib/api';
-import { DOMAINE_LABELS, MAX_COMPARAISON, NIVEAU_LABELS, aUneSourceOfficielle, type Filiere } from '@/lib/filiere';
+import { DOMAINE_LABELS, MAX_COMPARAISON, NIVEAU_LABELS, aUneSourceOfficielle, type Filiere, resumeLieux } from '@/lib/filiere';
 import { restaurerComparateur, useComparateur } from '@/stores/comparateurStore';
 import { BoutonFavori } from '@/components/catalogue/BoutonFavori';
 import { Partage } from '@/components/catalogue/Partage';
@@ -41,7 +41,7 @@ const LIGNES: { titre: string; valeur: (f: Filiere) => ReactNode }[] = [
   { titre: 'Matières du classement', valeur: (f) => f.matieresClassement ?? nonRenseigne() },
   { titre: 'Places avec bourse', valeur: (f) => f.quotaBourses ?? nonRenseigne() },
   { titre: 'Aides ou places partiellement payantes', valeur: (f) => f.quotaAides ?? nonRenseigne() },
-  { titre: 'Où se former', valeur: (f) => f.ouSeFormer ?? nonRenseigne() },
+  { titre: 'Où se former', valeur: (f) => (f.offres?.length ? resumeLieux(f.offres) : (f.ouSeFormer ?? nonRenseigne())) },
   { titre: 'Métiers visés', valeur: (f) => liste(f.metiersVises) },
   { titre: 'Débouchés', valeur: (f) => f.debouches ?? nonRenseigne() },
   { titre: "Taux d'insertion", valeur: (f) => (f.tauxInsertion === null ? nonRenseigne('Aucune donnée publique') : `${f.tauxInsertion} %`) },

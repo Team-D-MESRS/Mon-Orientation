@@ -122,6 +122,8 @@ export interface ParametresCatalogue {
   /** Série de bac : formations du supérieur qui l'admettent */
   serie?: string;
   domaine?: string;
+  /** Formations ouvertes dans un établissement de ce département */
+  departement?: string;
   bourses?: boolean;
   officielle?: boolean;
   page?: number;

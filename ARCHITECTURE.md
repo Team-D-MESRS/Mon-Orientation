@@ -152,14 +152,15 @@ La plateforme Mon Orientation est un système composé de trois couches principa
 - `commune` (VARCHAR)
 - `derniere_sync` (TIMESTAMP)
 
-**`etablissements`** — supérieur : guide officiel du MESRS (66 établissements) ; secondaire : synchronisation EducMaster prévue
+**`etablissements`** — supérieur : guide officiel du MESRS (66 établissements) ; secondaire technique : répertoires officiels des lycées
+  (27 établissements publics) et catalogue des nouveaux métiers (5 écoles des métiers, sans adresse publiée) ; synchronisation EducMaster prévue
 - `id` (PK, UUID)
 - `educmaster_id` (VARCHAR, FK externe)
-- `code` (VARCHAR, unique) — identifiant stable du référentiel, ex. « UAC-FSS »
+- `code` (VARCHAR, unique) — identifiant stable du référentiel, ex. « UAC-FSS », « LTP-KANDI »
 - `nom`, `sigle`, `universite` (VARCHAR)
 - `type` (ENUM: lycee_general, lycee_technique, lycee_pro, ecole_metier, universite)
-- `departement` (VARCHAR, nullable)
-- `commune` (VARCHAR, nullable)
+- `departement`, `commune`, `quartier` (VARCHAR, nullable) — secondaire technique uniquement, inconnus pour les écoles des métiers
+- `internat`, `externat` (BOOLEAN, nullable) — secondaire technique uniquement
 - `capacite` (INTEGER)
 
 **`filiere`** — catalogue national de l'offre de formation
@@ -175,7 +176,18 @@ La plateforme Mon Orientation est un système composé de trois couches principa
 - `bourses` (BOOLEAN)
 - `domaines` (TEXT[]) — secteurs d'activité, filtre du catalogue (liste dans `backend/src/filiere/domaines.ts`)
 - `quota_bourses`, `quota_aides` (INTEGER), `mode_entree`, `series_recommandees`, `matieres_classement` (TEXT), `matieres_cles` (JSONB) — admission au supérieur d'après le guide officiel du MESRS ; `matieres_cles` sert au moteur d'orientation
-- `etablissement_id` (FK, nullable)
+- `masquee` (BOOLEAN, défaut false) — hors listes, recherche, comptages et recommandations, mais la fiche reste consultable par son lien
+  (séries générales du bac : promotion arrêtée, gardées comme clé de tri du filtre « Et après ce bac ? »)
+- `contenu_metier` (JSONB, nullable) — secondaire technique : contenu des catalogues officiels des nouveaux métiers (DTM), vérifié contre
+  les PDF (`backend/prisma/data/fiches-metiers.ts`) : secteur, missions, compétences, qualités requises, débouchés, employeurs…
+- `etablissement_id` (FK, nullable) — supérieur uniquement ; le secondaire technique passe par `offres_formation` (une même fiche s'ouvre
+  dans plusieurs établissements)
+
+**`offres_formation`** — lieux où se prépare une formation du secondaire technique, d'après les répertoires officiels des lycées et le
+catalogue des nouveaux métiers (`backend/prisma/data/correspondances-eftp.ts`)
+- `filiere_id`, `etablissement_id` (FK) — clé primaire composée ; suppression en cascade
+- `duree` (VARCHAR, nullable)
+- `source` (VARCHAR) — libellé du document officiel d'où vient l'offre
 
 **`favoris`** — formations mises de côté par l'élève dans le catalogue, proposées en premier lors des vœux
 - `apprenant_nip` (FK), `filiere_id` (FK) — clé primaire composée ; suppression en cascade

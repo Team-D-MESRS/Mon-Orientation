@@ -1,8 +1,10 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma, TypeEtablissement } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import * as fs from 'fs';
 import * as path from 'path';
 import { REFERENTIEL_FILIERES } from './data/referentiel-filieres';
+import { ECOLES_METIERS, FICHES_CATALOGUE, SPECIALITES_REPERTOIRE, cleIntitule } from './data/correspondances-eftp';
+import { FICHES_METIERS } from './data/fiches-metiers';
 import { estDomaine } from '../src/filiere/domaines';
 
 /** Filières du supérieur extraites du guide officiel du MESRS (data/outils/extraire-guide-mesrs.py). */
@@ -28,7 +30,34 @@ interface GuideMesrs {
   }[];
 }
 
-const GUIDE: GuideMesrs = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'guide-mesrs-2026-2027.json'), 'utf8'));
+/** Répertoires officiels des lycées techniques (data/outils/extraire-repertoires-eftp.py). */
+interface RepertoiresEftp {
+  sources: { libelle: string }[];
+  etablissements: {
+    code: string;
+    nom: string;
+    type: TypeEtablissement;
+    departement: string;
+    commune: string;
+    quartier: string | null;
+    externat: boolean | null;
+    internat: boolean | null;
+  }[];
+  offres: { etablissement: string; specialite: string; duree: string | null; origine: 'LTP' | 'LTA' }[];
+}
+
+/** Catalogues officiels des nouveaux métiers (data/outils/extraire-metiers-dtm.py). */
+interface CatalogueMetiers {
+  sources: { libelle: string }[];
+  metiers: { origine: 'LTP' | 'LTA'; numero: number; titre: string; etablissements?: string[] }[];
+}
+
+const lire = <T>(fichier: string): T => JSON.parse(fs.readFileSync(path.join(__dirname, 'data', fichier), 'utf8'));
+const GUIDE = lire<GuideMesrs>('guide-mesrs-2026-2027.json');
+const REPERTOIRES = lire<RepertoiresEftp>('repertoires-eftp.json');
+const CATALOGUE = lire<CatalogueMetiers>('metiers-dtm.json');
+/** Les deux extracteurs écrivent leurs sources dans l'ordre LTP puis LTA. */
+const rangSource = (origine: 'LTP' | 'LTA') => (origine === 'LTP' ? 0 : 1);
 const json = (valeur: unknown[]) => (valeur.length > 0 ? (valeur as Prisma.InputJsonValue) : Prisma.DbNull);
 
 const prisma = new PrismaClient();
@@ -82,6 +111,8 @@ async function main() {
       create: { code: f.code, ...data },
     });
   }
+
+  const lieux = await rattacherLieuxDeFormation();
 
   // Supérieur : établissements et filières du guide officiel du MESRS
   const etablissements = new Map<string, { id: string; nom: string; universite: string }>();
@@ -174,11 +205,99 @@ async function main() {
   });
 
   console.log(
-    `✅ Seed terminé : ${REFERENTIEL_FILIERES.length} filières après le BEPC, ${GUIDE.filieres.length} du supérieur ` +
+    `✅ Seed terminé : ${REFERENTIEL_FILIERES.length} filières après le BEPC (${lieux.etablissements} lieux de formation, ` +
+      `${lieux.offres} offres), ${GUIDE.filieres.length} du supérieur ` +
       `(${GUIDE.etablissements.length} établissements, guide MESRS) ; ${obsoletesSupprimees}/${obsoletes.length} ancienne(s) ` +
       `filière(s) du supérieur supprimée(s), ${retireesSupprimees}/${retirees.length} fiche(s) retirée(s) du référentiel, ` +
       `${demoSupprimees} filière(s) de démo supprimée(s)`,
   );
+}
+
+/**
+ * Secondaire technique : lieux de formation d'après les répertoires officiels des lycées, complétés des
+ * écoles des métiers citées par le catalogue des nouveaux métiers. Toute spécialité, fiche ou école sans
+ * correspondance arrête le seed : une offre officielle n'est jamais ignorée en silence.
+ */
+async function rattacherLieuxDeFormation() {
+  const codesReferentiel = new Set(REFERENTIEL_FILIERES.map((f) => f.code));
+  const inconnus = [...Object.values(SPECIALITES_REPERTOIRE), ...Object.values(FICHES_CATALOGUE), ...Object.keys(FICHES_METIERS)].filter(
+    (c) => !codesReferentiel.has(c),
+  );
+  if (inconnus.length > 0) {
+    throw new Error(`Correspondances vers des codes absents du référentiel : ${Array.from(new Set(inconnus)).join(', ')}`);
+  }
+  for (const [code, contenu] of Object.entries(FICHES_METIERS)) {
+    await prisma.filiere.update({ where: { code }, data: { contenuMetier: contenu as unknown as Prisma.InputJsonValue } });
+  }
+
+  const lieux = new Map<string, string>();
+  for (const e of REPERTOIRES.etablissements) {
+    const data = {
+      nom: e.nom,
+      type: e.type,
+      departement: e.departement,
+      commune: e.commune,
+      quartier: e.quartier,
+      internat: e.internat,
+      externat: e.externat,
+    };
+    const { id } = await prisma.etablissement.upsert({ where: { code: e.code }, update: data, create: { code: e.code, ...data } });
+    lieux.set(e.code, id);
+  }
+  for (const e of ECOLES_METIERS) {
+    const data = { nom: e.nom, type: 'ECOLE_METIER' as const };
+    const { id } = await prisma.etablissement.upsert({ where: { code: e.code }, update: data, create: { code: e.code, ...data } });
+    lieux.set(e.code, id);
+  }
+
+  const filieres = new Map(
+    (await prisma.filiere.findMany({ where: { code: { in: Array.from(codesReferentiel) } }, select: { id: true, code: true } })).map((f) => [
+      f.code as string,
+      f.id,
+    ]),
+  );
+  const offres = new Map<string, Prisma.OffreFormationCreateManyInput>();
+  const ajouter = (code: string, lieu: string, duree: string | null, source: string) => {
+    const filiereId = filieres.get(code);
+    const etablissementId = lieux.get(lieu);
+    if (!filiereId || !etablissementId) throw new Error(`Offre impossible à rattacher : ${code} à ${lieu}`);
+    offres.set(`${filiereId}|${etablissementId}`, { filiereId, etablissementId, duree, source });
+  };
+
+  const specialites = new Map(Object.entries(SPECIALITES_REPERTOIRE).map(([intitule, code]) => [cleIntitule(intitule), code]));
+  const sansFiche = new Set<string>();
+  const utilisees = new Set<string>();
+  for (const o of REPERTOIRES.offres) {
+    const cle = cleIntitule(o.specialite);
+    const code = specialites.get(cle);
+    if (!code) {
+      sansFiche.add(o.specialite);
+      continue;
+    }
+    utilisees.add(cle);
+    ajouter(code, o.etablissement, o.duree, REPERTOIRES.sources[rangSource(o.origine)].libelle);
+  }
+  if (sansFiche.size > 0) throw new Error(`Spécialités du répertoire sans fiche : ${Array.from(sansFiche).join(' ; ')}`);
+  const inutilisees = Array.from(specialites.keys()).filter((cle) => !utilisees.has(cle));
+  if (inutilisees.length > 0) throw new Error(`Correspondances absentes du répertoire (intitulé changé ?) : ${inutilisees.join(' ; ')}`);
+
+  const ecolesCitees = new Set<string>();
+  for (const m of CATALOGUE.metiers) {
+    const code = FICHES_CATALOGUE[`${m.origine}-${m.numero}`];
+    if (!code) throw new Error(`Fiche du catalogue sans correspondance : ${m.origine} ${m.numero} (${m.titre})`);
+    for (const nom of m.etablissements ?? []) {
+      const ecole = ECOLES_METIERS.find((e) => nom.includes(`(${e.sigle})`));
+      if (!ecole) continue; // lycée : le répertoire fait foi
+      ajouter(code, ecole.code, null, CATALOGUE.sources[rangSource(m.origine)].libelle);
+      ecolesCitees.add(ecole.code);
+    }
+  }
+  const nonCitees = ECOLES_METIERS.filter((e) => !ecolesCitees.has(e.code));
+  if (nonCitees.length > 0) throw new Error(`Écoles des métiers absentes du catalogue : ${nonCitees.map((e) => e.sigle).join(', ')}`);
+
+  // Offres entièrement reconstruites à chaque passage : le répertoire officiel fait foi
+  await prisma.$transaction([prisma.offreFormation.deleteMany({}), prisma.offreFormation.createMany({ data: Array.from(offres.values()) })]);
+  return { etablissements: lieux.size, offres: offres.size };
 }
 
 main()

@@ -56,9 +56,9 @@ try {
   await nav.attendre(contient('Étape 2 sur 3'));
   await choisirVoeu('série G2', 'Baccalauréat série G2');
   await nav.attendre(contient('Étape 3 sur 3'));
-  await choisirVoeu('Électricité', 'DTM — Électricité');
+  await choisirVoeu('électricité', "DTM — Métiers de l'électricité");
   await nav.attendre(contient('Tes vœux pour la 3e'));
-  r.verifier('Vœux : récapitulatif des 3 choix', await nav.evaluer(`document.querySelectorAll('main ol > li').length === 3 && ${contient('Baccalauréat série F3')} && ${contient('DTM — Électricité')}`));
+  r.verifier('Vœux : récapitulatif des 3 choix', await nav.evaluer(`document.querySelectorAll('main ol > li').length === 3 && ${contient('Baccalauréat série F3')} && ${contient("DTM — Métiers de l'électricité")}`));
   await nav.saisir('#motivation', "J'aime les mathématiques et la physique.");
   await nav.cliquerTexte('Enregistrer mes vœux', 'button');
   await nav.attendre(contient('Vœux enregistrés'));

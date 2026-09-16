@@ -60,8 +60,59 @@ export interface Filiere {
   seriesRecommandees: string | null;
   matieresClassement: string | null;
   etablissement?: { nom: string; sigle: string | null; universite: string | null } | null;
+  /** Secondaire technique : établissements où la formation est ouverte (fiche détaillée seulement) */
+  offres?: LieuDeFormation[];
+  /** Secondaire technique : contenu des catalogues officiels des nouveaux métiers (DTM), fiche détaillée seulement */
+  contenuMetier?: ContenuMetier | null;
   /** Présent quand la liste est filtrée par série de bac */
   accesSerie?: AccesSerie;
+}
+
+/** Lieu de formation d'après les répertoires officiels des lycées ou le catalogue des nouveaux métiers. */
+export interface LieuDeFormation {
+  duree: string | null;
+  etablissement: {
+    code: string;
+    nom: string;
+    type: string;
+    /** Inconnus pour les écoles des métiers, dont l'implantation n'est pas publiée */
+    departement: string | null;
+    commune: string | null;
+    quartier: string | null;
+    internat: boolean | null;
+    externat: boolean | null;
+  };
+}
+
+/** « LTP Kandi (Kandi), LTP Ina (Bèbèrèkè)… » : résumé des lieux, pour les listes et la comparaison. */
+export const resumeLieux = (offres: LieuDeFormation[]) =>
+  offres.map(({ etablissement: e }) => (e.commune ? `${e.nom} (${e.commune})` : e.nom)).join(', ');
+
+/** Élément de liste, ou groupe d'éléments sous un intertitre du document officiel. */
+export type ElementListe = string | { titre: string; elements: string[] };
+
+/** Contenu d'une fiche des catalogues officiels des nouveaux métiers (DTM), tel que défini côté backend. */
+export interface ContenuMetier {
+  catalogue: 'LTP' | 'LTA';
+  secteur?: string;
+  objectif?: string;
+  description: string;
+  missions?: ElementListe[];
+  competencesIntro?: string;
+  competences: ElementListe[];
+  qualites?: ElementListe[];
+  debouches: ElementListe[];
+  employeurs?: ElementListe[];
+  secteursActivite?: ElementListe[];
+  partenariatsIntro?: string;
+  partenariats?: ElementListe[];
+  perspectives?: ElementListe[];
+  profilSortie?: string;
+  diplome?: string;
+  profilEntree?: string;
+  duree?: string;
+  ageLimite?: string;
+  acces: string[];
 }
 
 /** Fiche du supérieur issue du guide du MESRS : admission détaillée (mode d'entrée, quotas, matières). */
@@ -85,6 +136,8 @@ export interface SerieBac {
 export interface ValeursFiltres {
   domaines: { code: Domaine; libelle: string; total: number }[];
   series: SerieBac[];
+  /** Départements où au moins une formation est ouverte, avec leur nombre de formations */
+  departements: { nom: string; total: number }[];
 }
 
 export const TYPE_LABELS: Record<TypeFiliere, string> = {
