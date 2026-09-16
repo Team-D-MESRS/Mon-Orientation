@@ -152,13 +152,14 @@ La plateforme Mon Orientation est un système composé de trois couches principa
 - `commune` (VARCHAR)
 - `derniere_sync` (TIMESTAMP)
 
-**`etablissements`** — synchronisé depuis EducMaster
+**`etablissements`** — supérieur : guide officiel du MESRS (66 établissements) ; secondaire : synchronisation EducMaster prévue
 - `id` (PK, UUID)
 - `educmaster_id` (VARCHAR, FK externe)
-- `nom` (VARCHAR)
+- `code` (VARCHAR, unique) — identifiant stable du référentiel, ex. « UAC-FSS »
+- `nom`, `sigle`, `universite` (VARCHAR)
 - `type` (ENUM: lycee_general, lycee_technique, lycee_pro, ecole_metier, universite)
-- `departement` (VARCHAR)
-- `commune` (VARCHAR)
+- `departement` (VARCHAR, nullable)
+- `commune` (VARCHAR, nullable)
 - `capacite` (INTEGER)
 
 **`filiere`** — catalogue national de l'offre de formation
@@ -173,6 +174,7 @@ La plateforme Mon Orientation est un système composé de trois couches principa
 - `conditions_acces` (TEXT)
 - `bourses` (BOOLEAN)
 - `domaines` (TEXT[]) — secteurs d'activité, filtre du catalogue (liste dans `backend/src/filiere/domaines.ts`)
+- `quota_bourses`, `quota_aides` (INTEGER), `mode_entree`, `series_recommandees`, `matieres_classement` (TEXT), `matieres_cles` (JSONB) — admission au supérieur d'après le guide officiel du MESRS ; `matieres_cles` sert au moteur d'orientation
 - `etablissement_id` (FK, nullable)
 
 **`favoris`** — formations mises de côté par l'élève dans le catalogue, proposées en premier lors des vœux

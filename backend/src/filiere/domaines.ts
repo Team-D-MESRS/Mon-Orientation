@@ -7,6 +7,7 @@
 export const DOMAINES = {
   AGRICULTURE: 'Agriculture, élevage et pêche',
   ARTISANAT: 'Artisanat et mode',
+  ARTS: 'Arts, culture et communication',
   BTP: 'Bâtiment et travaux publics',
   DROIT: 'Droit et science politique',
   ELECTRICITE: 'Électricité, électronique et énergie',
@@ -18,6 +19,7 @@ export const DOMAINES = {
   NUMERIQUE: 'Numérique et télécommunications',
   SANTE: 'Santé et hygiène',
   SCIENCES: 'Sciences et mathématiques',
+  SPORT: 'Sport et animation',
   TOURISME: 'Tourisme, hôtellerie et restauration',
 } as const;
 

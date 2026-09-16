@@ -1,6 +1,8 @@
 /**
- * Référentiel des filières — constitué le 13/09/2026 à partir de sources publiques,
- * en attendant le référentiel officiel du MESTFP (secondaire, technique) et du MESRS (supérieur).
+ * Référentiel des filières après le BEPC — constitué le 13/09/2026 à partir de sources publiques,
+ * en attendant le référentiel officiel du MESTFP (secondaire, technique).
+ * Les filières du supérieur viennent du guide officiel du MESRS 2026-2027 : guide-mesrs-2026-2027.json,
+ * produit par outils/extraire-guide-mesrs.py.
  *
  * Règles :
  * - `code` est l'identifiant stable : le seed fait un upsert dessus ;
@@ -92,18 +94,6 @@ const S = {
     consulteLe: CONSULTE_LE,
     officielle: false,
   },
-  apresbacUac: {
-    libelle: "apresbac.bj — Université d'Abomey-Calavi : filières et admission (site non officiel)",
-    url: 'https://apresbac.bj/universites/uac',
-    consulteLe: CONSULTE_LE,
-    officielle: false,
-  },
-  apresbacGuide: {
-    libelle: 'apresbac.bj — Guide orientation bac Bénin 2026 (site non officiel)',
-    url: 'https://apresbac.bj/blog/guide-orientation-bac-benin-2026',
-    consulteLe: CONSULTE_LE,
-    officielle: false,
-  },
   bacsTechniques: {
     libelle: 'opportunitepourtous.com — Bacs E, F, DT, DEAT, EA : filières pour les profils techniques (site non officiel)',
     url: 'https://opportunitepourtous.com/2026/07/12/filieres-bacs-techniques-benin/',
@@ -116,8 +106,6 @@ const COND_BAC_TECHNIQUE =
   "Titulaire du BEPC, âgé de 14 à 22 ans au 31/12/2025, avec au moins 12/20 dans les matières de spécialité (conditions publiées pour l'inscription à titre payant en lycée technique, rentrée 2026-2027).";
 const COND_DTM =
   "Titulaire du BEPC ou du CAP, âgé de 14 à 25 ans au 31/12/2025, avec au moins 10/20 dans les matières clés (conditions publiées pour l'inscription à titre payant, rentrée 2026-2027).";
-const COND_UNIVERSITE =
-  "Être titulaire du baccalauréat dans une série admise. Choix des filières et classement sur la plateforme officielle apresmonbac.bj (places boursières, secours ou payantes).";
 
 // ─── Enseignement secondaire général ─────────────────────────────────────────
 
@@ -216,48 +204,6 @@ const ecoleMetiers = (code: string, domaine: string, domaines: Domaine[]): Filie
     "Domaine couvert par l'une des écoles des métiers de référence du Programme d'action du gouvernement. Nombre d'écoles, implantation, diplômes et conditions d'accès à préciser par le MESTFP.",
   sources: [S.pagEcolesMetiers],
 });
-
-// ─── Enseignement supérieur public ───────────────────────────────────────────
-
-const universitaire = (f: {
-  code: string;
-  nom: string;
-  etablissement: string;
-  lieu: string;
-  description: string;
-  domaines: Domaine[];
-  series?: string[];
-  diplomes?: string[];
-  metiers?: string[];
-  conditions?: string;
-  sources?: SourceFiliere[];
-}): FiliereReferentiel => ({
-  code: `UNIV-${f.code}`,
-  domaines: f.domaines,
-  nom: `${f.nom} — ${f.etablissement}`,
-  type: 'UNIVERSITE',
-  niveauAcces: 'APRES_BAC',
-  description: f.description,
-  diplomesDelivres: f.diplomes,
-  metiersVises: f.metiers,
-  conditionsAcces: f.conditions ?? COND_UNIVERSITE,
-  seriesAdmises: f.series,
-  ouSeFormer: f.lieu,
-  bourses: true,
-  sources: [...(f.sources ?? [S.apresbacUac]), S.apresbacGuide],
-});
-
-const FSS = "Faculté des sciences de la santé (FSS) — Université d'Abomey-Calavi";
-const EPAC = "École polytechnique d'Abomey-Calavi (EPAC) — Université d'Abomey-Calavi";
-const FAST = "Faculté des sciences et techniques (FAST) — Université d'Abomey-Calavi";
-const FASEG = "Faculté des sciences économiques et de gestion (FASEG) — Université d'Abomey-Calavi";
-const FADESP = "Faculté de droit et de science politique (FADESP) — Université d'Abomey-Calavi";
-const FLASH = "Faculté des lettres, arts et sciences humaines (FLASH) — Université d'Abomey-Calavi";
-const IFRI = "Institut de formation et de recherche en informatique (IFRI) — Université d'Abomey-Calavi";
-const ENEAM = "École nationale d'économie appliquée et de management (ENEAM) — Université d'Abomey-Calavi";
-const INSTI = 'Institut national supérieur de technologie industrielle (INSTI) — UNSTIM';
-const ENSET = "École normale supérieure de l'enseignement technique (ENSET) — UNSTIM";
-const IMSP = "Institut de mathématiques et de sciences physiques (IMSP) — Université d'Abomey-Calavi";
 
 export const REFERENTIEL_FILIERES: FiliereReferentiel[] = [
   serieGenerale('A1', 'Lettres – Langues', ['LETTRES'], POURSUITES_A),
@@ -365,25 +311,4 @@ export const REFERENTIEL_FILIERES: FiliereReferentiel[] = [
   ecoleMetiers('AUTOMOBILE', 'Automobile et équipements industriels', ['INDUSTRIE']),
   ecoleMetiers('BOIS-ALUMINIUM', 'Bois et aluminium', ['ARTISANAT', 'BTP']),
   ecoleMetiers('TOURISME-HOTELLERIE', 'Tourisme, hôtellerie et restauration', ['TOURISME']),
-
-  universitaire({ code: 'FSS-MEDECINE', domaines: ['SANTE'], nom: 'Médecine générale', etablissement: 'FSS (UAC)', lieu: FSS, description: 'Études de médecine en 7 ans.', series: ['C', 'D'], metiers: ['Médecin'] }),
-  universitaire({ code: 'FSS-PHARMACIE', domaines: ['SANTE'], nom: 'Pharmacie', etablissement: 'FSS (UAC)', lieu: FSS, description: 'Études de pharmacie en 6 ans.', series: ['C', 'D'], metiers: ["Pharmacien d'officine", 'Pharmacien hospitalier'] }),
-  universitaire({ code: 'FSS-DENTAIRE', domaines: ['SANTE'], nom: 'Chirurgie dentaire', etablissement: 'FSS (UAC)', lieu: FSS, description: 'Études de chirurgie dentaire en 6 ans.', series: ['C', 'D'], metiers: ['Chirurgien-dentiste'] }),
-  universitaire({ code: 'EPAC-GIT', domaines: ['NUMERIQUE'], nom: 'Génie informatique et télécommunications', etablissement: 'EPAC (UAC)', lieu: EPAC, description: "Formation en génie informatique et télécommunications à l'École polytechnique d'Abomey-Calavi.", series: ['C', 'D'] }),
-  universitaire({ code: 'EPAC-GC', domaines: ['BTP'], nom: 'Génie civil', etablissement: 'EPAC (UAC)', lieu: EPAC, description: "Formation en génie civil à l'École polytechnique d'Abomey-Calavi.", series: ['C', 'D'] }),
-  universitaire({ code: 'EPAC-GEE', domaines: ['ELECTRICITE'], nom: 'Génie électrique et énergétique', etablissement: 'EPAC (UAC)', lieu: EPAC, description: "Formation en génie électrique et énergétique à l'École polytechnique d'Abomey-Calavi.", series: ['C', 'D'] }),
-  universitaire({ code: 'FAST-MPC', domaines: ['SCIENCES'], nom: 'Mathématiques, physique, chimie', etablissement: 'FAST (UAC)', lieu: FAST, description: 'Parcours de sciences fondamentales : mathématiques, physique, chimie.', series: ['C', 'D'] }),
-  universitaire({ code: 'FAST-SVT', domaines: ['SCIENCES'], nom: 'Biologie, biochimie et géologie', etablissement: 'FAST (UAC)', lieu: FAST, description: 'Parcours de sciences de la vie et de la Terre : biologie, biochimie, géologie.', series: ['C', 'D'] }),
-  universitaire({ code: 'FASEG-ECONOMIE', domaines: ['GESTION'], nom: 'Sciences économiques', etablissement: 'FASEG (UAC)', lieu: FASEG, description: 'Formation en sciences économiques.', series: ['Toutes séries'] }),
-  universitaire({ code: 'FASEG-GESTION', domaines: ['GESTION'], nom: 'Gestion, finance et comptabilité', etablissement: 'FASEG (UAC)', lieu: FASEG, description: 'Gestion des entreprises, finance et banque, comptabilité et audit.', series: ['Toutes séries'] }),
-  universitaire({ code: 'FADESP-DROIT', domaines: ['DROIT'], nom: 'Droit et science politique', etablissement: 'FADESP (UAC)', lieu: FADESP, description: 'Droit privé, droit public, science politique, relations internationales.', series: ['A1', 'A2', 'B', 'Autres séries sous conditions'] }),
-  universitaire({ code: 'FLASH-LETTRES', domaines: ['LETTRES'], nom: 'Lettres, langues et philosophie', etablissement: 'FLASH (UAC)', lieu: FLASH, description: 'Lettres modernes, anglais, philosophie.', series: ['A1', 'A2'] }),
-  universitaire({ code: 'FLASH-SHS', domaines: ['LETTRES'], nom: 'Histoire, géographie et sciences sociales', etablissement: 'FLASH (UAC)', lieu: FLASH, description: 'Histoire, géographie et aménagement du territoire, sociologie-anthropologie, psychologie.', series: ['A1', 'A2'] }),
-  universitaire({ code: 'IFRI-INFORMATIQUE', domaines: ['NUMERIQUE'], nom: 'Informatique', etablissement: 'IFRI (UAC)', lieu: IFRI, description: 'Licence en informatique.', series: ['C', 'D'], diplomes: ['Licence en informatique'] }),
-  universitaire({ code: 'ENEAM-STATISTIQUE', domaines: ['GESTION', 'SCIENCES'], nom: 'Statistique et planification', etablissement: 'ENEAM (UAC)', lieu: ENEAM, description: 'Formation en statistique et planification.', series: ['C', 'D', 'G2'] }),
-  universitaire({ code: 'ENEAM-GESTION', domaines: ['GESTION'], nom: 'Management, administration des affaires, finances-comptabilité', etablissement: 'ENEAM (UAC)', lieu: ENEAM, description: 'Management des organisations, administration des affaires, finances-comptabilité.', series: ['C', 'D', 'G2'] }),
-  universitaire({ code: 'INSTI-MAINT-INDUSTRIELLE', domaines: ['INDUSTRIE'], nom: 'Maintenance industrielle', etablissement: 'INSTI (UNSTIM)', lieu: INSTI, description: "Filière réservée aux titulaires d'un baccalauréat technique.", series: ['Baccalauréats techniques uniquement'], sources: [S.bacsTechniques] }),
-  universitaire({ code: 'INSTI-MAINT-AUTOMOBILE', domaines: ['INDUSTRIE'], nom: 'Maintenance automobile', etablissement: 'INSTI (UNSTIM)', lieu: INSTI, description: "Filière réservée aux titulaires d'un baccalauréat technique.", series: ['Baccalauréats techniques uniquement'], sources: [S.bacsTechniques] }),
-  universitaire({ code: 'ENSET', domaines: ['ENSEIGNEMENT'], nom: "Professorat de l'enseignement technique", etablissement: 'ENSET (UNSTIM)', lieu: ENSET, description: "École normale formant les enseignants de l'enseignement technique ; 14 filières accessibles sur concours.", metiers: ["Professeur de l'enseignement technique"], conditions: 'Admission sur concours.', sources: [S.bacsTechniques] }),
-  universitaire({ code: 'IMSP-PREPA', domaines: ['SCIENCES'], nom: "Classes préparatoires aux études d'ingénieur", etablissement: 'IMSP (UAC)', lieu: IMSP, description: 'Classes préparatoires ouvertes notamment aux bacheliers des séries E et F.', series: ['E', 'F1', 'F2', 'F3', 'F4'], sources: [S.bacsTechniques] }),
 ];

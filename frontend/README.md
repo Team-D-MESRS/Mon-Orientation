@@ -128,8 +128,8 @@ frontend/src/
 | Route | Accès | État | Contenu |
 |---|---|---|---|
 | `/` | public | ✅ API | Accueil : recherche vers le catalogue, raccourci « Que faire après mon bac ? » par série, entrées par profil, étapes du parcours, domaines avec leur nombre de formations (lus dans l'API), conseiller en fongbé ; boutons selon la connexion |
-| `/catalogue` | public | ✅ API | 67 filières ; recherche sans accents (formation, métier, ville) ; filtres niveau, type, domaine, série de bac, bourses, source officielle, tous portés par l'adresse (`/catalogue?serie=D`) ; raccourci « Que faire avec mon bac D ? » pour l'élève de 1re ou de Terminale ; cœur (élève) et « Comparer » sur chaque carte |
-| `/catalogue/[id]` | public | ✅ API | Fiche complète, domaines cliquables ; « Et après ce bac ? » sur les fiches de bac ; mettre de côté (élève), comparer, partager (WhatsApp, partage du téléphone, lien), imprimer |
+| `/catalogue` | public | ✅ API | 272 formations, affichées 48 par 48 (« Afficher plus ») ; recherche sans accents (formation, métier, ville) ; filtres niveau, type, domaine, série de bac, bourses, source officielle, tous portés par l'adresse (`/catalogue?serie=D`) ; raccourci « Que faire avec mon bac D ? » pour l'élève de 1re ou de Terminale ; cœur (élève) et « Comparer » sur chaque carte |
+| `/catalogue/[id]` | public | ✅ API | Fiche complète, domaines cliquables ; section « Admission » pour le supérieur (mode d'entrée, séries, matières du classement, places avec bourse et aides, d'après le guide du MESRS) ; « Et après ce bac ? » sur les fiches de bac, groupé par université ; mettre de côté (élève), comparer, partager (WhatsApp, partage du téléphone, lien), imprimer |
 | `/catalogue/comparer` | public | ✅ API | Tableau de 2 ou 3 formations sur 11 critères ; lien partageable ; sans `?ids=`, reprend la sélection faite dans le catalogue |
 | `/connexion` | public | ✅ API | NIP ou email + mot de passe ; retour à la page demandée (`?redirect=`) |
 | `/inscription` | public | ✅ API | Élève (NIP + date de naissance) ou parent (email) |

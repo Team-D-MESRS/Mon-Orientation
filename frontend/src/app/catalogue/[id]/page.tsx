@@ -20,7 +20,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { filiereApi } from '@/lib/api';
-import { DOMAINE_LABELS, Filiere, NIVEAU_LABELS, TYPE_COLORS, TYPE_LABELS, aUneSourceOfficielle, serieDuBac } from '@/lib/filiere';
+import { DOMAINE_LABELS, Filiere, NIVEAU_LABELS, TYPE_COLORS, TYPE_LABELS, aUneSourceOfficielle, avecAdmission, serieDuBac } from '@/lib/filiere';
 import { useFavoris } from '@/stores/favorisStore';
 import { BoutonComparer } from '@/components/catalogue/BoutonComparer';
 import { BoutonFavori } from '@/components/catalogue/BoutonFavori';
@@ -66,6 +66,65 @@ function ListeLiens({ filieres }: { filieres: Filiere[] }) {
   );
 }
 
+/** Formations regroupées par université (la plus fournie d'abord), chaque groupe dépliable. */
+function ParUniversite({ filieres }: { filieres: Filiere[] }) {
+  const groupes = new Map<string, Filiere[]>();
+  for (const f of filieres) {
+    const universite = f.etablissement?.universite ?? 'Autres établissements';
+    groupes.set(universite, [...(groupes.get(universite) ?? []), f]);
+  }
+  const tries = Array.from(groupes.entries()).sort((a, b) => b[1].length - a[1].length);
+  return (
+    <div className="space-y-2v">
+      {tries.map(([universite, liste], i) => (
+        <details key={universite} open={i === 0} className="rounded-bj-sm border border-bj-gray-925 px-4v py-3v">
+          <summary className="cursor-pointer font-medium">
+            {universite} <span className="font-normal text-bj-gray-500">({liste.length})</span>
+          </summary>
+          <div className="mt-3v">
+            <ListeLiens filieres={liste} />
+          </div>
+        </details>
+      ))}
+    </div>
+  );
+}
+
+/** Admission au supérieur d'après le guide officiel du MESRS. */
+function Admission({ filiere: f }: { filiere: Filiere }) {
+  const nonPrecise = <span className="text-bj-gray-500">Non précisé</span>;
+  const lignes: [string, ReactNode][] = [
+    ['Mode d’entrée', f.modeEntree ?? nonPrecise],
+    ['Séries de bac recommandées', f.seriesRecommandees ?? nonPrecise],
+    ['Matières du classement', f.matieresClassement ?? nonPrecise],
+  ];
+  if (f.quotaBourses !== null) lignes.push(['Places avec bourse', f.quotaBourses]);
+  if (f.quotaAides !== null) lignes.push(['Aides universitaires ou places partiellement payantes', f.quotaAides]);
+  return (
+    <>
+      <dl className="grid grid-cols-1 sm:grid-cols-[14rem_1fr] gap-x-6v gap-y-3v">
+        {lignes.map(([titre, valeur]) => (
+          <div key={titre} className="contents">
+            <dt className="text-sm text-bj-gray-500">{titre}</dt>
+            <dd>{valeur}</dd>
+          </div>
+        ))}
+      </dl>
+      {f.modeEntree?.startsWith('Classement') && (
+        <p className="mt-4v text-sm text-bj-gray-500">
+          Le classement se fait filière par filière, à partir de la moyenne des matières du classement pondérées par les coefficients du
+          bac. Les meilleures moyennes obtiennent les bourses, puis les aides et places partiellement payantes. Les choix se font sur la
+          plateforme officielle{' '}
+          <a href="https://apresmonbac.bj" target="_blank" rel="noopener noreferrer" className="text-bj-blue hover:underline">
+            apresmonbac.bj
+          </a>
+          .
+        </p>
+      )}
+    </>
+  );
+}
+
 /** « Et après ce bac ? » : formations du supérieur du catalogue qui admettent la série. */
 function PoursuitesApresBac({ serie }: { serie: string }) {
   const [liste, setListe] = useState<Filiere[] | null>(null);
@@ -76,7 +135,7 @@ function PoursuitesApresBac({ serie }: { serie: string }) {
     setListe(null);
     setErreur(false);
     filiereApi
-      .list({ serie, limit: 100 })
+      .list({ serie, limit: 500 })
       .then(({ data }) => {
         if (!annule) setListe(data.items);
       })
@@ -102,7 +161,7 @@ function PoursuitesApresBac({ serie }: { serie: string }) {
         {liste.length} formation{liste.length > 1 ? 's' : ''} du supérieur de ce catalogue {liste.length > 1 ? 'sont accessibles' : 'est accessible'}{' '}
         avec un bac {serie} :
       </p>
-      <ListeLiens filieres={admises} />
+      <ParUniversite filieres={admises} />
       {sousConditions.length > 0 && (
         <>
           <p className="mt-4v mb-2v text-sm font-medium text-bj-ochre-fonce">Sous conditions (à vérifier auprès de l&apos;établissement)</p>
@@ -241,14 +300,22 @@ export default function FicheFilierePage() {
                 </Section>
               )}
 
-              <Section icone={<ClipboardCheck size={18} />} titre="Conditions d'accès">
-                <p className={filiere.conditionsAcces ? '' : 'text-bj-gray-500'}>{filiere.conditionsAcces ?? NON_RENSEIGNE}</p>
-              </Section>
-
-              {filiere.seriesAdmises && filiere.seriesAdmises.length > 0 && (
-                <Section icone={<BookOpen size={18} />} titre="Séries de bac admises">
-                  <p>{filiere.seriesAdmises.join(', ')}</p>
+              {avecAdmission(filiere) ? (
+                <Section icone={<ClipboardCheck size={18} />} titre="Admission">
+                  <Admission filiere={filiere} />
                 </Section>
+              ) : (
+                <>
+                  <Section icone={<ClipboardCheck size={18} />} titre="Conditions d'accès">
+                    <p className={filiere.conditionsAcces ? '' : 'text-bj-gray-500'}>{filiere.conditionsAcces ?? NON_RENSEIGNE}</p>
+                  </Section>
+
+                  {filiere.seriesAdmises && filiere.seriesAdmises.length > 0 && (
+                    <Section icone={<BookOpen size={18} />} titre="Séries de bac admises">
+                      <p>{filiere.seriesAdmises.join(', ')}</p>
+                    </Section>
+                  )}
+                </>
               )}
 
               <Section icone={<MapPin size={18} />} titre="Où se former">
@@ -275,15 +342,18 @@ export default function FicheFilierePage() {
                 )}
               </Section>
 
-              <Section icone={<Wallet size={18} />} titre="Bourses">
-                <p className={filiere.bourses === null ? 'text-bj-gray-500' : ''}>
-                  {filiere.bourses === null
-                    ? NON_RENSEIGNE
-                    : filiere.bourses
-                      ? 'Oui — places boursières attribuées sur classement.'
-                      : 'Non'}
-                </p>
-              </Section>
+              {/* Pour les fiches du guide du MESRS, le nombre de places avec bourse figure dans « Admission » */}
+              {filiere.quotaBourses === null && (
+                <Section icone={<Wallet size={18} />} titre="Bourses">
+                  <p className={filiere.bourses === null ? 'text-bj-gray-500' : ''}>
+                    {filiere.bourses === null
+                      ? NON_RENSEIGNE
+                      : filiere.bourses
+                        ? 'Oui — places boursières attribuées sur classement.'
+                        : 'Non'}
+                  </p>
+                </Section>
+              )}
 
               <Section icone={<ExternalLink size={18} />} titre="Sources">
                 {filiere.sources && filiere.sources.length > 0 ? (

@@ -293,7 +293,7 @@ Bottom Navigation (4 tabs):
 │  ③ Saisis tes vœux ④ Décide en famille        │
 ├──────────────────────────────────────────────┤
 │  EXPLORE PAR DOMAINE                          │
-│  « 67 formations recensées dans 14 domaines » │
+│  « 272 formations recensées dans 16 domaines » │
 │  [icône + domaine + nombre] × 14              │
 ├──────────────────────────────────────────────┤
 │  NOUVEAU : LE CONSEILLER RÉPOND EN FONGBÉ     │

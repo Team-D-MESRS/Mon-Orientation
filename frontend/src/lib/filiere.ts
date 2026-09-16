@@ -11,6 +11,7 @@ export type NiveauAcces = 'APRES_BEPC' | 'APRES_BAC';
 export type Domaine =
   | 'AGRICULTURE'
   | 'ARTISANAT'
+  | 'ARTS'
   | 'BTP'
   | 'DROIT'
   | 'ELECTRICITE'
@@ -22,6 +23,7 @@ export type Domaine =
   | 'NUMERIQUE'
   | 'SANTE'
   | 'SCIENCES'
+  | 'SPORT'
   | 'TOURISME';
 
 /** Accès d'une formation du supérieur pour la série de bac filtrée */
@@ -51,9 +53,19 @@ export interface Filiere {
   bourses: boolean | null;
   sources: SourceFiliere[] | null;
   domaines: Domaine[];
+  /** Admission au supérieur, telle que publiée dans le guide officiel du MESRS */
+  quotaBourses: number | null;
+  quotaAides: number | null;
+  modeEntree: string | null;
+  seriesRecommandees: string | null;
+  matieresClassement: string | null;
+  etablissement?: { nom: string; sigle: string | null; universite: string | null } | null;
   /** Présent quand la liste est filtrée par série de bac */
   accesSerie?: AccesSerie;
 }
+
+/** Fiche du supérieur issue du guide du MESRS : admission détaillée (mode d'entrée, quotas, matières). */
+export const avecAdmission = (f: Filiere) => f.modeEntree !== null || f.quotaBourses !== null || f.seriesRecommandees !== null;
 
 export interface PageFilieres {
   items: Filiere[];
@@ -102,6 +114,7 @@ export const NIVEAU_LABELS: Record<NiveauAcces, string> = {
 export const DOMAINE_LABELS: Record<Domaine, string> = {
   AGRICULTURE: 'Agriculture, élevage et pêche',
   ARTISANAT: 'Artisanat et mode',
+  ARTS: 'Arts, culture et communication',
   BTP: 'Bâtiment et travaux publics',
   DROIT: 'Droit et science politique',
   ELECTRICITE: 'Électricité, électronique et énergie',
@@ -113,6 +126,7 @@ export const DOMAINE_LABELS: Record<Domaine, string> = {
   NUMERIQUE: 'Numérique et télécommunications',
   SANTE: 'Santé et hygiène',
   SCIENCES: 'Sciences et mathématiques',
+  SPORT: 'Sport et animation',
   TOURISME: 'Tourisme, hôtellerie et restauration',
 };
 

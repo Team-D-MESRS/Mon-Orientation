@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { lancerNavigateur, rapporteur } from './cdp.mjs';
 
 const BASE = process.env.FRONT_URL ?? 'http://localhost:3000';
+const API = process.env.API_URL ?? 'http://localhost:8080/api';
 const OUT = process.argv[2] ?? fileURLToPath(new URL('./captures', import.meta.url));
 mkdirSync(OUT, { recursive: true });
 
@@ -27,7 +28,7 @@ async function deconnecter() {
 }
 const accueil = async () => {
   await nav.aller(`${BASE}/`);
-  await nav.attendre(`${series}.length === 14 && ${domaines}.length === 14`);
+  await nav.attendre(`${series}.length === 14 && ${domaines}.length === 16`);
 };
 // Fait défiler toute la page par paliers (déclenche les apparitions), puis revient en haut
 const defiler = () =>
@@ -56,7 +57,7 @@ try {
     "([...document.querySelectorAll('main p')].find((e) => e.textContent.includes('formations recensées'))?.querySelector('.sr-only')?.textContent ?? '')";
   r.verifier(
     'Chiffres lus dans le catalogue',
-    await nav.evaluer(`/^[1-9]\\d* formations recensées dans 14 domaines/.test(${phraseFixe})`),
+    await nav.evaluer(`/^[1-9]\\d* formations recensées dans 16 domaines/.test(${phraseFixe})`),
     await nav.evaluer(phraseFixe),
   );
   r.verifier('Visiteur : « Se connecter » et « Créer un compte »', await nav.evaluer(`${dansMain('Se connecter')} && !!document.querySelector('main a[href="/inscription"]')`));
@@ -100,8 +101,9 @@ try {
 
   await accueil();
   await nav.cliquer('main a[href="/catalogue?domaine=NUMERIQUE"]');
-  await nav.attendre(`location.search.includes('domaine=NUMERIQUE') && document.body.textContent.includes('7 filière(s) trouvée(s)')`);
-  r.verifier('Tuile Numérique → 7 formations', true);
+  const nbNumerique = (await (await fetch(`${API}/filiere?domaine=NUMERIQUE&limit=1`)).json()).total;
+  await nav.attendre(`location.search.includes('domaine=NUMERIQUE') && document.body.textContent.includes('${nbNumerique} filière(s) trouvée(s)')`);
+  r.verifier(`Tuile Numérique → ${nbNumerique} formations`, true);
 
   await connecter('DEMO-TLE-0001', '/espace-apprenant');
   await accueil();

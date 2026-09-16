@@ -180,7 +180,7 @@ function SaisieDesVoeux({
 
   useEffect(() => {
     filiereApi
-      .list({ niveau: niveauDuPalier(palier), limit: 100 })
+      .list({ niveau: niveauDuPalier(palier), limit: 500 })
       .then(({ data }) => setFilieres(data.items))
       .catch((err) => setErreur(messageErreur(err)));
     // Les formations mises de côté dans le catalogue sont proposées en premier ; sans elles, la saisie reste possible

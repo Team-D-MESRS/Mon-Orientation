@@ -100,7 +100,7 @@ try {
   await connecter('DEMO-TLE-0001', '/espace-apprenant');
   await nav.aller(`${BASE}/espace-apprenant/recommandations`);
   await nav.attendre("document.querySelectorAll('main ol > li').length > 0");
-  r.verifier('Koffi (Tle D) : pistes du supérieur compatibles avec sa série', await nav.evaluer(`${contient('Ta série (D) est admise')} && !${contient('FLASH')}`), await nav.evaluer("[...document.querySelectorAll('main ol > li h3')].map((h) => h.textContent).join(' | ')"));
+  r.verifier('Koffi (Tle D) : pistes du supérieur compatibles avec sa série', await nav.evaluer(`${contient('Ta série (D) est admise')} && !${contient('ne fait pas partie des séries admises')}`), await nav.evaluer("[...document.querySelectorAll('main ol > li h3')].map((h) => h.textContent).join(' | ')"));
   await nav.capture(`${OUT}/b2-terminale.png`);
   await deconnecter();
 } catch (e) {

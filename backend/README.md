@@ -48,8 +48,10 @@ API REST de la plateforme nationale d'orientation scolaire. Elle gère l'authent
 backend/
 ├── prisma/
 │   ├── schema.prisma                modèle de données
-│   ├── migrations/                  init → referentiel_filieres → parcours_eleve → catalogue_favoris
-│   ├── data/referentiel-filieres.ts référentiel des 67 filières (sources citées)
+│   ├── migrations/                  init → referentiel_filieres → parcours_eleve → catalogue_favoris → guide_mesrs
+│   ├── data/referentiel-filieres.ts formations après le BEPC (47, sources citées)
+│   ├── data/guide-mesrs-2026-2027.json  formations du supérieur (225) et établissements (66), guide officiel du MESRS
+│   ├── data/outils/extraire-guide-mesrs.py  extraction du guide (PDF hors dépôt) vers ce JSON
 │   ├── seed.ts                      admin + référentiel (idempotent)
 │   └── seed-demo.ts                 élèves, notes et comptes fictifs (interdit en production)
 ├── src/
@@ -151,9 +153,9 @@ Ne jamais versionner `.env`. En production, utiliser des secrets longs et aléat
 | `apprenants` | Dossier élève identifié par le **NIP** : identité, département, commune, **classe** (`palier`), **série** ; rattaché au plus à un compte |
 | `parent_apprenant` | Liens parent ↔ enfant (relation : père, mère, tuteur…) |
 | `notes` | Notes par matière, trimestre et année scolaire (unicité sur ces quatre champs) |
-| `filieres` | Catalogue : code unique, type, niveau d'accès, diplômes, métiers, débouchés, conditions, séries admises, lieux, bourses, taux d'insertion, **sources**, **domaines** (tableau de codes) |
+| `filieres` | Catalogue : code unique, type, niveau d'accès, diplômes, métiers, débouchés, conditions, séries admises, lieux, bourses, taux d'insertion, **sources**, **domaines** (tableau de codes) ; pour le supérieur, données du guide du MESRS : places avec bourse, aides ou places partiellement payantes, mode d'entrée, séries et matières du classement, établissement |
+| `etablissements` | Établissements du supérieur du guide du MESRS (code stable, sigle, université) ; prévu aussi pour la synchronisation EducMaster |
 | `favoris` | Formations mises de côté par un élève (clé : NIP + filière, 50 au plus) ; supprimées avec l'élève ou la filière |
-| `etablissements` | Établissements (prévu pour la synchronisation EducMaster) |
 | `preferences` | Vœux : jusqu'à 3 filières par élève **et par classe** (unicité), motivation, validation parent |
 | `recommandations` | Sorties du moteur : score, explication, **critères détaillés** (JSON), active ou archivée |
 | `conversations_ia` | Historique des échanges avec le conseiller |
@@ -167,6 +169,7 @@ Ne jamais versionner `.env`. En production, utiliser des secrets longs et aléat
 | `20260913100532_init` | Schéma initial |
 | `20260913133911_referentiel_filieres` | Filière : `code`, `niveauAcces`, `seriesAdmises`, `ouSeFormer`, `sources` ; `bourses` facultatif |
 | `20260913155635_parcours_eleve` | Apprenant : `palier`, `serie` ; vœux uniques par classe, date de validation parent ; `criteres` des recommandations |
+| `20260914155352_guide_mesrs` | Filière : `quotaBourses`, `quotaAides`, `modeEntree`, `seriesRecommandees`, `matieresClassement`, `matieresCles` ; établissement : `code` (unique), `sigle`, `universite`, département et commune facultatifs |
 | `20260914000931_catalogue_favoris` | Extension `unaccent` (recherche sans accents, extension « de confiance » : pas besoin d'être superutilisateur) ; Filière : `domaines` ; table `favoris` |
 
 Pour **créer une migration** dans un terminal interactif : `npm run prisma:migrate -- --name <nom>`.
@@ -187,9 +190,12 @@ Utiliser toujours le binaire Prisma local (`npx` depuis `backend/`). Lancé depu
 
 ## Référentiel des filières
 
-Le fichier `prisma/data/referentiel-filieres.ts` décrit **67 filières** constituées à partir de sources publiques : Office du Baccalauréat, gouv.bj, communiqués du MESTFP relayés par la presse, apresbac.bj pour le supérieur.
+Le catalogue compte **272 formations**, de deux origines :
 
-Chaque filière a au moins un **domaine** parmi les 14 de `src/filiere/domaines.ts` (agriculture, numérique, santé, BTP…). Ce classement a été fait par l'équipe à partir des intitulés, et non repris des sources : il est à faire valider avec le référentiel. Le seed s'arrête si une filière n'a pas de domaine ou en a un inconnu.
+- **Supérieur public (225)** : extrait du *Guide d'information et de sensibilisation des nouveaux bacheliers 2026-2027* du MESRS (source officielle, page citée sur chaque fiche), avec ses 66 établissements. Le PDF reste hors dépôt ; `prisma/data/outils/extraire-guide-mesrs.py` (pdfplumber) produit `guide-mesrs-2026-2027.json`, lu par le seed. Le script normalise les séries (« C, D et DEAT/PV » → C, D, DEAT), rapproche les matières du classement de celles des bulletins, et garde leur code aux 19 anciennes fiches du supérieur qui ont un équivalent : leurs identifiants, vœux et favoris restent valides. Pour une nouvelle édition du guide : ajuster les pages de `SECTIONS`, relancer avec `--controle`, relire les contrôles, puis relancer le seed.
+- **Après le BEPC (47)** : `prisma/data/referentiel-filieres.ts`, constitué à partir de sources publiques (Office du Baccalauréat, gouv.bj, communiqués du MESTFP relayés par la presse), à faire valider par le MESTFP.
+
+Chaque filière a au moins un **domaine** parmi les 16 de `src/filiere/domaines.ts` (agriculture, numérique, santé, BTP…). Ce classement a été fait par l'équipe à partir des intitulés, et non repris des sources : il est à faire valider avec le référentiel. Le seed s'arrête si une filière n'a pas de domaine ou en a un inconnu.
 
 | Famille | Nombre | Exemples de codes |
 |---|---|---|
@@ -280,7 +286,7 @@ Toutes les routes sont préfixées par `/api`. « Dossier » désigne l'accès d
 
 | Méthode | Route | Accès | Description |
 |---|---|---|---|
-| GET | `/filiere` | public | Liste paginée ; filtres `type`, `niveau` (`APRES_BEPC`, `APRES_BAC`), `departement`, `search`, `serie` (ex. `D`), `domaine`, `bourses` et `officielle` (`true` ou `false`), `page`, `limit` (100 au maximum). Un paramètre répété ou une valeur inconnue renvoie 400 |
+| GET | `/filiere` | public | Liste paginée ; filtres `type`, `niveau` (`APRES_BEPC`, `APRES_BAC`), `departement`, `search`, `serie` (ex. `D`), `domaine`, `bourses` et `officielle` (`true` ou `false`), `page`, `limit` (500 au maximum). Un paramètre répété ou une valeur inconnue renvoie 400 |
 | GET | `/filiere/filtres` | public | Valeurs des filtres : domaines (libellé, nombre de filières) et séries du bac (libellé, fiche du bac) |
 | GET | `/filiere/:id` | public | Fiche complète (sources et domaines inclus) |
 | GET | `/filiere/:id/debouches` | public | Débouchés, métiers, taux d'insertion |
@@ -424,7 +430,7 @@ Les tests de bout en bout se trouvent dans le dossier racine `tests/`, et s'exé
 bash tests/api/securite.sh        # 37 vérifications
 bash tests/api/parcours-eleve.sh  # 38 vérifications (nécessite le seed de démonstration)
 bash tests/api/conseiller.sh      # 11 vérifications sans appel au modèle ; 22 avec CONSEILLER_TEST_LLM=1 (appels réels, dont une réponse en fongbé)
-bash tests/api/catalogue.sh       # 58 vérifications : recherche, filtres, séries, domaines, formations mises de côté
+bash tests/api/catalogue.sh       # 66 vérifications : recherche, filtres, séries, domaines, supérieur (guide du MESRS), formations mises de côté
 ```
 
 Il n'y a pas encore de tests unitaires (Jest n'est pas configuré) : c'est l'objet des tâches 7.1 et 7.3.

@@ -119,10 +119,15 @@ model ParentApprenant {
 model Etablissement {
   id              String            @id @default(uuid())
   educmasterId    String?           @unique @map("educmaster_id")
+  /// Identifiant stable du référentiel (ex. « UAC-FSS »), utilisé par le seed
+  code            String?           @unique
   nom             String
+  sigle           String?
+  universite      String?
   type            TypeEtablissement
-  departement     String
-  commune         String
+  /// Non renseignés par le guide du MESRS
+  departement     String?
+  commune         String?
   capacite        Int?
   createdAt       DateTime          @default(now()) @map("created_at")
   updatedAt       DateTime          @updatedAt @map("updated_at")
@@ -150,6 +155,15 @@ model Filiere {
   sources           Json?
   /// Codes de src/filiere/domaines.ts (secteurs d'activité, filtre du catalogue)
   domaines          String[]    @default([])
+  /// Admission au supérieur, d'après le guide officiel du MESRS : places avec bourse, aides universitaires ou places
+  /// partiellement payantes, mode d'entrée (Classement, Concours…), séries et matières telles qu'écrites dans le guide
+  quotaBourses      Int?        @map("quota_bourses")
+  quotaAides        Int?        @map("quota_aides")
+  modeEntree        String?     @map("mode_entree")
+  seriesRecommandees String?    @map("series_recommandees")
+  matieresClassement String?    @map("matieres_classement")
+  /// Matières des bulletins retenues par le moteur d'orientation (sinon : règles de src/orientation/profils-filieres.ts)
+  matieresCles      Json?       @map("matieres_cles")
   etablissementId   String?     @map("etablissement_id")
   imageUrl          String?     @map("image_url")
   createdAt         DateTime    @default(now()) @map("created_at")

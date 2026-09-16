@@ -34,8 +34,8 @@ echo "  → $(js 'return j.map(r=>r.filiere.code+" "+r.score).join(" | ")')"
 echo "── Moteur (Terminale D)"
 check "Koffi → calcul" 201 $(req POST /orientation/DEMO-TLE-0001/calcul "$TK")
 check "  toutes accessibles après le bac" true "$(js 'return j.every(r=>r.filiere.niveauAcces==="APRES_BAC")')"
-check "  aucune filière réservée aux séries A (FLASH)" true "$(js 'return !j.some(r=>r.filiere.code.startsWith("UNIV-FLASH"))')"
-check "  aucune filière réservée aux bacs techniques (INSTI)" true "$(js 'return !j.some(r=>r.filiere.code.startsWith("UNIV-INSTI"))')"
+check "  toutes admettent la série D (séries officielles du guide du MESRS)" true "$(js 'return j.every(r=>(r.filiere.seriesAdmises||[]).includes("D")||(r.filiere.seriesAdmises||[]).includes("Toutes séries"))')"
+check "  au plus 2 par établissement" true "$(js 'const c={};j.forEach(r=>c[r.filiere.etablissementId]=(c[r.filiere.etablissementId]||0)+1);return Object.values(c).every(n=>n<=2)')"
 echo "  → $(js 'return j.map(r=>r.filiere.code+" "+r.score).join(" | ")')"
 
 echo "── Vœux"

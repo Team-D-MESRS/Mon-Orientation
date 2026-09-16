@@ -5,9 +5,11 @@ import {
   BarChart3,
   BookOpen,
   Droplets,
+  Dumbbell,
   FlaskConical,
   HardHat,
   Monitor,
+  Palette,
   Scale,
   School,
   Scissors,
@@ -26,6 +28,7 @@ import { useCatalogueAccueil } from './useCatalogueAccueil';
 const ICONES: Record<Domaine, LucideIcon> = {
   AGRICULTURE: Sprout,
   ARTISANAT: Scissors,
+  ARTS: Palette,
   BTP: HardHat,
   DROIT: Scale,
   ELECTRICITE: Zap,
@@ -37,6 +40,7 @@ const ICONES: Record<Domaine, LucideIcon> = {
   NUMERIQUE: Monitor,
   SANTE: Stethoscope,
   SCIENCES: FlaskConical,
+  SPORT: Dumbbell,
   TOURISME: UtensilsCrossed,
 };
 

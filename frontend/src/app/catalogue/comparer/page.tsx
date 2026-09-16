@@ -31,11 +31,16 @@ const LIGNES: { titre: string; valeur: (f: Filiere) => ReactNode }[] = [
   { titre: 'Domaines', valeur: (f) => (f.domaines.length > 0 ? f.domaines.map((d) => DOMAINE_LABELS[d]).join(', ') : nonRenseigne()) },
   { titre: 'Diplômes délivrés', valeur: (f) => liste(f.diplomesDelivres) },
   { titre: "Conditions d'accès", valeur: (f) => f.conditionsAcces ?? nonRenseigne() },
+  { titre: 'Mode d’entrée', valeur: (f) => f.modeEntree ?? nonRenseigne() },
   {
     titre: 'Séries de bac admises',
     valeur: (f) =>
-      f.seriesAdmises?.length ? f.seriesAdmises.join(', ') : nonRenseigne(f.niveauAcces === 'APRES_BEPC' ? 'Sans objet (après le BEPC)' : undefined),
+      f.seriesRecommandees ??
+      (f.seriesAdmises?.length ? f.seriesAdmises.join(', ') : nonRenseigne(f.niveauAcces === 'APRES_BEPC' ? 'Sans objet (après le BEPC)' : undefined)),
   },
+  { titre: 'Matières du classement', valeur: (f) => f.matieresClassement ?? nonRenseigne() },
+  { titre: 'Places avec bourse', valeur: (f) => f.quotaBourses ?? nonRenseigne() },
+  { titre: 'Aides ou places partiellement payantes', valeur: (f) => f.quotaAides ?? nonRenseigne() },
   { titre: 'Où se former', valeur: (f) => f.ouSeFormer ?? nonRenseigne() },
   { titre: 'Métiers visés', valeur: (f) => liste(f.metiersVises) },
   { titre: 'Débouchés', valeur: (f) => f.debouches ?? nonRenseigne() },

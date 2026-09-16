@@ -65,3 +65,5 @@ tests/e2e/captures/
 # Documents gardés en local, hors dépôt : cahier des charges de présentation et note de cadrage du client
 docs/
 Note_cadrage_*.docx
+# Guide officiel du MESRS (source du référentiel du supérieur, extrait dans backend/prisma/data/) : gardé hors dépôt
+Guide d'information *.pdf

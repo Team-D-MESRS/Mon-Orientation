@@ -31,16 +31,16 @@ const PROFILS: [RegExp, ProfilFiliere][] = [
   [/^DTM-LTA-/, { matieresCles: VIVANT, seuil: 10 }],
   [/^DEAT$/, { matieresCles: VIVANT }],
   [/^EFMS-/, { matieresCles: ['SVT', 'Français'] }],
-  [/^UNIV-FSS-/, { matieresCles: ['SVT', 'PCT', 'Mathématiques'] }],
-  [/^UNIV-(EPAC|IFRI|IMSP|INSTI)-|^UNIV-FAST-MPC$|^UNIV-ENSET$/, { matieresCles: SCIENCES }],
-  [/^UNIV-FAST-SVT$/, { matieresCles: VIVANT }],
-  [/^UNIV-(ENEAM|FASEG)-/, { matieresCles: ['Mathématiques', 'Français'] }],
-  [/^UNIV-FADESP-/, { matieresCles: ['Français', 'Philosophie', 'Histoire-Géographie'] }],
-  [/^UNIV-FLASH-LETTRES$/, { matieresCles: ['Français', 'Philosophie', 'Anglais'] }],
-  [/^UNIV-FLASH-/, { matieresCles: ['Histoire-Géographie', 'Français', 'Philosophie'] }],
 ];
 
-export function profilFiliere(filiere: Pick<Filiere, 'code'>): ProfilFiliere {
+/**
+ * Au supérieur, les matières clés sont celles du classement officiel (guide du MESRS, champ matieresCles).
+ * Le guide pondère ces matières par les coefficients du bac de chaque série, qu'il ne publie pas :
+ * le moteur les compte à parts égales. Sans matière connue, la moyenne générale compte pour moitié.
+ */
+export function profilFiliere(filiere: Pick<Filiere, 'code' | 'matieresCles'>): ProfilFiliere {
+  const officielles = Array.isArray(filiere.matieresCles) ? (filiere.matieresCles as string[]) : [];
+  if (officielles.length > 0) return { matieresCles: officielles };
   const code = filiere.code;
   return (code && PROFILS.find(([motif]) => motif.test(code))?.[1]) || { matieresCles: [] };
 }

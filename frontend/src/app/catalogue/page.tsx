@@ -10,7 +10,8 @@ import { useFavoris } from '@/stores/favorisStore';
 import { CarteFiliere } from '@/components/catalogue/CarteFiliere';
 import { Alerte } from '@/components/espace/ui';
 
-const LIMITE = 100;
+/** Formations chargées à la fois ; « Afficher plus » charge la page suivante */
+const LIMITE = 48;
 const CHAMP = 'w-full px-4v py-3v border border-bj-gray-850 rounded-bj-sm text-sm bg-white focus:outline-none focus:ring-2 focus:ring-bj-green';
 
 /** Filtres portés par l'adresse de la page : une recherche filtrée se partage par simple lien. */
@@ -64,6 +65,8 @@ function Catalogue() {
   const [total, setTotal] = useState(0);
   const [statut, setStatut] = useState<'chargement' | 'ok' | 'erreur'>('chargement');
   const [tentative, setTentative] = useState(0);
+  const [page, setPage] = useState(1);
+  const [suite, setSuite] = useState<'repos' | 'chargement' | 'erreur'>('repos');
   const [maSerie, setMaSerie] = useState<string | null>(null);
   const role = useAuthStore((s) => s.user?.role);
   const { erreur: erreurFavoris } = useFavoris();
@@ -121,12 +124,14 @@ function Catalogue() {
   useEffect(() => {
     let annule = false;
     setStatut('chargement');
+    setSuite('repos');
     filiereApi
       .list(requete)
       .then(({ data }) => {
         if (annule) return;
         setFilieres(data.items);
         setTotal(data.total);
+        setPage(1);
         setStatut('ok');
       })
       .catch(() => {
@@ -136,6 +141,18 @@ function Catalogue() {
       annule = true;
     };
   }, [requete, tentative]);
+
+  const afficherPlus = async () => {
+    setSuite('chargement');
+    try {
+      const { data } = await filiereApi.list({ ...requete, page: page + 1 });
+      setFilieres((actuelles) => [...actuelles, ...data.items]);
+      setPage(page + 1);
+      setSuite('repos');
+    } catch {
+      setSuite('erreur');
+    }
+  };
 
   const filtresActifs = CLES.some((cle) => params.get(cle));
   const serieChoisie = valeurs?.series.find((s) => s.serie === serie);
@@ -311,7 +328,7 @@ function Catalogue() {
           <>
             <p className="text-sm text-bj-gray-500 mb-6v" aria-live="polite">
               {total} filière(s) trouvée(s)
-              {total > filieres.length && ` — ${filieres.length} premières affichées, affine ta recherche`}
+              {total > filieres.length && ` — ${filieres.length} affichées`}
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6v">
@@ -319,6 +336,19 @@ function Catalogue() {
                 <CarteFiliere key={filiere.id} filiere={filiere} />
               ))}
             </div>
+
+            {filieres.length < total && (
+              <div className="mt-8v text-center">
+                <button type="button" onClick={afficherPlus} disabled={suite === 'chargement'} className="bj-btn bj-btn-secondary disabled:opacity-60">
+                  {suite === 'chargement' ? 'Chargement…' : `Afficher plus de formations (${total - filieres.length} restantes)`}
+                </button>
+                {suite === 'erreur' && (
+                  <p role="alert" className="mt-3v text-sm text-bj-red">
+                    Impossible de charger la suite pour le moment. Réessaie.
+                  </p>
+                )}
+              </div>
+            )}
 
             {filieres.length === 0 && (
               <div className="text-center py-12v">

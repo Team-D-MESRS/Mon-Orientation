@@ -13,6 +13,7 @@ const sql = (requete) =>
 const reinitialiser = () =>
   sql("delete from favoris where apprenant_nip like 'DEMO-%'; delete from preferences where apprenant_nip = 'DEMO-TLE-0001';");
 const idDe = async (code) => (await (await fetch(`${API}/filiere?search=${code}`)).json()).items.find((f) => f.code === code).id;
+const totalDe = async (parametres) => (await (await fetch(`${API}/filiere?limit=1&${parametres}`)).json()).total;
 
 const nav = await lancerNavigateur();
 const r = rapporteur();
@@ -53,37 +54,47 @@ async function deconnecter() {
 try {
   reinitialiser();
   await nav.taille(1280, 900);
+  const TOTAL = await totalDe('');
+  const NB_NUMERIQUE = await totalDe('domaine=NUMERIQUE');
+  const NB_BOURSES = await totalDe('bourses=true');
 
   // ── Visiteur : recherche et filtres
   await nav.aller(`${BASE}/catalogue`);
-  await nav.attendre(`${nbCartes} > 0 && ${contient('67 filière(s) trouvée(s)')}`);
+  await nav.attendre(`${nbCartes} > 0 && ${contient(`${TOTAL} filière(s) trouvée(s)`)}`);
   r.verifier(
-    'Visiteur : 67 fiches, pas de cœur (réservé aux élèves)',
+    `Visiteur : ${TOTAL} fiches, pas de cœur (réservé aux élèves)`,
     await nav.evaluer("[...document.querySelectorAll('main article button')].every((b) => b.textContent.includes('Comparer'))"),
   );
 
   await nav.saisir('#recherche', 'electricite');
-  await nav.attendre(`location.search.includes('q=electricite') && ${contient('Électricité et systèmes énergétiques')} && !${contient('67 filière(s)')}`);
+  await nav.attendre(`location.search.includes('q=electricite') && ${contient('Électricité et systèmes énergétiques')} && !${contient(`${TOTAL} filière(s)`)}`);
   r.verifier('Recherche sans accent : « electricite » trouve le DTM Électricité', true, await nav.evaluer(`${nbCartes} + ' fiche(s)'`));
 
   await nav.cliquerTexte('Effacer les filtres', 'button');
-  await nav.attendre(`${contient('67 filière(s) trouvée(s)')} && document.querySelector('#recherche').value === ''`);
+  await nav.attendre(`${contient(`${TOTAL} filière(s) trouvée(s)`)} && document.querySelector('#recherche').value === ''`);
   await nav.saisir('#filtre-domaine', 'NUMERIQUE');
-  await nav.attendre(`location.search.includes('domaine=NUMERIQUE') && ${contient('7 filière(s) trouvée(s)')}`);
-  r.verifier('Filtre domaine : Numérique (7)', await nav.evaluer(`${nbCartes} === 7`));
+  await nav.attendre(`location.search.includes('domaine=NUMERIQUE') && ${contient(`${NB_NUMERIQUE} filière(s) trouvée(s)`)}`);
+  r.verifier(`Filtre domaine : Numérique (${NB_NUMERIQUE})`, await nav.evaluer(`${nbCartes} === ${Math.min(NB_NUMERIQUE, 48)}`));
   await nav.cliquerTexte('Effacer les filtres', 'button');
-  await nav.attendre(contient('67 filière(s) trouvée(s)'));
+  await nav.attendre(contient(`${TOTAL} filière(s) trouvée(s)`));
   await nav.cliquerTexte('Avec bourses', 'label');
-  await nav.attendre(`location.search.includes('bourses=true') && ${contient('20 filière(s) trouvée(s)')}`);
-  r.verifier('Filtre bourses (20)', true);
+  await nav.attendre(`location.search.includes('bourses=true') && ${contient(`${NB_BOURSES} filière(s) trouvée(s)`)}`);
+  r.verifier(`Filtre bourses (${NB_BOURSES})`, true);
+
+  // Pagination : 48 formations à la fois
+  await nav.aller(`${BASE}/catalogue?serie=D`);
+  await nav.attendre(`${nbCartes} === 48`);
+  await nav.cliquerTexte('Afficher plus de formations', 'main button');
+  await nav.attendre(`${nbCartes} === 96`);
+  r.verifier('« Afficher plus » charge les 48 suivantes', true);
 
   // Lien partageable : les filtres sont dans l'adresse
-  await nav.aller(`${BASE}/catalogue?serie=D`);
+  await nav.aller(`${BASE}/catalogue?serie=D&domaine=SANTE`);
   await nav.attendre(`${contient('Formations du supérieur accessibles avec un bac D')} && ${nbCartes} > 0`);
   r.verifier(
-    'Lien « ?serie=D » : médecine admise, droit sous conditions, pas de lettres',
+    'Lien « ?serie=D&domaine=SANTE » : formations de santé accessibles avec un bac D',
     await nav.evaluer(
-      `document.querySelector('#filtre-serie').value === 'D' && ${contient('Médecine générale')} && ${contient('Admise sous conditions')} && !${contient('Lettres, langues et philosophie')}`,
+      `document.querySelector('#filtre-serie').value === 'D' && document.querySelector('#filtre-domaine').value === 'SANTE' && ${contient('Médecine générale')} && ${contient('Série admise')}`,
     ),
     await nav.evaluer(`${nbCartes} + ' fiches'`),
   );
@@ -94,14 +105,17 @@ try {
   await cliquerDansCarte('Pharmacie', 'Comparer');
   await nav.attendre(`${barre}?.textContent.includes('2 formations à comparer')`);
   r.verifier('Comparateur : 2 formations choisies, boutons enfoncés', await nav.evaluer(`${etatDansCarte('Médecine générale', 'comparer')} === 'true'`));
-  await cliquerDansCarte('Chirurgie dentaire', 'Comparer');
-  await cliquerDansCarte('Informatique — IFRI', 'Comparer');
+  await cliquerDansCarte('Kinésithérapie', 'Comparer');
+  await cliquerDansCarte('Nutrition et diététique', 'Comparer');
   await nav.attendre(`${barre}?.textContent.includes('3 formations au maximum')`);
-  r.verifier('Comparateur : 4e formation refusée (3 au maximum)', await nav.evaluer(`${barre}.textContent.includes('3 formations à comparer') && ${etatDansCarte('Informatique — IFRI', 'comparer')} === 'false'`));
+  r.verifier('Comparateur : 4e formation refusée (3 au maximum)', await nav.evaluer(`${barre}.textContent.includes('3 formations à comparer') && ${etatDansCarte('Nutrition et diététique', 'comparer')} === 'false'`));
 
   await nav.cliquerTexte('Comparer →', `[aria-label="Comparateur de formations"] a`);
   await nav.attendre("location.pathname === '/catalogue/comparer' && document.querySelectorAll('main thead th').length === 4");
-  r.verifier('Tableau : 3 colonnes, 11 critères', await nav.evaluer("document.querySelectorAll('main tbody tr').length === 11"));
+  r.verifier(
+    'Tableau : 3 colonnes, 15 critères dont les quotas officiels',
+    await nav.evaluer(`document.querySelectorAll('main tbody tr').length === 15 && ${contient('Places avec bourse')} && ${contient('Matières du classement')}`),
+  );
   r.verifier(
     'Partage WhatsApp : le message contient le lien de la comparaison',
     await nav.evaluer("new URL(document.querySelector('a[href^=\"https://wa.me/\"]').href).searchParams.get('text').includes(location.href)"),
@@ -137,10 +151,11 @@ try {
   await nav.aller(`${BASE}/catalogue/${await idDe('BAC-D')}`);
   await nav.attendre("!!document.querySelector('#poursuites a')");
   r.verifier(
-    'Fiche bac D : « Et après ce bac ? » avec médecine et droit sous conditions',
+    'Fiche bac D : « Et après ce bac ? » groupé par université, avec médecine',
     await nav.evaluer(
-      `${contient('Et après ce bac ?')} && [...document.querySelectorAll('#poursuites a')].some((a) => a.textContent.includes('Médecine générale')) && document.querySelector('#poursuites').textContent.includes('Sous conditions')`,
+      `${contient('Et après ce bac ?')} && [...document.querySelectorAll('#poursuites a')].some((a) => a.textContent.includes('Médecine générale')) && document.querySelectorAll('#poursuites details').length >= 3`,
     ),
+    await nav.evaluer("document.querySelectorAll('#poursuites details').length + ' universités'"),
   );
   r.verifier(
     'Fiche : domaine cliquable, partage et impression proposés',
@@ -162,6 +177,15 @@ try {
   await nav.capture(`${OUT}/c5-fiche-impression.png`);
   await nav.media('');
 
+  // Fiche du supérieur : admission d'après le guide officiel du MESRS
+  await nav.aller(`${BASE}/catalogue/${await idDe('UNIV-EPAC-GC')}`);
+  await nav.attendre(`${contient('Admission')} && ${contient('Places avec bourse')}`);
+  r.verifier(
+    'Fiche Génie civil (EPAC) : mode d’entrée, séries, matières et quotas officiels',
+    await nav.evaluer(`${contient('Classement')} && ${contient('Matières du classement')} && ${contient('apresmonbac.bj')} && ${contient('Source officielle')}`),
+  );
+  await nav.capture(`${OUT}/c9-fiche-superieur.png`);
+
   // ── Élève de Terminale D : formations mises de côté
   await connecter('DEMO-TLE-0001');
   await nav.attendre(contient('Aucune pour l’instant'));
@@ -170,16 +194,18 @@ try {
   await nav.aller(`${BASE}/catalogue`);
   await nav.attendre(`${contient('Que faire avec mon bac D ?')} && !!document.querySelector('main article button[title]:not([disabled])')`);
   await nav.cliquerTexte('Que faire avec mon bac D ?', 'button');
-  await nav.attendre(`location.search.includes('serie=D') && ${contient('accessibles avec un bac D')} && ${contient('Médecine générale')}`);
+  await nav.attendre(`location.search.includes('serie=D') && ${contient('accessibles avec un bac D')}`);
   r.verifier('Raccourci « Que faire avec mon bac D ? »', true);
+  await nav.aller(`${BASE}/catalogue?serie=D&domaine=SANTE`);
+  await nav.attendre(`${contient('Médecine générale')} && !!document.querySelector('main article button[title]:not([disabled])')`);
   await cliquerDansCarte('Médecine générale', 'Mettre de côté');
-  await cliquerDansCarte('Informatique — IFRI', 'Mettre de côté');
-  await nav.attendre(`${etatDansCarte('Médecine générale', 'cœur')} === 'true' && ${etatDansCarte('Informatique — IFRI', 'cœur')} === 'true'`);
+  await cliquerDansCarte('Pharmacie', 'Mettre de côté');
+  await nav.attendre(`${etatDansCarte('Médecine générale', 'cœur')} === 'true' && ${etatDansCarte('Pharmacie', 'cœur')} === 'true'`);
   await nav.aller(`${BASE}/catalogue?q=${encodeURIComponent('série C')}`);
   await nav.attendre(`${contient('Baccalauréat série C')} && !!document.querySelector('main article button[title]:not([disabled])')`);
   await cliquerDansCarte('Baccalauréat série C', 'Mettre de côté');
   await nav.attendre(`${etatDansCarte('Baccalauréat série C', 'cœur')} === 'true'`);
-  await nav.aller(`${BASE}/catalogue?serie=D`);
+  await nav.aller(`${BASE}/catalogue?serie=D&domaine=SANTE`);
   await nav.attendre(`${etatDansCarte('Médecine générale', 'cœur')} === 'true'`);
   r.verifier('Cœurs enregistrés côté serveur (retrouvés après rechargement)', true);
   await nav.capture(`${OUT}/c6-catalogue-eleve.png`, false);

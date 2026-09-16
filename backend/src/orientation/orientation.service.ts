@@ -156,7 +156,7 @@ export class OrientationService {
 
   private famille(filiere: Filiere): string {
     // Au supérieur, toutes les filières sont de type UNIVERSITE : on varie par établissement (FSS, EPAC…)
-    return filiere.type === 'UNIVERSITE' ? (filiere.code?.split('-')[1] ?? filiere.id) : filiere.type;
+    return filiere.type === 'UNIVERSITE' ? (filiere.etablissementId ?? filiere.code?.split('-')[1] ?? filiere.id) : filiere.type;
   }
 
   private evaluer(
@@ -170,12 +170,20 @@ export class OrientationService {
     const profil = profilFiliere(filiere);
 
     const matieresCles = bilan.matieres.filter((m) => profil.matieresCles.includes(m.matiere));
-    const moyenneCles = matieresCles.length > 0 ? moyenne(matieresCles.map((m) => m.moyenne)) : null;
+    // Une seule matière clé dans les bulletins (les autres épreuves, « culture générale » ou « étude de cas », n'y figurent
+    // pas) : elle est complétée par la moyenne générale, pour ne pas avantager les formations classées sur une seule matière
+    const complement = matieresCles.length === 1 ? bilan.moyenneGenerale : null;
+    const moyenneCles =
+      matieresCles.length > 0 ? moyenne([...matieresCles.map((m) => m.moyenne), ...(complement !== null ? [complement] : [])]) : null;
     if (moyenneCles !== null) {
+      const detailMatieres = matieresCles.map((m) => `${m.matiere} ${noteLisible(m.moyenne)}`).join(', ');
       criteres.push({
         critere: 'resultats',
         points: Math.round(POIDS_RESULTATS * progression(moyenneCles)),
-        detail: `Tes moyennes dans les matières clés (${matieresCles.map((m) => `${m.matiere} ${noteLisible(m.moyenne)}`).join(', ')}) donnent ${noteLisible(moyenneCles)}/20.`,
+        detail:
+          complement !== null
+            ? `Ta moyenne dans la seule matière clé connue (${detailMatieres}) et ta moyenne générale (${noteLisible(complement)}/20) donnent ${noteLisible(moyenneCles)}/20.`
+            : `Tes moyennes dans les matières clés (${detailMatieres}) donnent ${noteLisible(moyenneCles)}/20.`,
       });
     } else if (bilan.moyenneGenerale !== null) {
       criteres.push({

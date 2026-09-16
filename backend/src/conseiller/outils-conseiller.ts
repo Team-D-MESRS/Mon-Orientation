@@ -128,6 +128,12 @@ export class OutilsConseillerService {
       debouches: f.debouches,
       conditionsAcces: f.conditionsAcces ?? 'non renseignées',
       seriesAdmises: f.seriesAdmises,
+      // Supérieur : données du guide officiel du MESRS (null pour les formations après le BEPC)
+      modeEntree: f.modeEntree,
+      seriesRecommandees: f.seriesRecommandees,
+      matieresClassement: f.matieresClassement,
+      placesAvecBourse: f.quotaBourses,
+      aidesOuPlacesPartiellementPayantes: f.quotaAides,
       ouSeFormer: f.ouSeFormer ?? 'non renseigné',
       bourses: f.bourses ?? 'non renseigné',
       tauxInsertion: f.tauxInsertion ?? 'aucune donnée publique',

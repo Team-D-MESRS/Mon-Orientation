@@ -73,7 +73,8 @@ export class FiliereController {
       bourses: booleen('bourses', bourses),
       officielle: booleen('officielle', officielle),
       page: numeroPage ? Math.max(parseInt(numeroPage) || 1, 1) : 1,
-      limit: taille ? Math.min(Math.max(parseInt(taille) || 20, 1), 100) : 20,
+      // 500 : de quoi charger toutes les formations d'un niveau (saisie des vœux)
+      limit: taille ? Math.min(Math.max(parseInt(taille) || 20, 1), 500) : 20,
     });
   }
 
