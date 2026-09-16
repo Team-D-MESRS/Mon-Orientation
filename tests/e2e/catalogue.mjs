@@ -46,7 +46,7 @@ const etatDansCarte = (carte, bouton) =>
   `[...document.querySelectorAll('main article')].find((a) => a.textContent.includes(${js(carte)}))?.querySelector('button[aria-pressed]' + ${js(bouton === 'cœur' ? '[title]' : ':not([title])')})?.getAttribute('aria-pressed')`;
 
 async function connecter(identifiant) {
-  await nav.aller(`${BASE}/connexion`);
+  await nav.aller(`${BASE}/identification`);
   await nav.attendre("!!document.querySelector('#identifiant')");
   await nav.saisir('#identifiant', identifiant);
   await nav.saisir('#password', 'Demo2026!');

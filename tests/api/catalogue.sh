@@ -1,7 +1,9 @@
 #!/bin/bash
 # Catalogue : recherche sans accents, filtres (série du bac, domaine, bourses, sources) et formations mises de côté.
 source "$(dirname "$0")/../lib.sh"
-jeton() { req POST /auth/connexion "" "{\"identifiant\":\"$1\",\"motDePasse\":\"${2:-Demo2026!}\"}" >/dev/null; js 'return j.accessToken'; }
+# Élèves et parents : identifiants EducMaster. Personnels du ministère : compte interne.
+jeton() { req POST /auth/identification "" "{\"identifiant\":\"$1\",\"motDePasse\":\"${2:-Demo2026!}\"}" >/dev/null; js 'return j.accessToken'; }
+personnel() { req POST /auth/personnel "" "{\"identifiant\":\"$1\",\"motDePasse\":\"${2:-Demo2026!}\"}" >/dev/null; js 'return j.accessToken'; }
 enc() { node -e 'console.log(encodeURIComponent(process.argv[1]))' "$1"; }
 # liste <paramètres> : GET /filiere (500 résultats au plus : tout le catalogue), corps de réponse dans $BODY
 liste() { req GET "/filiere?limit=500&$1"; }
@@ -84,7 +86,7 @@ check "Chirurgie dentaire (absente du guide) retirée" 0 "$(liste "search=UNIV-F
 check "au plus 500 résultats par page" 500 "$(req GET "/filiere?limit=9999" >/dev/null; jget 'j.limit')"
 
 echo "── Formations mises de côté"
-TF=$(jeton DEMO-3E-0001); TK=$(jeton DEMO-TLE-0001); TP=$(jeton parent.demo@monorientation.bj); TA=$(jeton admin@monorientation.bj "${ADMIN_PASSWORD:-admin123}")
+TF=$(jeton DEMO-3E-0001); TK=$(jeton DEMO-TLE-0001); TP=$(jeton parent.demo@monorientation.bj); TA=$(personnel admin@monorientation.bj "${ADMIN_PASSWORD:-admin123}")
 MED=$(id_code UNIV-FSS-MEDECINE); F3=$(id_code BAC-F3)
 F=/apprenant/DEMO-3E-0001/favoris
 check "sans connexion → 401" 401 $(req GET $F)

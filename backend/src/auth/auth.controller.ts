@@ -3,7 +3,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { RegisterDto, LoginDto, RefreshDto } from './dto/auth.dto';
+import { IdentificationDto, PersonnelDto, RefreshDto } from './dto/auth.dto';
 import { ThrottlerIdentifiantGuard } from './throttler-identifiant.guard';
 import { UtilisateurConnecte, UtilisateurCourant } from './utilisateur-courant.decorator';
 
@@ -15,19 +15,23 @@ const LIMITE_TENTATIVES = { default: { limit: 5, ttl: 60_000 } };
 export class AuthController {
   constructor(private authService: AuthService) {}
 
-  @Post('inscription')
-  @Throttle(LIMITE_TENTATIVES)
-  @ApiOperation({ summary: 'Créer un compte (apprenant : NIP + date de naissance ; parent : email)' })
-  async register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
-  }
-
-  @Post('connexion')
+  @Post('identification')
   @HttpCode(HttpStatus.OK)
   @Throttle(LIMITE_TENTATIVES)
-  @ApiOperation({ summary: 'Se connecter' })
-  async login(@Body() dto: LoginDto) {
-    return this.authService.login(dto);
+  @ApiOperation({
+    summary: "S'identifier avec ses identifiants EducMaster (élève : NIP ou numéro EducMaster ; parent : adresse)",
+    description: "Il n'y a pas d'inscription : EducMaster fait foi, et le compte est créé à la première identification.",
+  })
+  async identification(@Body() dto: IdentificationDto) {
+    return this.authService.identification(dto);
+  }
+
+  @Post('personnel')
+  @HttpCode(HttpStatus.OK)
+  @Throttle(LIMITE_TENTATIVES)
+  @ApiOperation({ summary: 'Accès des personnels du ministère (compte interne : administration, DGES, établissement)' })
+  async personnel(@Body() dto: PersonnelDto) {
+    return this.authService.identificationPersonnel(dto);
   }
 
   @Post('refresh')

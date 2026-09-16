@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api';
 import { messageErreur } from '@/lib/erreurs';
@@ -11,7 +10,8 @@ import { accueilDuRole, useAuthStore } from '@/stores/authStore';
 const CHAMP =
   'w-full px-4v py-3v border border-bj-gray-850 rounded-bj-sm text-sm focus:outline-none focus:ring-2 focus:ring-bj-green';
 
-export default function ConnexionPage() {
+/** Accès des personnels du ministère : compte interne, distinct de l'identification EducMaster. */
+export default function PersonnelsPage() {
   const router = useRouter();
   const { user, pret, login } = useAuthStore();
   const [identifiant, setIdentifiant] = useState('');
@@ -28,7 +28,7 @@ export default function ConnexionPage() {
     setErreur(null);
     setEnvoi(true);
     try {
-      const { data } = await authApi.login(identifiant.trim(), motDePasse);
+      const { data } = await authApi.personnel(identifiant.trim(), motDePasse);
       login(data.user, data.accessToken, data.refreshToken);
     } catch (err) {
       setErreur(messageErreur(err, { 401: 'Identifiant ou mot de passe incorrect.' }));
@@ -42,27 +42,27 @@ export default function ConnexionPage() {
       <div className="bj-container max-w-md w-full">
         <div className="bj-card p-8v">
           <div className="text-center mb-8v">
-            <div className="w-16 h-16 bg-bj-green rounded-full flex items-center justify-center text-white font-bold text-xl mx-auto mb-4v">
-              MO
-            </div>
-            <h1 className="text-2xl font-bold">Connexion</h1>
-            <p className="text-sm text-bj-gray-500 mt-2v">Accède à ton espace personnel</p>
+            <h1 className="text-2xl font-bold">Accès des personnels</h1>
+            <p className="text-sm text-bj-gray-500 mt-2v">
+              Administration, DGES et établissements. Les élèves et leurs parents passent par{' '}
+              <span className="whitespace-nowrap">l&apos;identification EducMaster</span>.
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4v" noValidate>
             <div>
               <label htmlFor="identifiant" className="block text-sm font-medium mb-1v">
-                NIP ou email
+                Adresse professionnelle
               </label>
               <input
                 id="identifiant"
-                type="text"
+                type="email"
                 autoComplete="username"
                 required
                 value={identifiant}
                 onChange={(e) => setIdentifiant(e.target.value)}
                 className={CHAMP}
-                placeholder="Ton NIP ou ton email"
+                placeholder="nom@monorientation.bj"
               />
             </div>
 
@@ -96,15 +96,6 @@ export default function ConnexionPage() {
               {envoi ? 'Connexion…' : 'Se connecter'}
             </button>
           </form>
-
-          <div className="mt-6v text-center space-y-3v">
-            <Link href="/inscription" className="block text-sm text-bj-green hover:underline">
-              Pas encore de compte ? Créer un compte
-            </Link>
-            <p className="text-xs text-bj-gray-500">
-              Mot de passe oublié ? Rapproche-toi de ton établissement.
-            </p>
-          </div>
         </div>
       </div>
     </div>

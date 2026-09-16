@@ -46,8 +46,8 @@ export default function ConseillerAccueilPage() {
         {user ? (
           <Alerte ton="info">Le conseiller est réservé aux élèves et à leurs parents.</Alerte>
         ) : (
-          <Link href={`/connexion?redirect=${encodeURIComponent(CIBLE)}`} className="bj-btn bj-btn-primary">
-            Se connecter pour échanger avec le conseiller
+          <Link href={`/identification?redirect=${encodeURIComponent(CIBLE)}`} className="bj-btn bj-btn-primary">
+            S&apos;identifier pour échanger avec le conseiller
           </Link>
         )}
       </div>

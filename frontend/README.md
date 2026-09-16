@@ -89,7 +89,7 @@ frontend/src/
 │   ├── catalogue/page.tsx             catalogue : recherche et filtres, portés par l'adresse (lien partageable)
 │   ├── catalogue/[id]/page.tsx        fiche filière : sources, « Et après ce bac ? », cœur, comparer, partage, impression
 │   ├── catalogue/comparer/page.tsx    comparaison de 2 ou 3 formations (?ids=…)
-│   ├── connexion/ , inscription/      formulaires reliés à l'API
+│   ├── identification/ , personnels/  identification EducMaster ; accès dédié des personnels
 │   ├── espace-apprenant/
 │   │   ├── layout.tsx                 RequireAuth → EspaceProvider → CadreEspace (onglets)
 │   │   ├── page.tsx                   tableau de bord
@@ -131,8 +131,8 @@ frontend/src/
 | `/catalogue` | public | ✅ API | 272 formations, affichées 48 par 48 (« Afficher plus ») ; recherche sans accents (formation, métier, ville) ; filtres niveau, type, domaine, série de bac, bourses, source officielle, tous portés par l'adresse (`/catalogue?serie=D`) ; raccourci « Que faire avec mon bac D ? » pour l'élève de 1re ou de Terminale ; cœur (élève) et « Comparer » sur chaque carte |
 | `/catalogue/[id]` | public | ✅ API | Fiche complète, domaines cliquables ; section « Admission » pour le supérieur (mode d'entrée, séries, matières du classement, places avec bourse et aides, d'après le guide du MESRS) ; « Et après ce bac ? » sur les fiches de bac, groupé par université ; mettre de côté (élève), comparer, partager (WhatsApp, partage du téléphone, lien), imprimer |
 | `/catalogue/comparer` | public | ✅ API | Tableau de 2 ou 3 formations sur 11 critères ; lien partageable ; sans `?ids=`, reprend la sélection faite dans le catalogue |
-| `/connexion` | public | ✅ API | NIP ou email + mot de passe ; retour à la page demandée (`?redirect=`) |
-| `/inscription` | public | ✅ API | Élève (NIP + date de naissance) ou parent (email) |
+| `/identification` | public | ✅ API | Identifiants EducMaster : NIP ou numéro EducMaster (élève), adresse (parent) ; le compte est créé à la première identification ; retour à la page demandée (`?redirect=`) |
+| `/personnels` | public | ✅ API | Accès des personnels du ministère (administration, DGES, établissement), séparé de l'identification EducMaster |
 | `/espace-apprenant` | élève, parent, admin | ✅ API | Profil, résultats, étape d'orientation, pistes du moment, formations mises de côté |
 | `/espace-apprenant/notes` | élève, parent, admin | ✅ API | Tableau par matière et trimestre (vue compacte sur mobile) |
 | `/espace-apprenant/preferences` | élève (saisie), parent (validation), admin (lecture) | ✅ API | Vœux en 3 étapes, enregistrés à chaque étape, récapitulatif, motivation ; formations mises de côté proposées en premier, recherche sans accents |
@@ -155,9 +155,9 @@ Un bandeau signale les dossiers de démonstration (NIP en `DEMO-`).
 
 ## Authentification côté client
 
-1. La **connexion** et l'**inscription** appellent l'API, puis `useAuthStore().login(user, accessToken, refreshToken)` : l'utilisateur et les jetons sont enregistrés dans `localStorage`.
+1. L'**identification** (élèves et parents) et l'**accès des personnels** appellent l'API, puis `useAuthStore().login(user, accessToken, refreshToken)` : l'utilisateur et les jetons sont enregistrés dans `localStorage`.
 2. Au chargement, **`AuthInitialiser`** restaure la session. Le drapeau `pret` évite de rediriger avant de savoir si l'utilisateur est connecté.
-3. **`RequireAuth roles={[…]}`** protège une page ou un layout : sans session, il redirige vers `/connexion?redirect=<page>` ; avec un rôle non autorisé, il affiche « Accès réservé ».
+3. **`RequireAuth roles={[…]}`** protège une page ou un layout : sans session, il redirige vers `/identification?redirect=<page>` ; avec un rôle non autorisé, il affiche « Accès réservé ».
 4. **Rafraîchissement** : sur une réponse 401, l'intercepteur Axios demande une nouvelle paire de jetons, **une seule requête à la fois** (le backend révoque chaque jeton après usage), puis rejoue la requête. En cas d'échec, il déconnecte et renvoie vers la connexion.
 5. **Déconnexion** : l'appel API révoque les sessions, puis la session locale n'est effacée qu'**une fois arrivé sur l'accueil**. Effacée plus tôt, la page protégée encore affichée redirigerait vers la connexion.
 6. Après connexion, l'utilisateur arrive sur `accueilDuRole(role)` : `/espace-apprenant` pour un élève ou un parent, `/stats` pour le DGES ou un admin.

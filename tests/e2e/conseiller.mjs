@@ -13,7 +13,7 @@ const contient = (t) => `document.body.textContent.includes(${JSON.stringify(t)}
 const QUESTION = 'Pourquoi le moteur me propose ces formations ?';
 
 async function connecter(identifiant, cible) {
-  await nav.aller(`${BASE}/connexion`);
+  await nav.aller(`${BASE}/identification`);
   await nav.attendre("!!document.querySelector('#identifiant')");
   await nav.saisir('#identifiant', identifiant);
   await nav.saisir('#password', 'Demo2026!');
@@ -29,8 +29,8 @@ try {
   await nav.taille(1280, 900);
 
   await nav.aller(`${BASE}/conseiller`);
-  await nav.attendre(contient('Se connecter pour échanger avec le conseiller'));
-  r.verifier('Visiteur : présentation du conseiller et invitation à se connecter', true);
+  await nav.attendre(contient("S'identifier pour échanger avec le conseiller"));
+  r.verifier("Visiteur : présentation du conseiller et invitation à s'identifier", true);
 
   await connecter('DEMO-3E-0001', '/espace-apprenant');
   await nav.aller(`${BASE}/conseiller`);

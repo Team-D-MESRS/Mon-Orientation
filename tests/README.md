@@ -11,9 +11,9 @@ Scripts de vérification contre l'application **lancée en local** (`./start.sh`
 ## Lancer
 
 ```bash
-bash tests/api/securite.sh          # droits d'accès, inscription, jetons, limitation des tentatives
+bash tests/api/securite.sh          # droits d'accès, identification EducMaster, jetons, limitation des tentatives
 bash tests/api/parcours-eleve.sh    # bilan des notes, moteur d'orientation, vœux, validation parent
-node tests/e2e/connexion.mjs        # connexion, session, pages protégées, déconnexion, inscription
+node tests/e2e/connexion.mjs        # identification, accès des personnels, session, pages protégées, déconnexion
 node tests/e2e/parcours-eleve.mjs   # parcours complet élève / parent / Terminale, captures ordinateur et mobile
 bash tests/api/conseiller.sh        # conseiller : droits, validation, conversations, limitation (sans appel au modèle)
 CONSEILLER_TEST_LLM=1 bash tests/api/conseiller.sh   # + appels réels au modèle (clé GEMINI_API_KEY requise, quota gratuit limité)

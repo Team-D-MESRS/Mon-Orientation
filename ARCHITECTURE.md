@@ -243,8 +243,8 @@ La recherche du catalogue utilise l'extension PostgreSQL `unaccent` (insensible 
 ### 4.1 Endpoints principaux
 
 **Authentification**
-- `POST /auth/inscription` — création de compte (apprenant ou parent)
-- `POST /auth/connexion` — authentification (NIP + mot de passe)
+- `POST /auth/identification` — identification EducMaster (élève : NIP ou numéro EducMaster ; parent : adresse)
+- `POST /auth/personnel` — accès des personnels du ministère (compte interne)
 - `POST /auth/refresh` — rafraîchir le token
 - `POST /auth/deconnexion` — déconnexion
 

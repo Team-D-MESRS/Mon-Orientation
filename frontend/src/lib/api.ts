@@ -45,7 +45,7 @@ function rafraichirJeton(): Promise<string | null> {
   return rafraichissementEnCours;
 }
 
-const SANS_RAFRAICHISSEMENT = ['/auth/connexion', '/auth/inscription', '/auth/refresh', '/auth/deconnexion'];
+const SANS_RAFRAICHISSEMENT = ['/auth/identification', '/auth/personnel', '/auth/refresh', '/auth/deconnexion'];
 
 api.interceptors.response.use(
   (response) => response,
@@ -69,7 +69,7 @@ api.interceptors.response.use(
     }
 
     useAuthStore.getState().logout();
-    window.location.href = `/connexion?redirect=${encodeURIComponent(window.location.pathname)}`;
+    window.location.href = `/identification?redirect=${encodeURIComponent(window.location.pathname)}`;
     return Promise.reject(error);
   }
 );
@@ -81,16 +81,6 @@ export interface Jetons {
 
 export interface ReponseAuth extends Jetons {
   user: Utilisateur;
-}
-
-export interface DonneesInscription {
-  role: 'APPRENANT' | 'PARENT';
-  nom: string;
-  prenom: string;
-  motDePasse: string;
-  nip?: string;
-  dateNaissance?: string;
-  email?: string;
 }
 
 export interface ApprenantResume {
@@ -115,9 +105,12 @@ export interface Moi extends Utilisateur {
 }
 
 export const authApi = {
-  login: (identifiant: string, motDePasse: string) =>
-    api.post<ReponseAuth>('/auth/connexion', { identifiant, motDePasse }),
-  register: (data: DonneesInscription) => api.post<ReponseAuth>('/auth/inscription', data),
+  /** Élève (NIP ou numéro EducMaster) ou parent (adresse), avec ses identifiants EducMaster. */
+  identification: (identifiant: string, motDePasse: string) =>
+    api.post<ReponseAuth>('/auth/identification', { identifiant, motDePasse }),
+  /** Personnels du ministère : compte interne à la plateforme. */
+  personnel: (identifiant: string, motDePasse: string) =>
+    api.post<ReponseAuth>('/auth/personnel', { identifiant, motDePasse }),
   moi: () => api.get<Moi>('/auth/moi'),
   logout: () => api.post('/auth/deconnexion'),
 };

@@ -9,22 +9,24 @@ SQL
 curl -s -o /dev/null --retry 30 --retry-all-errors --retry-delay 1 --max-time 3 $A/docs
 nettoyer
 $PSQL <<SQL
-insert into apprenants (nip, nom, prenom, date_naissance, sexe, departement, commune, updated_at) values
- ('TEST-B1-A','Test','Alice','2011-04-15','F','Littoral','Cotonou', now()),
- ('TEST-B1-B','Test','Bob','2010-02-01','M','Borgou','Parakou', now());
+insert into apprenants (nip, numero_educmaster, nom, prenom, date_naissance, sexe, departement, commune, updated_at) values
+ ('TEST-B1-A','EM-TEST-B1-A','Test','Alice','2011-04-15','F','Littoral','Cotonou', now()),
+ ('TEST-B1-B','EM-TEST-B1-B','Test','Bob','2010-02-01','M','Borgou','Parakou', now());
 SQL
 
-echo "── Inscription"
-check "apprenant, mauvaise date de naissance → 400" 400 $(req POST /auth/inscription "" '{"nip":"TEST-B1-A","dateNaissance":"2011-04-16","nom":"Test","prenom":"Alice","motDePasse":"motdepasse1"}')
-check "apprenant, NIP inconnu → 400" 400 $(req POST /auth/inscription "" '{"nip":"TEST-B1-ZZZ","dateNaissance":"2011-04-15","nom":"X","prenom":"Y","motDePasse":"motdepasse1"}')
-check "apprenant, sans date de naissance → 400" 400 $(req POST /auth/inscription "" '{"nip":"TEST-B1-A","nom":"Test","prenom":"Alice","motDePasse":"motdepasse1"}')
-check "apprenant, NIP + bonne date → 201" 201 $(req POST /auth/inscription "" '{"nip":"TEST-B1-A","dateNaissance":"2011-04-15","nom":"Test","prenom":"Alice","motDePasse":"motdepasse1"}')
+echo "── Identification (EducMaster, sans inscription)"
+check "élève, date de naissance incorrecte → 401" 401 $(req POST /auth/identification "" '{"identifiant":"TEST-B1-A","motDePasse":"2011-04-16"}')
+check "élève inconnu → 401" 401 $(req POST /auth/identification "" '{"identifiant":"TEST-B1-ZZZ","motDePasse":"2011-04-15"}')
+check "élève, sans mot de passe → 400" 400 $(req POST /auth/identification "" '{"identifiant":"TEST-B1-A"}')
+check "élève, 1re identification → 200 (le compte est créé)" 200 $(req POST /auth/identification "" '{"identifiant":"TEST-B1-A","motDePasse":"2011-04-15"}')
 TA=$(jget j.accessToken); RA=$(jget j.refreshToken)
-check "même NIP une 2e fois → 409" 409 $(req POST /auth/inscription "" '{"nip":"TEST-B1-A","dateNaissance":"2011-04-15","nom":"Test","prenom":"Alice","motDePasse":"motdepasse1"}')
-check "parent sans NIP (email) → 201" 201 $(req POST /auth/inscription "" '{"role":"PARENT","email":"parent@test-b1.bj","nom":"Test","prenom":"Papa","motDePasse":"motdepasse1"}')
+check "  son dossier est rattaché au compte créé" TEST-B1-A "$(req GET /auth/moi "$TA" >/dev/null; jget 'j.apprenant?.nip')"
+check "élève, identification suivante → 200" 200 $(req POST /auth/identification "" '{"identifiant":"TEST-B1-A","motDePasse":"2011-04-15"}')
+check "élève, par son numéro EducMaster → 200" 200 $(req POST /auth/identification "" '{"identifiant":"EM-TEST-B1-B","motDePasse":"2010-02-01"}')
+check "personnel refusé sur l'identification EducMaster → 401" 401 $(req POST /auth/identification "" '{"identifiant":"admin@monorientation.bj","motDePasse":"admin123"}')
+check "élève refusé sur l'accès des personnels → 401" 401 $(req POST /auth/personnel "" '{"identifiant":"TEST-B1-A","motDePasse":"2011-04-15"}')
+check "parent, par l'adresse de son compte → 200" 200 $(req POST /auth/identification "" '{"identifiant":"parent.demo@monorientation.bj","motDePasse":"Demo2026!"}')
 TP=$(jget j.accessToken); PID=$(jget j.user.id)
-check "parent sans email → 400" 400 $(req POST /auth/inscription "" '{"role":"PARENT","nom":"Test","prenom":"Maman","motDePasse":"motdepasse1"}')
-check "role ADMIN → 400" 400 $(req POST /auth/inscription "" '{"role":"ADMIN","email":"pirate@test-b1.bj","nom":"X","prenom":"Y","motDePasse":"motdepasse1"}')
 
 echo "── Accès élève"
 check "élève → son dossier" 200 $(req GET /apprenant/TEST-B1-A "$TA")
@@ -44,10 +46,10 @@ check "parent non rattaché → 403" 403 $(req GET /apprenant/TEST-B1-A "$TP")
 $PSQL -c "insert into parent_apprenant (id, parent_user_id, apprenant_nip, relation) values (gen_random_uuid(), '$PID', 'TEST-B1-A', 'Père');"
 check "parent rattaché → dossier de l'enfant" 200 $(req GET /apprenant/TEST-B1-A "$TP")
 check "parent → autre élève → 403" 403 $(req GET /apprenant/TEST-B1-B "$TP")
-check "/auth/moi parent → enfants" 200 $(req GET /auth/moi "$TP"); check "  moi.enfants[0].nip" TEST-B1-A "$(jget j.enfants?.[0]?.nip)"
+check "/auth/moi parent → enfants" 200 $(req GET /auth/moi "$TP"); check "  moi.enfants contient TEST-B1-A" true "$(js 'return (j.enfants||[]).some(e=>e.nip==="TEST-B1-A")')"
 
 echo "── Accès admin"
-check "admin connexion" 200 $(req POST /auth/connexion "" '{"identifiant":"admin@monorientation.bj","motDePasse":"admin123"}'); TADM=$(jget j.accessToken)
+check "admin connexion" 200 $(req POST /auth/personnel "" '{"identifiant":"admin@monorientation.bj","motDePasse":"admin123"}'); TADM=$(jget j.accessToken)
 check "admin → dossier élève" 200 $(req GET /apprenant/TEST-B1-B "$TADM")
 check "admin → NIP inexistant → 404" 404 $(req GET /apprenant/INCONNU-B1 "$TADM")
 check "admin → stats" 200 $(req GET /stats/national "$TADM")
@@ -60,9 +62,9 @@ check "déconnexion élève" 200 $(req POST /auth/deconnexion "$TA")
 check "refresh après déconnexion → 401" 401 $(req POST /auth/refresh "" "{\"refreshToken\":\"$RA2\"}")
 
 echo "── Limitation des tentatives"
-for i in 1 2 3 4 5; do req POST /auth/connexion "" '{"identifiant":"throttle@test-b1.bj","motDePasse":"x"}' >/dev/null; done
-check "6e échec pour le même identifiant → 429" 429 $(req POST /auth/connexion "" '{"identifiant":"throttle@test-b1.bj","motDePasse":"x"}')
-check "autre identifiant, même IP → 401 (pas bloqué)" 401 $(req POST /auth/connexion "" '{"identifiant":"autre@test-b1.bj","motDePasse":"x"}')
+for i in 1 2 3 4 5; do req POST /auth/identification "" '{"identifiant":"throttle@test-b1.bj","motDePasse":"x"}' >/dev/null; done
+check "6e échec pour le même identifiant → 429" 429 $(req POST /auth/identification "" '{"identifiant":"throttle@test-b1.bj","motDePasse":"x"}')
+check "autre identifiant, même IP → 401 (pas bloqué)" 401 $(req POST /auth/identification "" '{"identifiant":"autre@test-b1.bj","motDePasse":"x"}')
 
 echo "── En-têtes de sécurité"
 check "helmet X-Content-Type-Options" nosniff "$(curl -sI $A/filiere | grep -i '^x-content-type-options' | awk '{print $2}' | tr -d '\r')"

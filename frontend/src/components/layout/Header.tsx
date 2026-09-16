@@ -25,7 +25,7 @@ export function Header() {
   };
 
   // La session locale n'est effacée qu'une fois sur l'accueil : effacée plus tôt, la page protégée
-  // encore affichée redirigerait vers /connexion au lieu de laisser la navigation aboutir.
+  // encore affichée redirigerait vers /identification au lieu de laisser la navigation aboutir.
   useEffect(() => {
     if (deconnexionEnCours && pathname === '/') {
       logout();
@@ -62,8 +62,8 @@ export function Header() {
                 </button>
               </div>
             ) : (
-              <Link href="/connexion" className="bj-btn bj-btn-primary text-sm">
-                Connexion
+              <Link href="/identification" className="bj-btn bj-btn-primary text-sm">
+                S&apos;identifier
               </Link>
             )}
           </nav>
@@ -93,8 +93,8 @@ export function Header() {
                   <LogOut size={16} aria-hidden="true" /> Déconnexion ({user.prenom})
                 </button>
               ) : (
-                <Link href="/connexion" className="bj-btn bj-btn-primary text-sm mt-2v" onClick={() => setMenuOpen(false)}>
-                  Connexion
+                <Link href="/identification" className="bj-btn bj-btn-primary text-sm mt-2v" onClick={() => setMenuOpen(false)}>
+                  S&apos;identifier
                 </Link>
               )}
             </div>

@@ -14,8 +14,9 @@ const dansMain = (t) => `document.querySelector('main').textContent.includes(${J
 const series = "document.querySelectorAll('main a[href*=\"serie=\"]')";
 const domaines = "document.querySelectorAll('main a[href^=\"/catalogue?domaine=\"]')";
 
-async function connecter(identifiant, cible) {
-  await nav.aller(`${BASE}/connexion`);
+// Élèves et parents : identification EducMaster. Personnels du ministère : accès dédié.
+async function connecter(identifiant, cible, chemin = '/identification') {
+  await nav.aller(`${BASE}${chemin}`);
   await nav.attendre("!!document.querySelector('#identifiant')");
   await nav.saisir('#identifiant', identifiant);
   await nav.saisir('#password', 'Demo2026!');
@@ -60,7 +61,7 @@ try {
     await nav.evaluer(`/^[1-9]\\d* formations recensées dans 16 domaines/.test(${phraseFixe})`),
     await nav.evaluer(phraseFixe),
   );
-  r.verifier('Visiteur : « Se connecter » et « Créer un compte »', await nav.evaluer(`${dansMain('Se connecter')} && !!document.querySelector('main a[href="/inscription"]')`));
+  r.verifier("Visiteur : « S'identifier », sans création de compte", await nav.evaluer(`${dansMain("S'identifier")} && !document.querySelector('main a[href="/inscription"]')`));
   r.verifier('Exemple du conseiller marqué en fongbé (lang="fon")', await nav.evaluer(`!!document.querySelector('main [lang="fon"]')`));
 
   // Animations au défilement
@@ -108,10 +109,10 @@ try {
   await connecter('DEMO-TLE-0001', '/espace-apprenant');
   await accueil();
   await nav.attendre(`!!document.querySelector('main a[href="/espace-apprenant"]') && ${dansMain('Bonjour Koffi')}`);
-  r.verifier('Élève connecté : « Mon espace » à la place de « Se connecter »', await nav.evaluer(`!${dansMain('Se connecter')}`));
+  r.verifier("Élève connecté : « Mon espace » à la place de « S'identifier »", await nav.evaluer(`!${dansMain("S'identifier")}`));
   await deconnecter();
 
-  await connecter('dges.demo@monorientation.bj', '/stats');
+  await connecter('dges.demo@monorientation.bj', '/stats', '/personnels');
   await accueil();
   await nav.attendre(`!!document.querySelector('main a[href="/stats"]') && ${dansMain('Tableau de bord')}`);
   r.verifier('DGES connecté : « Tableau de bord »', true);

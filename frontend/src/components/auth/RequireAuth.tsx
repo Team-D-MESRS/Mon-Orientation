@@ -13,7 +13,7 @@ export function RequireAuth({ roles, children }: { roles?: Role[]; children: Rea
 
   useEffect(() => {
     if (pret && !user) {
-      router.replace(`/connexion?redirect=${encodeURIComponent(pathname)}`);
+      router.replace(`/identification?redirect=${encodeURIComponent(pathname)}`);
     }
   }, [pret, user, router, pathname]);
 

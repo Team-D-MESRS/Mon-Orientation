@@ -12,7 +12,7 @@ const texte = (sel) => `(document.querySelector(${JSON.stringify(sel)})?.textCon
 const contient = (t) => `document.body.textContent.includes(${JSON.stringify(t)})`;
 
 async function connecter(identifiant, cible) {
-  await nav.aller(`${BASE}/connexion`);
+  await nav.aller(`${BASE}/identification`);
   await nav.attendre("!!document.querySelector('#identifiant')");
   await nav.saisir('#identifiant', identifiant);
   await nav.saisir('#password', 'Demo2026!');

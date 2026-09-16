@@ -12,6 +12,8 @@ const ANNEE_SCOLAIRE = '2025-2026';
 
 interface EleveDemo {
   nip: string;
+  /** Numéro EducMaster fictif : accepté à l'identification au même titre que le NIP. */
+  numeroEducmaster: string;
   nom: string;
   prenom: string;
   dateNaissance: string;
@@ -20,7 +22,10 @@ interface EleveDemo {
   commune: string;
   palier: Palier;
   serie?: string;
-  /** Crée aussi le compte élève (connexion par NIP) ; sans compte, l'élève peut s'inscrire lui-même. */
+  /**
+   * Crée aussi le compte élève. Sans compte, il est créé à la première identification — le mot de
+   * passe fictif étant alors la date de naissance —, ce qui exerce ce chemin en démonstration.
+   */
   avecCompte: boolean;
   /** Notes des trois trimestres, sur 20 */
   notes: Record<string, [number, number, number]>;
@@ -29,6 +34,7 @@ interface EleveDemo {
 const ELEVES: EleveDemo[] = [
   {
     nip: 'DEMO-3E-0001',
+    numeroEducmaster: 'EM-2026-00031',
     nom: 'Dossou',
     prenom: 'Fatou',
     dateNaissance: '2011-03-12',
@@ -49,6 +55,7 @@ const ELEVES: EleveDemo[] = [
   },
   {
     nip: 'DEMO-TLE-0001',
+    numeroEducmaster: 'EM-2026-00047',
     nom: 'Agossou',
     prenom: 'Koffi',
     dateNaissance: '2008-09-30',
@@ -71,6 +78,7 @@ const ELEVES: EleveDemo[] = [
   },
   {
     nip: 'DEMO-4E-0001',
+    numeroEducmaster: 'EM-2026-00052',
     nom: 'Hounkpatin',
     prenom: 'Adama',
     dateNaissance: '2012-07-08',
@@ -104,6 +112,7 @@ async function main() {
 
   for (const e of ELEVES) {
     const identite = {
+      numeroEducmaster: e.numeroEducmaster,
       nom: e.nom,
       prenom: e.prenom,
       dateNaissance: new Date(e.dateNaissance),
@@ -152,7 +161,7 @@ async function main() {
 
   console.log(`✅ Démo : ${ELEVES.length} élèves — mot de passe des comptes : ${MOT_DE_PASSE_DEMO}`);
   for (const e of ELEVES) {
-    console.log(`   ${e.avecCompte ? 'compte élève' : 'sans compte '}  NIP ${e.nip}  ${e.prenom} ${e.nom} (${e.palier}${e.serie ? ' ' + e.serie : ''}, né(e) le ${e.dateNaissance})`);
+    console.log(`   ${e.avecCompte ? 'compte élève' : 'sans compte '}  NIP ${e.nip}  n° EducMaster ${e.numeroEducmaster}  ${e.prenom} ${e.nom} (${e.palier}${e.serie ? ' ' + e.serie : ''}, né(e) le ${e.dateNaissance})`);
   }
   for (const c of COMPTES) console.log(`   compte ${c.role.toLowerCase()}  ${c.email}`);
 }

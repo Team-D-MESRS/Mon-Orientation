@@ -1,6 +1,8 @@
 #!/bin/bash
 source "$(dirname "$0")/../lib.sh"
-jeton() { req POST /auth/connexion "" "{\"identifiant\":\"$1\",\"motDePasse\":\"Demo2026!\"}" >/dev/null; js 'return j.accessToken'; }
+# Élèves et parents : identifiants EducMaster. Personnels du ministère : compte interne.
+jeton() { req POST /auth/identification "" "{\"identifiant\":\"$1\",\"motDePasse\":\"${2:-Demo2026!}\"}" >/dev/null; js 'return j.accessToken'; }
+personnel() { req POST /auth/personnel "" "{\"identifiant\":\"$1\",\"motDePasse\":\"${2:-Demo2026!}\"}" >/dev/null; js 'return j.accessToken'; }
 id_filiere() { curl -s "$A/filiere?search=$1" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);console.log((j.items.find(f=>f.code===process.argv[1])||j.items[0]).id)})' "$1"; }
 # Fiche masquée (série générale) : absente des listes, son id vient des filtres du catalogue
 id_serie() { curl -s "$A/filiere/filtres" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).series.find(x=>x.serie===process.argv[1]).filiereId))' "$1"; }
@@ -13,7 +15,7 @@ SQL
 
 curl -s -o /dev/null --retry 30 --retry-all-errors --retry-delay 1 --max-time 3 $A/docs
 reinitialiser
-TF=$(jeton DEMO-3E-0001); TK=$(jeton DEMO-TLE-0001); TP=$(jeton parent.demo@monorientation.bj); TD=$(jeton dges.demo@monorientation.bj)
+TF=$(jeton DEMO-3E-0001); TK=$(jeton DEMO-TLE-0001); TP=$(jeton parent.demo@monorientation.bj); TD=$(personnel dges.demo@monorientation.bj)
 F3=$(id_filiere BAC-F3); G2=$(id_filiere BAC-G2); ELEC=$(id_filiere DTM-LTP-ELEC); MED=$(id_filiere UNIV-FSS-MEDECINE); MASQUEE=$(id_serie D)
 echo "jetons: F=${TF:0:8}… K=${TK:0:8}… P=${TP:0:8}… D=${TD:0:8}… | filières F3=${F3:0:8} G2=${G2:0:8} ELEC=${ELEC:0:8} MED=${MED:0:8}"
 
@@ -60,8 +62,8 @@ check "parent valide" 200 $(req POST /apprenant/DEMO-3E-0001/preferences/validat
 check "même vœux ré-enregistrés → validation conservée" true "$(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$F3\",\"filiereId2\":\"$G2\",\"filiereId3\":\"$ELEC\",\"motivation\":\"J'aime les maths\"}" >/dev/null; js 'return j[0].valideParent')"
 check "vœux modifiés → validation annulée" false "$(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$G2\",\"filiereId2\":\"$F3\"}" >/dev/null; js 'return j[0].valideParent')"
 
-echo "── Élève de 4e (inscription puis pistes)"
-check "Adama s'inscrit avec NIP + date de naissance" 201 $(req POST /auth/inscription "" '{"nip":"DEMO-4E-0001","dateNaissance":"2012-07-08","nom":"Hounkpatin","prenom":"Adama","motDePasse":"motdepasse4e"}')
+echo "── Élève de 4e (1re identification puis pistes)"
+check "Adama s'identifie (1re fois : son compte est créé)" 200 $(req POST /auth/identification "" '{"identifiant":"DEMO-4E-0001","motDePasse":"2012-07-08"}')
 TA=$(js 'return j.accessToken')
 check "Adama → pistes (4e)" 201 $(req POST /orientation/DEMO-4E-0001/calcul "$TA")
 check "  aucune piste « vœu » en 4e" true "$(js 'return j.every(r=>!r.criteres.some(c=>c.critere==="preference"))')"

@@ -1,11 +1,15 @@
-import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Role } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { RegisterDto, LoginDto } from './dto/auth.dto';
+import { CompteEducMaster, EducMasterService } from '../educmaster/educmaster.service';
+import { IdentificationDto, PersonnelDto } from './dto/auth.dto';
+
+/** Comptes internes à la plateforme, hors EducMaster : ils passent par la route « personnel ». */
+const ROLES_PERSONNEL: Role[] = ['ADMIN', 'DGES', 'ETABLISSEMENT'];
 
 @Injectable()
 export class AuthService {
@@ -15,84 +19,67 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private educmaster: EducMasterService,
     config: ConfigService,
   ) {
     this.refreshSecret = config.get<string>('JWT_REFRESH_SECRET') ?? `${config.getOrThrow<string>('JWT_SECRET')}-refresh`;
     this.refreshExpiration = config.get<string>('JWT_REFRESH_EXPIRATION', '7d');
   }
 
-  async register(dto: RegisterDto) {
-    const role = (dto.role ?? 'APPRENANT') as Role;
-
-    const identifiants: { nip?: string; email?: string }[] = [];
-    if (dto.nip) identifiants.push({ nip: dto.nip });
-    if (dto.email) identifiants.push({ email: dto.email });
-    if (identifiants.length > 0) {
-      const existing = await this.prisma.utilisateur.findFirst({ where: { OR: identifiants } });
-      if (existing) {
-        throw new ConflictException('Un compte existe déjà avec ce NIP ou cet email');
-      }
+  /**
+   * Identification d'un élève ou d'un parent avec ses identifiants EducMaster. Il n'y a pas
+   * d'inscription : c'est EducMaster qui atteste de l'identité, et le compte local est créé à la
+   * première identification pour porter la session et les vœux.
+   */
+  async identification(dto: IdentificationDto) {
+    const compte = await this.educmaster.verifier(dto.identifiant.trim(), dto.motDePasse);
+    if (!compte) {
+      throw new UnauthorizedException('Identifiants invalides');
     }
-
-    // En attendant l'authentification EducMaster, l'apprenant prouve que le NIP est le sien
-    // avec sa date de naissance ; un dossier ne peut être rattaché qu'à un seul compte.
-    if (role === 'APPRENANT') {
-      const apprenant = await this.prisma.apprenant.findUnique({ where: { nip: dto.nip } });
-      if (!apprenant || apprenant.utilisateurId || !this.memeDate(apprenant.dateNaissance, dto.dateNaissance)) {
-        throw new BadRequestException('NIP ou date de naissance incorrects, ou compte déjà créé pour ce NIP');
-      }
-    }
-
-    const hash = await bcrypt.hash(dto.motDePasse, 12);
-
-    const user = await this.prisma.$transaction(async (tx) => {
-      const cree = await tx.utilisateur.create({
-        data: {
-          nip: role === 'APPRENANT' ? dto.nip : null,
-          email: dto.email,
-          nom: dto.nom,
-          prenom: dto.prenom,
-          hashMotDePasse: hash,
-          role,
-        },
-      });
-      if (role === 'APPRENANT') {
-        await tx.apprenant.update({ where: { nip: dto.nip }, data: { utilisateurId: cree.id } });
-      }
-      return cree;
-    });
-
-    const tokens = await this.generateTokens(user.id, user.role);
-    return {
-      user: { id: user.id, nip: user.nip, nom: user.nom, prenom: user.prenom, role: user.role },
-      ...tokens,
-    };
+    const user = compte.role === 'APPRENANT' ? await this.compteEleve(compte, dto.motDePasse) : await this.compteParent(compte);
+    return this.session(user);
   }
 
-  async login(dto: LoginDto) {
-    const user = await this.prisma.utilisateur.findFirst({
-      where: {
-        OR: [
-          { nip: dto.identifiant },
-          { email: dto.identifiant },
-        ],
-      },
-    });
+  /** Personnels du ministère : compte interne à la plateforme, sans lien avec EducMaster. */
+  async identificationPersonnel(dto: PersonnelDto) {
+    const user = await this.prisma.utilisateur.findFirst({ where: { email: dto.identifiant.trim() } });
+    if (!user || !user.actif || !ROLES_PERSONNEL.includes(user.role)) {
+      throw new UnauthorizedException('Identifiants invalides');
+    }
+    if (!(await bcrypt.compare(dto.motDePasse, user.hashMotDePasse))) {
+      throw new UnauthorizedException('Identifiants invalides');
+    }
+    return this.session(user);
+  }
 
+  /** Compte local de l'élève, créé à la première identification et rattaché à son dossier. */
+  private async compteEleve(compte: CompteEducMaster, motDePasse: string) {
+    const nip = compte.nip as string;
+    const existant = await this.prisma.utilisateur.findUnique({ where: { nip } });
+    if (existant) {
+      if (!existant.actif) throw new UnauthorizedException('Identifiants invalides');
+      return existant;
+    }
+    const hash = await bcrypt.hash(motDePasse, 12);
+    return this.prisma.$transaction(async (tx) => {
+      const cree = await tx.utilisateur.create({
+        data: { nip, nom: compte.nom, prenom: compte.prenom, hashMotDePasse: hash, role: 'APPRENANT' },
+      });
+      await tx.apprenant.update({ where: { nip }, data: { utilisateurId: cree.id } });
+      return cree;
+    });
+  }
+
+  private async compteParent(compte: CompteEducMaster) {
+    const user = await this.prisma.utilisateur.findFirst({ where: { email: compte.email as string, role: 'PARENT' } });
     if (!user || !user.actif) {
       throw new UnauthorizedException('Identifiants invalides');
     }
+    return user;
+  }
 
-    const valid = await bcrypt.compare(dto.motDePasse, user.hashMotDePasse);
-    if (!valid) {
-      throw new UnauthorizedException('Identifiants invalides');
-    }
-
-    await this.prisma.utilisateur.update({
-      where: { id: user.id },
-      data: { derniereConnexion: new Date() },
-    });
-
+  private async session(user: { id: string; nip: string | null; nom: string; prenom: string; role: Role }) {
+    await this.prisma.utilisateur.update({ where: { id: user.id }, data: { derniereConnexion: new Date() } });
     const tokens = await this.generateTokens(user.id, user.role);
     return {
       user: { id: user.id, nip: user.nip, nom: user.nom, prenom: user.prenom, role: user.role },
@@ -152,10 +139,6 @@ export class AuthService {
       ...profil,
       enfants: parentLinks.map((lien) => ({ ...lien.apprenant, relation: lien.relation })),
     };
-  }
-
-  private memeDate(date: Date, iso?: string) {
-    return !!iso && date.toISOString().slice(0, 10) === iso.slice(0, 10);
   }
 
   private async generateTokens(userId: string, role: Role) {

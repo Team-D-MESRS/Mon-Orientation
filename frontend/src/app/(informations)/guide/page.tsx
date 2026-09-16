@@ -6,7 +6,7 @@ import { SITE } from '@/lib/site';
 export const metadata: Metadata = { title: "Guide d'utilisation — Mon Orientation" };
 
 const ETAPES = [
-  { id: 'compte', titre: 'Créer ton compte' },
+  { id: 'compte', titre: "T'identifier" },
   { id: 'catalogue', titre: 'Explorer le catalogue' },
   { id: 'resultats', titre: 'Suivre tes résultats' },
   { id: 'pistes', titre: 'Découvrir tes pistes' },
@@ -37,18 +37,22 @@ export default function GuidePage() {
         </ol>
       </nav>
 
-      <Bloc id="compte" titre="1. Créer ton compte">
+      <Bloc id="compte" titre="1. T&apos;identifier">
         <p>
-          <strong>Élève</strong> : sur la page <Link href="/inscription">Inscription</Link>, choisis « Élève », puis saisis ton NIP
-          (numéro d&apos;identification personnel) et ta date de naissance. Ils doivent correspondre à ton dossier scolaire : ton
-          établissement peut te communiquer ton NIP. Choisis ensuite ton mot de passe.
+          Il n&apos;y a pas de compte à créer : tu utilises les identifiants que tu as déjà sur EducMaster, où ton
+          établissement gère ton dossier scolaire.
         </p>
         <p>
-          <strong>Parent</strong> : choisissez « Parent / tuteur » et inscrivez-vous avec votre adresse e-mail. Le dossier de votre enfant est ensuite rattaché à votre compte
-          par son établissement ; vous pourrez alors suivre ses résultats et valider ses vœux.
+          <strong>Élève</strong> : sur la page <Link href="/identification">S&apos;identifier</Link>, saisis ton NIP (numéro
+          d&apos;identification personnel) ou ton numéro EducMaster, celui qui figure sur ta fiche d&apos;inscription, puis ton
+          mot de passe. Si tu ne les connais pas, ton établissement peut te les communiquer.
         </p>
         <p>
-          Pour te <Link href="/connexion">connecter</Link>, utilise ton NIP (élève) ou ton adresse e-mail (parent), avec ton mot de passe.
+          <strong>Parent</strong> : identifiez-vous avec l&apos;adresse de votre compte EducMaster. Le dossier de votre enfant y
+          est rattaché ; vous pourrez alors suivre ses résultats et valider ses vœux.
+        </p>
+        <p>
+          Les personnels du ministère disposent d&apos;un <Link href="/personnels">accès dédié</Link>.
         </p>
       </Bloc>
 

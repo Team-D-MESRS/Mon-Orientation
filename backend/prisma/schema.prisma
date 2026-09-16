@@ -79,6 +79,9 @@ model Session {
 
 model Apprenant {
   nip             String   @id
+  /// Numéro figurant sur les documents officiels du ministère (fiche unique d'inscription ITP) ;
+  /// accepté à l'identification au même titre que le NIP.
+  numeroEducmaster String? @unique @map("numero_educmaster")
   utilisateurId   String?  @unique @map("utilisateur_id")
   nom             String
   prenom          String

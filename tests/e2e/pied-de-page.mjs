@@ -94,7 +94,7 @@ try {
   await nav.capture(`${OUT}/p3-faq.png`, false);
 
   // ── DGES : lien Statistiques
-  await nav.aller(`${BASE}/connexion`);
+  await nav.aller(`${BASE}/personnels`);
   await nav.attendre("!!document.querySelector('#identifiant')");
   await nav.saisir('#identifiant', 'dges.demo@monorientation.bj');
   await nav.saisir('#password', 'Demo2026!');

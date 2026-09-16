@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { accueilDuRole, useAuthStore } from '@/stores/authStore';
 
-/** Visiteur : se connecter ou créer un compte ; utilisateur connecté : accès direct à son espace. */
+/** Visiteur : s'identifier avec EducMaster ; utilisateur connecté : accès direct à son espace. */
 export function ActionsHero() {
   const { user, pret } = useAuthStore();
 
@@ -21,14 +21,11 @@ export function ActionsHero() {
 
   return (
     <div className="flex flex-wrap items-center gap-x-4v gap-y-3v">
-      <Link href="/connexion" className="bj-btn bj-btn-secondary">
-        Se connecter
+      <Link href="/identification" className="bj-btn bj-btn-secondary">
+        S&apos;identifier
       </Link>
       <p className="text-sm text-bj-gray-500">
-        Pas encore de compte&nbsp;?{' '}
-        <Link href="/inscription" className="font-medium text-bj-green hover:underline">
-          Créer un compte
-        </Link>
+        Avec tes identifiants EducMaster&nbsp;: pas de compte à créer.
       </p>
     </div>
   );

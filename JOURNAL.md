@@ -7,16 +7,26 @@
 ## État actuel
 
 - **Étape du pipeline** : développement MVP — **recentrage en cours** : le site sert à mettre en avant la formation technique et à y orienter les collégiens. Tout ce qui n'est pas lycée technique dégage, hormis les universités.
-- **En cours** : lots 1 et 2 du recentrage **terminés et vérifiés** (236 vérifications au vert : 142 API, 94 navigateur). Le lot 1 est commité (`040175c` guide MESRS, `6501843` sources de la formation technique), **non poussé** ; le lot 2 est dans l'arbre de travail, non commité. Ne commiter que sur demande de l'utilisateur.
+- **En cours** : lots 1 et 2 du recentrage, **plus la bascule vers l'identification EducMaster**, terminés et vérifiés (**250 vérifications au vert** : 155 API, 95 navigateur). Le lot 1 est commité (`040175c` guide MESRS, `6501843` sources de la formation technique), **non poussé** ; le lot 2 et la bascule d'authentification sont dans l'arbre de travail, non commités. Ne commiter que sur demande de l'utilisateur.
 - **Documents locaux** : le cahier des charges (`docs/`), la note de cadrage, le guide MESRS et le dossier `news/` (19 Mo de PDF officiels de la formation technique) restent hors dépôt (`.gitignore`) ; seules leurs extractions JSON sont versionnées.
 - **Décisions de cadrage (16/09)** : les 5 bacs généraux restent en fiches **masquées** (ils servent de clé de tri au filtre « Et après ce bac ? » du supérieur) ; les 6 fiches « École des métiers de référence » sont supprimées ; questionnaire de découverte **bloquant** avant les pistes, ~15 questions en 5 volets ; barème visé résultats 40 / intérêts 30 / vœux 30-20-10 / insertion 10 ; réalignement des vœux sur la fiche unique officielle (2 choix spécialité + établissement) reporté après le pivot.
-- **Bloqué / en attente de** : coordonnées et mentions légales du MESTFP (`frontend/src/lib/site.ts`) ; validation du moteur par les conseillers DGES ; accès API EducMaster (2.1)
+- **Bloqué / en attente de** : **accès à l'API EducMaster** — l'identification tourne en `EDUCMASTER_MODE=fictif` (annuaire rejoué depuis la base locale), interdit en production : c'est le seul verrou avant une mise en ligne réelle ; coordonnées et mentions légales du MESTFP (`frontend/src/lib/site.ts`) ; validation du moteur par les conseillers DGES
 - **Prochaine action recommandée** : lot 3) enrichir les fiches avec `repertoires-eftp.json` et `metiers-dtm.json` — créer les établissements (27 lycées publics + les 5 écoles des métiers EMEDD/EMN/EMAEI/EMBTP/EM THR, décidées comme **lieux** et non comme fiches), rattacher les DTM à leurs lycées avec commune et internat, reprendre le contenu métier, et **ajouter les 2 DTM manquants** (« Accueil touristique », « Technicien fabrication équipements bois » : le communiqué en liste 12, le référentiel n'en a que 10) ; lot 4) corriger le moteur (matières clés = **paire officielle avec minimum sur chacune**, pas une moyenne) puis le barème 40/30/30-20-10/10 ; lot 5) questionnaire de découverte (modèle `Decouverte`, onglet en 1re position, bloquant) ; lot 6) parcours Découverte → Notes → Pistes → Catalogue
-- **Dernière mise à jour** : 2026-09-16 12:05 — lot 2 : catalogue recentré sur la formation technique (fil principal)
+- **Dernière mise à jour** : 2026-09-16 13:10 — identification EducMaster, sans inscription (fil principal)
 
 ## Historique
 
 *(plus récent en haut)*
+
+### 2026-09-16 13:10 — identification EducMaster, sans inscription (fil principal)
+- Décision de l'utilisateur : on ne crée plus de compte, on s'identifie avec ses identifiants EducMaster. Conforme à SPEC §5.6 et §351 (l'inscription des élèves était déjà hors-scope).
+- Fait : `POST /auth/identification` (élève par **NIP ou numéro EducMaster**, parent par adresse) et `POST /auth/personnel` (administration, DGES, établissement) ; `POST /auth/inscription` et `/auth/connexion` supprimés. Le compte local est **créé à la première identification** : c'est EducMaster qui atteste de l'identité.
+- Adaptateur `src/educmaster/` : `EDUCMASTER_MODE=fictif` rejoue l'annuaire depuis la base (mot de passe du compte s'il existe, **sinon la date de naissance**, comme les documents officiels) ; `api` lève tant que l'accès n'est pas ouvert ; `fictif` est refusé en production. Le rattachement des parents y est isolé, car **provisoire** (à revoir).
+- Front : `/identification` et `/personnels` remplacent `/connexion` et `/inscription` ; en-tête, accueil, guide, FAQ et client API réécrits. Deux redirections cassées corrigées au passage (`RequireAuth`, page conseiller pointaient vers `/connexion`, devenue 404).
+- Base : `Apprenant.numeroEducmaster` unique (migration `20260916160800`) ; numéros fictifs en démonstration, Adama volontairement laissé sans compte pour exercer le provisionnement.
+- Tests : 250 vérifications au vert. `securite.sh` couvre désormais l'identification (mauvaise date, élève inconnu, 1re identification, numéro EducMaster, cloisonnement élève/personnel).
+- Piège : ce code est truffé d'**espaces insécables** français ; remplacer par correspondance de texte échoue silencieusement — passer par les numéros de ligne avec assertion.
+- Suite : lot 3 (enrichissement par les JSON officiels). Non commité.
 
 ### 2026-09-16 12:05 — lot 2 : catalogue recentré sur la formation technique (fil principal)
 - Fait : champ `Filiere.masquee` (migration `20260916111840_filiere_masquee`). Les 5 bacs généraux sont **masqués** — hors listes, recherche, comptages, recommandations et vœux — mais leur fiche reste consultable par son lien, car `series()` n'est pas filtrée et `/filiere/filtres` expose leur `filiereId` : c'est ce qui sauve le filtre « Et après ce bac ? » pour un élève de Terminale.

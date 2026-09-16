@@ -6,13 +6,15 @@ source "$(dirname "$0")/../lib.sh"
 pause() { node -e "setTimeout(()=>{}, $1)"; }
 DEBUT=$(date -u +'%Y-%m-%d %H:%M:%S')
 nettoyer() { $PSQL -c "delete from conversations_ia where apprenant_nip in ('DEMO-3E-0001','DEMO-TLE-0001') and date_debut >= '$DEBUT';"; }
-connexion() { req POST /auth/connexion "" "{\"identifiant\":\"$1\",\"motDePasse\":\"$2\"}" >/dev/null; jget j.accessToken; }
+# Élèves et parents : identifiants EducMaster. Personnels du ministère : compte interne.
+connexion() { req POST /auth/identification "" "{\"identifiant\":\"$1\",\"motDePasse\":\"$2\"}" >/dev/null; jget j.accessToken; }
+personnel() { req POST /auth/personnel "" "{\"identifiant\":\"$1\",\"motDePasse\":\"$2\"}" >/dev/null; jget j.accessToken; }
 
 curl -s -o /dev/null --retry 30 --retry-all-errors --retry-delay 1 --max-time 3 $A/docs
 TF=$(connexion DEMO-3E-0001 'Demo2026!')
 TP=$(connexion parent.demo@monorientation.bj 'Demo2026!')
-TD=$(connexion dges.demo@monorientation.bj 'Demo2026!')
-TADM=$(connexion admin@monorientation.bj admin123)
+TD=$(personnel dges.demo@monorientation.bj 'Demo2026!')
+TADM=$(personnel admin@monorientation.bj admin123)
 [ -n "$TF" ] && [ -n "$TP" ] || { echo "Comptes de démonstration absents : lancer npm run prisma:seed:demo"; exit 1; }
 
 echo "── Droits d'accès"

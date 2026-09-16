@@ -190,9 +190,9 @@ Pour remettre la démonstration à zéro (vœux, recommandations, compte d'Adama
 Les tests de bout en bout s'exécutent contre l'application lancée avec `start.sh`, sans dépendance supplémentaire :
 
 ```bash
-bash tests/api/securite.sh          # 37 vérifications : droits d'accès, inscription, jetons, limitation
-bash tests/api/parcours-eleve.sh    # 38 vérifications : bilan, moteur d'orientation, vœux, validation parent
-node tests/e2e/connexion.mjs        # 8 scénarios navigateur : connexion, session, pages protégées
+bash tests/api/securite.sh          # 39 vérifications : droits d'accès, identification EducMaster, jetons, limitation
+bash tests/api/parcours-eleve.sh    # 39 vérifications : bilan, moteur d'orientation, vœux, validation parent
+node tests/e2e/connexion.mjs        # 9 scénarios navigateur : identification EducMaster, accès des personnels, session
 node tests/e2e/parcours-eleve.mjs   # 11 scénarios : parcours élève / parent / Terminale, ordinateur et mobile
 bash tests/api/conseiller.sh        # 11 vérifications sans appel au modèle ; 22 avec CONSEILLER_TEST_LLM=1 (appels réels, dont une réponse en fongbé)
 node tests/e2e/conseiller.mjs       # 8 scénarios : présentation, onglet Conseiller, langue des réponses, sans ou avec clé API

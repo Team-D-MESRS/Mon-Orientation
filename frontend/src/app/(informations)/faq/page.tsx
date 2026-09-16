@@ -31,15 +31,16 @@ export default function FaqPage() {
             Le NIP (numéro d&apos;identification personnel) figure dans ton dossier scolaire. Ton établissement peut te le communiquer.
           </p>
         </Question>
-        <Question question="Mon inscription est refusée : que faire ?">
+        <Question question="Je n&apos;arrive pas à m&apos;identifier : que faire ?">
           <p>
-            Vérifie ton NIP et ta date de naissance : ils doivent correspondre exactement à ton dossier scolaire. Si le problème
-            persiste, adresse-toi à ton établissement.
+            Il n&apos;y a pas de compte à créer : utilise les identifiants que tu as déjà sur EducMaster. Vérifie ton NIP ou ton
+            numéro EducMaster, et ton mot de passe. Si le problème persiste, adresse-toi à ton établissement, qui gère ton
+            dossier dans EducMaster.
           </p>
         </Question>
-        <Question question="Je suis parent : comment suivre mon enfant ?">
+        <Question question="Je suis parent : comment suivre mon enfant ?">
           <p>
-            Créez un compte avec votre adresse e-mail. L&apos;établissement de votre enfant rattache ensuite son dossier à votre compte :
+            Identifiez-vous avec l&apos;adresse de votre compte EducMaster, auquel le dossier de votre enfant est rattaché :
             vous voyez alors ses résultats, ses pistes et ses vœux, que vous pouvez valider.
           </p>
         </Question>
