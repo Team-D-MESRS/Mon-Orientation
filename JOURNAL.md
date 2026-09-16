@@ -6,16 +6,25 @@
 
 ## État actuel
 
-- **Étape du pipeline** : développement MVP — parcours élève web opérationnel sur données de démonstration
-- **En cours** : rien — tout est commité et poussé sur `origin/main` (Team-D-MESRS/Mon-Orientation)
-- **Documents locaux** : le cahier des charges (`docs/`) et la note de cadrage du client restent sur la machine de l'utilisateur, hors dépôt (`.gitignore`), à sa demande.
-- **Bloqué / en attente de** : coordonnées et mentions légales à fournir par le MESTFP (contact, directeur de la publication, hébergeur, délégué aux données, durée de conservation → `frontend/src/lib/site.ts`) ; validation client du référentiel filières et du moteur (barème, matières clés, seuils : conseillers d'orientation DGES) ; arbitrages SPEC §7 (appliqué par défaut : vœux saisis par l'élève, validés par le parent) ; accès API EducMaster (2.1)
-- **Prochaine action recommandée** : 00) l'utilisateur régénère sa clé Gemini (collée en clair dans la conversation) et met la nouvelle dans `backend/.env` ; 0) l'utilisateur complète le nom du prestataire dans `docs/Cahier_des_charges_Mon_Orientation_v1.0.docx` et le présente au MESTFP ; 1) présenter le parcours au client et faire valider le moteur, ainsi que les domaines du catalogue ; 2) conseiller IA réel (5.1/5.2) une fois son périmètre arbitré ; 3) écran d'administration du référentiel (3.10 : fiches, statut « validé par le ministère », historique ; le seed réécrit aujourd'hui les fiches à chaque lancement, à adapter) + rôle ÉTABLISSEMENT et rattachement parent-enfant ; 4) statistiques branchées sur l'API (6.1/6.3) ; 5) projet Flutter ; 6) tests unitaires + CI (1.8)
-- **Dernière mise à jour** : 2026-09-14 04:15 — accueil refait (fil principal)
+- **Étape du pipeline** : développement MVP — **recentrage en cours** : le site sert à mettre en avant la formation technique et à y orienter les collégiens. Tout ce qui n'est pas lycée technique dégage, hormis les universités.
+- **En cours** : lot 1 du recentrage **terminé** (extraction des documentations officielles). Rien n'est commité : l'import du guide MESRS est toujours en staging depuis le 14/09, et les nouveautés du 16/09 sont non suivies. Ne commiter que sur demande de l'utilisateur.
+- **Documents locaux** : le cahier des charges (`docs/`), la note de cadrage, le guide MESRS et le dossier `news/` (19 Mo de PDF officiels de la formation technique) restent hors dépôt (`.gitignore`) ; seules leurs extractions JSON sont versionnées.
+- **Décisions de cadrage (16/09)** : les 5 bacs généraux restent en fiches **masquées** (ils servent de clé de tri au filtre « Et après ce bac ? » du supérieur) ; les 6 fiches « École des métiers de référence » sont supprimées ; questionnaire de découverte **bloquant** avant les pistes, ~15 questions en 5 volets ; barème visé résultats 40 / intérêts 30 / vœux 30-20-10 / insertion 10 ; réalignement des vœux sur la fiche unique officielle (2 choix spécialité + établissement) reporté après le pivot.
+- **Bloqué / en attente de** : arbitrage à demander à l'utilisateur — le catalogue officiel des métiers 2026-2027 présente **EMEDD, EMN, EMAEI, EMBTP et EM THR** comme lieux de formation des DTM, alors que les fiches « écoles des métiers » doivent être supprimées ; coordonnées et mentions légales du MESTFP (`frontend/src/lib/site.ts`) ; validation du moteur par les conseillers DGES ; accès API EducMaster (2.1)
+- **Prochaine action recommandée** : lot 2) recentrer le catalogue (masquer les `BAC-A1/A2/B/C/D`, supprimer les `EDM-`, corriger `DT-QUALITE-EAU` → DTM, ajouter le 12e DTM, re-fixturer les tests qui utilisent `BAC-C`/`BAC-D`) ; lot 3) enrichir les fiches avec `repertoires-eftp.json` et `metiers-dtm.json` ; lot 4) corriger le moteur (matières clés = **paire officielle avec minimum sur chacune**, pas une moyenne) puis le barème ; lot 5) questionnaire de découverte (modèle `Decouverte`, onglet en 1re position) ; lot 6) parcours Découverte → Notes → Pistes → Catalogue
+- **Dernière mise à jour** : 2026-09-16 11:10 — extraction des sources officielles de la formation technique (fil principal)
 
 ## Historique
 
 *(plus récent en haut)*
+
+### 2026-09-16 11:10 — sources officielles de la formation technique extraites (fil principal)
+- Contexte : l'utilisateur recentre le site sur la formation technique et dépose 8 documents officiels dans `news/` (hors dépôt). Bilan fait : rapport du sous-comité 3 (533 établissements techniques, dont 29 publics), répertoires LTP/LTA, catalogues des nouveaux métiers, communiqué N°0902, fiche unique d'inscription.
+- Fait : deux extracteurs pdfplumber — `outils/extraire-repertoires-eftp.py` → `repertoires-eftp.json` (**27 établissements publics avec commune et internat, 167 offres** diplôme/filière/spécialité) et `outils/extraire-metiers-dtm.py` → `metiers-dtm.json` (**21 fiches métier** : secteur, description, missions, compétences, qualités requises, débouchés, entreprises qui recrutent). `news/` ajouté au `.gitignore`.
+- Pièges résolus (documentés dans les scripts) : libellés centrés dans des cellules fusionnées (fusion de segments), colonnes irrégulières jusqu'à 3 par page, titres sur deux lignes, titres côte à côte se confondant en une ligne, rubrique composée un point plus petit sur une seule fiche.
+- Défauts de la source à ne pas « corriger » en silence : `profilSortie` LTA tronqué (fiches 2, 4, 5, 7, 8 — le PDF rend les premiers mots au-dessus de leur propre titre) ; fiche 2 porte le profil de l'aviculture (copier-coller du ministère) ; `LYTEB Bohicon` vs `LTP Bohicon`, `Djakotomè` vs `Djakotomey`, coquille `SECUIRTE` ; BORGOU absent du répertoire LTP (comblé via le répertoire LTA, Parakou par correspondance explicite).
+- Apport majeur pour la suite : conditions d'admission officielles **chiffrées par secteur** (DTM 10/20 en Maths **et** PCT ; bac techno 12/20 ; agricole Maths+SVT ; THR Anglais+Allemand/Espagnol) — le moteur fait aujourd'hui une moyenne, ce qui est faux.
+- Suite : lot 2 (recentrage du catalogue). Rien n'est commité.
 
 ### 2026-09-14 05:40 — animations au défilement sur l'accueil (fil principal)
 - Fait : composants `Apparition` (fondu au défilement, IntersectionObserver, sans bibliothèque) et `Compteur` (`frontend/src/components/animation/`) ; cascade du bandeau, cartes et domaines décalés, bulles du conseiller l'une après l'autre, compteur du nombre de formations.

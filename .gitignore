@@ -67,3 +67,10 @@ docs/
 Note_cadrage_*.docx
 # Guide officiel du MESRS (source du référentiel du supérieur, extrait dans backend/prisma/data/) : gardé hors dépôt
 Guide d'information *.pdf
+# Documentations officielles de la formation technique (répertoires LTP/LTA, catalogues des nouveaux
+# métiers, communiqués, fiche d'inscription) : gardées hors dépôt, seules les extractions JSON de
+# backend/prisma/data/ sont versionnées
+news/
+
+# Cache Python des outils d'extraction
+__pycache__/
