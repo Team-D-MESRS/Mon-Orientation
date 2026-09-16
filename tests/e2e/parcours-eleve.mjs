@@ -51,13 +51,14 @@ try {
   await nav.aller(`${BASE}/espace-apprenant/preferences`);
   await nav.attendre(contient('Étape 1 sur 3'));
   await nav.capture(`${OUT}/b2-voeux-etape1.png`, false);
-  await choisirVoeu('série C', 'Baccalauréat série C');
+  // Vœux techniques : les bacs généraux sont masqués du catalogue et ne sont plus proposés en 3e
+  await choisirVoeu('série F3', 'Baccalauréat série F3');
   await nav.attendre(contient('Étape 2 sur 3'));
-  await choisirVoeu('série D', 'Baccalauréat série D');
+  await choisirVoeu('série G2', 'Baccalauréat série G2');
   await nav.attendre(contient('Étape 3 sur 3'));
   await choisirVoeu('Électricité', 'DTM — Électricité');
   await nav.attendre(contient('Tes vœux pour la 3e'));
-  r.verifier('Vœux : récapitulatif des 3 choix', await nav.evaluer(`document.querySelectorAll('main ol > li').length === 3 && ${contient('Baccalauréat série C')} && ${contient('DTM — Électricité')}`));
+  r.verifier('Vœux : récapitulatif des 3 choix', await nav.evaluer(`document.querySelectorAll('main ol > li').length === 3 && ${contient('Baccalauréat série F3')} && ${contient('DTM — Électricité')}`));
   await nav.saisir('#motivation', "J'aime les mathématiques et la physique.");
   await nav.cliquerTexte('Enregistrer mes vœux', 'button');
   await nav.attendre(contient('Vœux enregistrés'));

@@ -61,7 +61,10 @@ export class OrientationService {
     const preference = apprenant.preferences.find((p) => p.palier === palier);
     const voeux = preference ? [preference.filiereId1, preference.filiereId2, preference.filiereId3] : [];
 
-    const filieres = await this.prisma.filiere.findMany({ where: { niveauAcces: niveau }, orderBy: { nom: 'asc' } });
+    const filieres = await this.prisma.filiere.findMany({
+      where: { niveauAcces: niveau, masquee: false },
+      orderBy: { nom: 'asc' },
+    });
     const evaluations = filieres
       .map((f) => this.evaluer(f, bilan, voeux, apprenant.serie, niveau))
       .sort((a, b) => b.score - a.score);

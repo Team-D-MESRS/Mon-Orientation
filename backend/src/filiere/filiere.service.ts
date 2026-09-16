@@ -40,7 +40,9 @@ export class FiliereService {
   async findAll(filters?: FiltresCatalogue) {
     const { type, niveau, departement, search, serie, domaine, bourses, officielle, page = 1, limit = 20 } = filters || {};
 
-    const where: Prisma.FiliereWhereInput = {};
+    // Les fiches masquées (séries générales du bac) sortent du catalogue et des comptages ; elles
+    // restent consultables par leur lien et alimentent le filtre « Et après ce bac ? » (series()).
+    const where: Prisma.FiliereWhereInput = { masquee: false };
     const restrictions: Prisma.FiliereWhereInput[] = [];
 
     if (type) {
@@ -170,7 +172,8 @@ export class FiliereService {
     const [series, parDomaine] = await Promise.all([
       this.series(),
       this.prisma.$queryRaw<{ domaine: string; total: number }[]>`
-        SELECT d AS domaine, count(*)::int AS total FROM filieres, unnest(domaines) AS d GROUP BY d`,
+        SELECT d AS domaine, count(*)::int AS total FROM filieres, unnest(domaines) AS d
+        WHERE NOT masquee GROUP BY d`,
     ]);
     const totaux = new Map(parDomaine.map((d) => [d.domaine, d.total]));
     const domaines = (Object.keys(DOMAINES) as Domaine[])

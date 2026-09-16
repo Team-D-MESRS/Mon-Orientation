@@ -74,6 +74,7 @@ async function main() {
       bourses: f.bourses ?? null,
       sources: f.sources as unknown as Prisma.InputJsonValue,
       domaines: f.domaines,
+      masquee: f.masquee ?? false,
     };
     await prisma.filiere.upsert({
       where: { code: f.code },
@@ -139,6 +140,26 @@ async function main() {
     },
   });
 
+  // Fiches retirées du référentiel : les écoles des métiers de référence, devenues des lieux de
+  // formation rattachés aux DTM, et l'ancien « DT — Contrôleur de qualité de l'eau », que le
+  // communiqué N°0902 classe en DTM (repris sous le code DTM-LTP-QUALITE-EAU)
+  const retirees = await prisma.filiere.findMany({
+    where: { OR: [{ code: { startsWith: 'EDM-' } }, { code: 'DT-QUALITE-EAU' }] },
+    select: { id: true },
+  });
+  await prisma.recommandation.deleteMany({ where: { filiereId: { in: retirees.map((f) => f.id) } } });
+  const { count: retireesSupprimees } = await prisma.filiere.deleteMany({
+    where: {
+      id: { in: retirees.map((f) => f.id) },
+      notes: { none: {} },
+      preferences1: { none: {} },
+      preferences2: { none: {} },
+      preferences3: { none: {} },
+      favoris: { none: {} },
+      conversations: { none: {} },
+    },
+  });
+
   // Filières de démonstration antérieures au référentiel (sans code) : supprimées tant que rien ne les référence
   const { count: demoSupprimees } = await prisma.filiere.deleteMany({
     where: {
@@ -155,7 +176,8 @@ async function main() {
   console.log(
     `✅ Seed terminé : ${REFERENTIEL_FILIERES.length} filières après le BEPC, ${GUIDE.filieres.length} du supérieur ` +
       `(${GUIDE.etablissements.length} établissements, guide MESRS) ; ${obsoletesSupprimees}/${obsoletes.length} ancienne(s) ` +
-      `filière(s) du supérieur supprimée(s), ${demoSupprimees} filière(s) de démo supprimée(s)`,
+      `filière(s) du supérieur supprimée(s), ${retireesSupprimees}/${retirees.length} fiche(s) retirée(s) du référentiel, ` +
+      `${demoSupprimees} filière(s) de démo supprimée(s)`,
   );
 }
 

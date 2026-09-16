@@ -164,6 +164,9 @@ model Filiere {
   matieresClassement String?    @map("matieres_classement")
   /// Matières des bulletins retenues par le moteur d'orientation (sinon : règles de src/orientation/profils-filieres.ts)
   matieresCles      Json?       @map("matieres_cles")
+  /// Fiche retirée des listes, des recommandations et des comptages, mais toujours consultable par
+  /// son lien : les séries générales du bac restent la clé de tri du filtre « Et après ce bac ? »
+  masquee           Boolean     @default(false)
   etablissementId   String?     @map("etablissement_id")
   imageUrl          String?     @map("image_url")
   createdAt         DateTime    @default(now()) @map("created_at")

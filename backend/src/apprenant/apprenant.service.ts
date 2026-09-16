@@ -80,7 +80,9 @@ export class ApprenantService {
     if (new Set(ids).size !== ids.length) {
       throw new BadRequestException('Chaque vœu doit porter sur une filière différente.');
     }
-    const accessibles = await this.prisma.filiere.count({ where: { id: { in: ids }, niveauAcces: niveau } });
+    const accessibles = await this.prisma.filiere.count({
+      where: { id: { in: ids }, niveauAcces: niveau, masquee: false },
+    });
     if (accessibles !== ids.length) {
       throw new BadRequestException(
         `Les vœux doivent porter sur des filières accessibles ${palier === 'TROISIEME' ? 'après le BEPC' : 'après le bac'}.`,

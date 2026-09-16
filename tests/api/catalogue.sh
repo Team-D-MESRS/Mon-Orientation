@@ -23,7 +23,7 @@ check "  et en majuscules" "$N1" "$(liste "search=ELECTRICITE" >/dev/null; jget 
 check "par métier : installateur solaire → DTM Énergies renouvelables" true "$(liste "search=$(enc 'installateur solaire')" >/dev/null; contient DTM-LTP-ENR)"
 check "« oeuvre » trouve « gros œuvre »" true "$(liste "search=oeuvre" >/dev/null; contient DTM-LTP-GROS-OEUVRE)"
 check "par lieu de formation : Parakou → EFMS" true "$(liste "search=Parakou" >/dev/null; contient EFMS-HYGIENISTE-SALLES)"
-check "apostrophe typographique : « l’eau »" true "$(liste "search=$(enc 'l’eau')" >/dev/null; contient DT-QUALITE-EAU)"
+check "apostrophe typographique : « l’eau »" true "$(liste "search=$(enc 'l’eau')" >/dev/null; contient DTM-LTP-QUALITE-EAU)"
 check "pertinence : les noms contenant « médecine » d'abord, dont Médecine générale" true "$(liste "search=medecine" >/dev/null; js 'const n=s=>s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();const k=j.items.map(f=>n(f.nom).includes("medecine"));return k[0]&&(k.indexOf(false)===-1||k.lastIndexOf(true)<k.indexOf(false))&&j.items.some(f=>f.code==="UNIV-FSS-MEDECINE")')"
 check "pertinence : les noms contenant « informatique » d'abord" true "$(liste "search=informatique" >/dev/null; js 'const n=s=>s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();const k=j.items.map(f=>n(f.nom).includes("informatique"));return k[0]&&(k.indexOf(false)===-1||k.lastIndexOf(true)<k.indexOf(false))')"
 echo "  → $(codes)"
@@ -31,9 +31,9 @@ check "« % » n'est pas un joker" 0 "$(liste "search=%25" >/dev/null; jget 'j.t
 check "injection SQL sans effet" 0 "$(liste "search=$(enc "' OR 1=1 --")" >/dev/null; jget 'j.total')"
 check "paramètre répété → 400" 400 $(req GET "/filiere?search=a&search=b")
 P1=$(req GET "/filiere?search=dtm&limit=10&page=1" >/dev/null; js 'return j.items.map(f=>f.id).join(",")')
-check "recherche paginée : 19 DTM" 19 "$(jget 'j.total')"
+check "recherche paginée : 20 DTM" 20 "$(jget 'j.total')"
 P2=$(req GET "/filiere?search=dtm&limit=10&page=2" >/dev/null; js 'return j.items.map(f=>f.id).join(",")')
-check "  page 2 : les 9 suivants, sans doublon" true "$(node -e 'const [a,b]=process.argv.slice(1).map(s=>s.split(","));console.log(b.length===9&&!b.some(x=>a.includes(x)))' "$P1" "$P2")"
+check "  page 2 : les 10 suivants, sans doublon" true "$(node -e 'const [a,b]=process.argv.slice(1).map(s=>s.split(","));console.log(b.length===10&&!b.some(x=>a.includes(x)))' "$P1" "$P2")"
 check "recherche + type : 10 DTM agricoles" 10 "$(liste "search=dtm&type=TECHNIQUE_AGRICOLE" >/dev/null; jget 'j.total')"
 
 echo "── Séries du bac"
@@ -85,14 +85,14 @@ check "au plus 500 résultats par page" 500 "$(req GET "/filiere?limit=9999" >/d
 
 echo "── Formations mises de côté"
 TF=$(jeton DEMO-3E-0001); TK=$(jeton DEMO-TLE-0001); TP=$(jeton parent.demo@monorientation.bj); TA=$(jeton admin@monorientation.bj "${ADMIN_PASSWORD:-admin123}")
-MED=$(id_code UNIV-FSS-MEDECINE); C=$(id_code BAC-C)
+MED=$(id_code UNIV-FSS-MEDECINE); F3=$(id_code BAC-F3)
 F=/apprenant/DEMO-3E-0001/favoris
 check "sans connexion → 401" 401 $(req GET $F)
 check "Fatou : aucune au départ" 0 "$(req GET $F "$TF" >/dev/null; jget 'j.length')"
 check "Fatou met Médecine de côté" 204 $(req PUT $F/$MED "$TF")
 check "  une seconde fois : sans effet" 204 $(req PUT $F/$MED "$TF")
-check "Fatou met la série C de côté" 204 $(req PUT $F/$C "$TF")
-check "  2 formations, la plus récente d'abord" "BAC-C UNIV-FSS-MEDECINE" "$(req GET $F "$TF" >/dev/null; js 'return j.map(f=>f.filiere.code).join(" ")')"
+check "Fatou met la série F3 de côté" 204 $(req PUT $F/$F3 "$TF")
+check "  2 formations, la plus récente d'abord" "BAC-F3 UNIV-FSS-MEDECINE" "$(req GET $F "$TF" >/dev/null; js 'return j.map(f=>f.filiere.code).join(" ")')"
 check "parent → consulte" 2 "$(req GET $F "$TP" >/dev/null; jget 'j.length')"
 check "admin → consulte" 200 $(req GET $F "$TA")
 check "parent ne modifie pas → 403" 403 $(req PUT $F/$MED "$TP")
@@ -102,7 +102,7 @@ check "filière inconnue → 404" 404 $(req PUT $F/$(node -e 'console.log(crypto
 check "identifiant invalide → 400" 400 $(req PUT $F/pas-un-uuid "$TF")
 check "Fatou retire Médecine" 204 $(req DELETE $F/$MED "$TF")
 check "  une seconde fois : sans effet" 204 $(req DELETE $F/$MED "$TF")
-check "  reste la série C" BAC-C "$(req GET $F "$TF" >/dev/null; js 'return j.map(f=>f.filiere.code).join(" ")')"
+check "  reste la série F3" BAC-F3 "$(req GET $F "$TF" >/dev/null; js 'return j.map(f=>f.filiere.code).join(" ")')"
 sql "insert into favoris (apprenant_nip, filiere_id) select 'DEMO-TLE-0001', id from filieres order by id limit 50"
 check "au-delà de 50 formations → 400" 400 $(req PUT /apprenant/DEMO-TLE-0001/favoris/$(sql "select id from filieres order by id offset 50 limit 1") "$TK")
 check "  une formation déjà mise de côté reste acceptée" 204 $(req PUT /apprenant/DEMO-TLE-0001/favoris/$(sql "select id from filieres order by id limit 1") "$TK")

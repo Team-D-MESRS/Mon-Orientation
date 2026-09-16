@@ -35,6 +35,8 @@ export interface FiliereReferentiel {
   bourses?: boolean;
   sources: SourceFiliere[];
   domaines: Domaine[];
+  /** Hors du catalogue et du moteur, mais la fiche reste consultable par son lien. */
+  masquee?: boolean;
 }
 
 const CONSULTE_LE = '2026-09-13';
@@ -111,8 +113,11 @@ const COND_DTM =
 
 const POURSUITES_A = "Poursuites d'études : droit, lettres, philosophie, communication, langues, histoire-géographie.";
 
+// Le site met en avant la formation technique : le bac général n'est pas proposé comme piste, mais
+// sa fiche reste consultable et sa série sert à filtrer le supérieur (« Et après ce bac ? »).
 const serieGenerale = (code: string, intitule: string, domaines: Domaine[], debouches?: string): FiliereReferentiel => ({
   code: `BAC-${code}`,
+  masquee: true,
   domaines,
   nom: `Baccalauréat série ${code} — ${intitule}`,
   type: 'GENERALE',
@@ -193,17 +198,9 @@ const dtmAgricole = (code: string, specialite: string): FiliereReferentiel => ({
   sources: [S.gouvAgricole, S.communiqueInscriptions],
 });
 
-// ─── Écoles des métiers de référence ─────────────────────────────────────────
-
-const ecoleMetiers = (code: string, domaine: string, domaines: Domaine[]): FiliereReferentiel => ({
-  code: `EDM-${code}`,
-  domaines,
-  nom: `École des métiers de référence — ${domaine}`,
-  type: 'ECOLE_METIER',
-  description:
-    "Domaine couvert par l'une des écoles des métiers de référence du Programme d'action du gouvernement. Nombre d'écoles, implantation, diplômes et conditions d'accès à préciser par le MESTFP.",
-  sources: [S.pagEcolesMetiers],
-});
+// Les écoles des métiers de référence ne sont plus des fiches de formation : le catalogue officiel
+// des nouveaux métiers les cite comme LIEUX où se préparent les DTM (EMEDD, EMN, EMAEI, EMBTP,
+// EM THR). Elles deviennent des établissements, rattachés aux fiches DTM concernées.
 
 export const REFERENTIEL_FILIERES: FiliereReferentiel[] = [
   serieGenerale('A1', 'Lettres – Langues', ['LETTRES'], POURSUITES_A),
@@ -242,7 +239,6 @@ export const REFERENTIEL_FILIERES: FiliereReferentiel[] = [
   diplomeTechnicien('MODE', 'Métiers de la mode', 'mode', ['ARTISANAT']),
   diplomeTechnicien('DEV-WEB-MOBILE', 'Développeur web et mobile', 'numérique', ['NUMERIQUE']),
   diplomeTechnicien('MULTIMEDIA', 'Producteur multimédia', 'numérique', ['NUMERIQUE']),
-  diplomeTechnicien('QUALITE-EAU', "Contrôleur de qualité de l'eau", 'environnement', ['ENVIRONNEMENT']),
 
   dtmLtp('ELEC-ENERGIE', 'Électricité et systèmes énergétiques', 'Installation, maintenance et dépannage des systèmes électriques en milieu résidentiel, tertiaire et industriel.', ['Électricien'], ['ELECTRICITE']),
   dtmLtp('ENR', 'Énergies renouvelables', "Installation et maintenance d'équipements solaires photovoltaïques et thermiques.", ['Installateur solaire'], ['ELECTRICITE']),
@@ -253,6 +249,8 @@ export const REFERENTIEL_FILIERES: FiliereReferentiel[] = [
   dtmLtp('GROS-OEUVRE', 'Construction bâtiment — gros œuvre', 'Fondations, maçonnerie et béton armé.', ['Technicien du bâtiment'], ['BTP']),
   dtmLtp('TOPOGRAPHIE', 'Topographie', 'Levés topographiques et cartographie.', ['Topographe'], ['BTP']),
   dtmLtp('ETUDES-BATIMENT', "Technicien d'études du bâtiment", 'Dessin assisté par ordinateur, planification et estimation des coûts.', ["Technicien d'études du bâtiment"], ['BTP']),
+  // 12e métier du communiqué N°0902 : annoncé comme DTM et non comme DT, contrairement à la presse
+  dtmLtp('QUALITE-EAU', "Contrôleur de la qualité de l'eau", "Contrôle de la qualité de l'eau de consommation et des rejets, prélèvements et analyses.", ["Contrôleur de la qualité de l'eau"], ['ENVIRONNEMENT']),
 
   {
     code: 'EFMS-HYGIENISTE-ASSAINISSEMENT',
@@ -305,10 +303,4 @@ export const REFERENTIEL_FILIERES: FiliereReferentiel[] = [
     domaines: ['AGRICULTURE'],
   },
 
-  ecoleMetiers('NUMERIQUE', 'Numérique', ['NUMERIQUE']),
-  ecoleMetiers('BTP', 'Bâtiment et travaux publics', ['BTP']),
-  ecoleMetiers('ELECTRONIQUE', 'Électronique et électrotechnique', ['ELECTRICITE']),
-  ecoleMetiers('AUTOMOBILE', 'Automobile et équipements industriels', ['INDUSTRIE']),
-  ecoleMetiers('BOIS-ALUMINIUM', 'Bois et aluminium', ['ARTISANAT', 'BTP']),
-  ecoleMetiers('TOURISME-HOTELLERIE', 'Tourisme, hôtellerie et restauration', ['TOURISME']),
 ];

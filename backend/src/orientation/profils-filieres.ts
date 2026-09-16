@@ -25,7 +25,6 @@ const PROFILS: [RegExp, ProfilFiliere][] = [
   [/^BAC-G[13]$/, { matieresCles: ['Français', 'Anglais'], seuil: 12 }],
   [/^BAC-EA$/, { matieresCles: VIVANT, seuil: 12 }],
   [/^DT-MODE$/, { matieresCles: [] }],
-  [/^DT-QUALITE-EAU$/, { matieresCles: VIVANT }],
   [/^DT-/, { matieresCles: SCIENCES }],
   [/^DTM-LTP-/, { matieresCles: SCIENCES, seuil: 10 }],
   [/^DTM-LTA-/, { matieresCles: VIVANT, seuil: 10 }],

@@ -8,12 +8,13 @@ export class StatsService {
   async getStatsNationales() {
     const [totalApprenants, totalFiliere, totalEtablissements] = await Promise.all([
       this.prisma.apprenant.count(),
-      this.prisma.filiere.count(),
+      this.prisma.filiere.count({ where: { masquee: false } }),
       this.prisma.etablissement.count(),
     ]);
 
     const repartitionType = await this.prisma.filiere.groupBy({
       by: ['type'],
+      where: { masquee: false },
       _count: true,
     });
 

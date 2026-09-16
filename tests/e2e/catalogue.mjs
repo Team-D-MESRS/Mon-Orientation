@@ -12,7 +12,14 @@ const sql = (requete) =>
   execSync(`docker exec -i ${process.env.PG_CONTAINER ?? 'mo-postgres'} psql -U mo_user -d mon_orientation -q`, { input: requete });
 const reinitialiser = () =>
   sql("delete from favoris where apprenant_nip like 'DEMO-%'; delete from preferences where apprenant_nip = 'DEMO-TLE-0001';");
-const idDe = async (code) => (await (await fetch(`${API}/filiere?search=${code}`)).json()).items.find((f) => f.code === code).id;
+// Les fiches masquées (séries générales du bac) sortent des listes : leur id vient des filtres du catalogue
+const idDe = async (code) => {
+  if (/^BAC-(A[12]|B|C|D)$/.test(code)) {
+    const { series } = await (await fetch(`${API}/filiere/filtres`)).json();
+    return series.find((s) => `BAC-${s.serie}` === code).filiereId;
+  }
+  return (await (await fetch(`${API}/filiere?search=${code}`)).json()).items.find((f) => f.code === code).id;
+};
 const totalDe = async (parametres) => (await (await fetch(`${API}/filiere?limit=1&${parametres}`)).json()).total;
 
 const nav = await lancerNavigateur();
@@ -201,10 +208,12 @@ try {
   await cliquerDansCarte('Médecine générale', 'Mettre de côté');
   await cliquerDansCarte('Pharmacie', 'Mettre de côté');
   await nav.attendre(`${etatDansCarte('Médecine générale', 'cœur')} === 'true' && ${etatDansCarte('Pharmacie', 'cœur')} === 'true'`);
-  await nav.aller(`${BASE}/catalogue?q=${encodeURIComponent('série C')}`);
-  await nav.attendre(`${contient('Baccalauréat série C')} && !!document.querySelector('main article button[title]:not([disabled])')`);
-  await cliquerDansCarte('Baccalauréat série C', 'Mettre de côté');
-  await nav.attendre(`${etatDansCarte('Baccalauréat série C', 'cœur')} === 'true'`);
+  // Fiche après le BEPC mise de côté par un élève de Terminale : elle doit être signalée hors niveau
+  // sur la page des vœux. La série C ne convient plus, les bacs généraux étant masqués du catalogue.
+  await nav.aller(`${BASE}/catalogue?q=${encodeURIComponent('série F3')}`);
+  await nav.attendre(`${contient('Baccalauréat série F3')} && !!document.querySelector('main article button[title]:not([disabled])')`);
+  await cliquerDansCarte('Baccalauréat série F3', 'Mettre de côté');
+  await nav.attendre(`${etatDansCarte('Baccalauréat série F3', 'cœur')} === 'true'`);
   await nav.aller(`${BASE}/catalogue?serie=D&domaine=SANTE`);
   await nav.attendre(`${etatDansCarte('Médecine générale', 'cœur')} === 'true'`);
   r.verifier('Cœurs enregistrés côté serveur (retrouvés après rechargement)', true);
@@ -217,7 +226,7 @@ try {
   await nav.aller(`${BASE}/espace-apprenant/preferences`);
   await nav.attendre(`${contient('Étape 1 sur 3')} && ${contient('Seulement mes formations mises de côté (2)')}`);
   r.verifier(
-    'Vœux : mises de côté proposées en premier, la série C signalée hors niveau',
+    'Vœux : mises de côté proposées en premier, la série F3 signalée hors niveau',
     await nav.evaluer(`document.querySelector('fieldset label').textContent.includes('Mise de côté') && ${contient('Une autre formation mise de côté ne se choisit pas après le bac')}`),
   );
   await nav.cliquerTexte('Seulement mes formations mises de côté', 'button');
