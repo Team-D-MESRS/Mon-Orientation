@@ -19,8 +19,14 @@ export class StatsController {
     return this.statsService.getStatsNationales();
   }
 
+  @Get('departements')
+  @ApiOperation({ summary: 'Statistiques pour tous les départements (tableau du dashboard)' })
+  async getStatsDepartements() {
+    return this.statsService.getStatsDepartements();
+  }
+
   @Get('departement/:code')
-  @ApiOperation({ summary: 'Statistiques par département' })
+  @ApiOperation({ summary: "Statistiques d'un département" })
   async getStatsDepartement(@Param('code') code: string) {
     return this.statsService.getStatsDepartement(code);
   }

@@ -180,8 +180,22 @@ export const conseillerApi = {
   getHistorique: (nip: string) => api.get(`/conseiller/${nip}/historique`),
 };
 
+export interface StatsNationales {
+  totalApprenants: number;
+  totalFiliere: number;
+  totalEtablissements: number;
+  repartitionType: { type: string; _count: number }[];
+}
+
+export interface StatsDepartement {
+  departement: string;
+  apprenants: number;
+  etablissements: number;
+}
+
 export const statsApi = {
-  getNationales: () => api.get('/stats/national'),
+  getNationales: () => api.get<StatsNationales>('/stats/national'),
+  getDepartements: () => api.get<StatsDepartement[]>('/stats/departements'),
   getDepartement: (code: string) => api.get(`/stats/departement/${code}`),
   getFiliere: () => api.get('/stats/filiere'),
 };
