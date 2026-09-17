@@ -55,7 +55,7 @@ De la classe de **4e** à la **terminale**, avec un enchaînement information �
 | Plateforme | Technologie | Priorité MVP |
 |---|---|---|
 | **Application web** | Framework moderne (Next.js ou similaire), responsive | Oui |
-| **Application mobile** | Flutter (iOS + Android) | Oui |
+| **Application mobile** | ~~Flutter (iOS + Android)~~ — abandonnée (décision du 17/09/2026, voir JOURNAL.md) | Non |
 | **PWA** | Complémentaire au web, installable | Souhaitable |
 
 ### 4.1 Accessibilité
@@ -152,7 +152,8 @@ De la classe de **4e** à la **terminale**, avec un enchaînement information �
 
 **Fonctionnalités :**
 - Consultation du catalogue de formations
-- Saisie des vœux et préférences (en 3e, en Terminale)
+- Questionnaire de découverte (goûts, ambitions, qualités, contraintes) — une fois, modifiable ensuite
+- Saisie des vœux et préférences : en 3e, réalignée sur la fiche unique d'inscription MESRS/DESTFP (2 choix de spécialité classés + 1 établissement qui les dispense tous deux) ; en Terminale, 3 choix libres pour l'admission au supérieur
 - Suivi de la proposition d'orientation
 - Accès aux contenus d'information
 - Tableau de bord personnalisé (parcours, notes, recommandations)

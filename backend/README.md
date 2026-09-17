@@ -38,7 +38,7 @@ API REST de la plateforme nationale d'orientation scolaire. Elle gère l'authent
 | Sécurité HTTP | `helmet` (CSP désactivée : API JSON + Swagger), CORS limité à `CORS_ORIGIN`, `@nestjs/throttler` |
 | Documentation | `@nestjs/swagger` |
 | Conseiller pédagogique | SDK officiel `@google/genai` : Gemini (`gemini-3.6-flash` par défaut) avec appel de fonctions côté serveur |
-| Dépendances installées mais pas encore utilisées | `ioredis`, `bullmq` (cache et files), `minio` (fichiers), `zod` |
+| Dépendances installées mais pas encore utilisées | `minio` (fichiers), `zod` |
 
 ---
 
@@ -115,7 +115,7 @@ Variables lues dans `backend/.env` :
 | `TRUST_PROXY` | non | `false` | `true` derrière nginx, pour que la limitation des tentatives voie l'IP réelle |
 | `SEED_ADMIN_PASSWORD` | en production | `admin123` hors production | Mot de passe du compte admin créé par le seed |
 | `NODE_ENV` | non | — | `production` interdit le seed de démonstration et impose `SEED_ADMIN_PASSWORD` |
-| `REDIS_URL`, `MINIO_*` | non | — | Prévus (cache, fichiers), non utilisés à ce stade |
+| `MINIO_*` | non | — | Prévu (fichiers), non utilisé à ce stade |
 | `EDUCMASTER_API_URL` | non | — | Prévu pour l'intégration EducMaster (tâche 2.1), non utilisé |
 | `GEMINI_API_KEY` | pour le conseiller | — | Clé de l'API Gemini (Google AI Studio) ; sans elle, le conseiller répond 503 « pas encore configuré » |
 | `CONSEILLER_MODELE` | non | `gemini-3.6-flash` | Modèle Gemini utilisé par le conseiller (`gemini-3.8-flash` est limité à 20 requêtes par jour dans l'offre gratuite) |
@@ -160,7 +160,7 @@ Ne jamais versionner `.env`. En production, utiliser des secrets longs et aléat
 | `recommandations` | Sorties du moteur : score, explication, **critères détaillés** (JSON), active ou archivée |
 | `conversations_ia` | Historique des échanges avec le conseiller |
 
-Énumérations : `Palier` (`QUATRIEME`, `TROISIEME`, `PREMIERE`, `TERMINALE`), `NiveauAcces` (`APRES_BEPC`, `APRES_BAC`), `TypeFiliere` (`GENERALE`, `TECHNIQUE`, `TECHNIQUE_AGRICOLE`, `PROFESSIONNELLE`, `ECOLE_METIER`, `UNIVERSITE`).
+Énumérations : `Palier` (`QUATRIEME`, `TROISIEME`, `PREMIERE`, `TERMINALE`), `NiveauAcces` (`APRES_BEPC`, `APRES_BAC`), `TypeFiliere` (`GENERALE`, `TECHNIQUE`, `TECHNIQUE_AGRICOLE`, `PROFESSIONNELLE`, `UNIVERSITE` — `ECOLE_METIER` retiré le 17/09/2026, les écoles des métiers sont des établissements, pas des filières, depuis le lot 3).
 
 ### Migrations
 
@@ -442,8 +442,8 @@ Il n'y a pas encore de tests unitaires (Jest n'est pas configuré) : c'est l'obj
 - **EducMaster** non connecté (tâche 2.1) : les notes proviennent du seed de démonstration.
 - **Conseiller pédagogique** : prototype du niveau B, pas encore testé avec une vraie clé. Supervision, jeu de questions de référence, streaming et hébergement des données restent à faire (voir [Conseiller pédagogique](#conseiller-pédagogique)).
 - **Rôle établissement** sans accès aux dossiers ; pas encore d'écran d'administration pour le rattachement parent-enfant ni pour le référentiel (tâche 3.10).
-- **Filière ↔ établissement** : une filière ne peut être rattachée qu'à un seul établissement. Le champ texte `ouSeFormer` sert en attendant une relation plusieurs-à-plusieurs.
-- **Infrastructure** : Redis, BullMQ et MinIO ne sont pas utilisés ; il n'y a pas de Dockerfile (`docker-compose.dev.yml` n'est pas encore fonctionnel) ni d'intégration continue.
+- **Filière ↔ établissement** : `OffreFormation` (table de jonction, depuis le lot 3 du 16/09) rattache une même fiche technique à plusieurs établissements, avec durée et source par offre ; le supérieur garde un établissement unique (`Filiere.etablissementId`). Le champ texte `ouSeFormer` reste pour les fiches sans lieu connu.
+- **Infrastructure** : MinIO n'est pas utilisé ; il n'y a pas de Dockerfile (`docker-compose.dev.yml` n'est pas encore fonctionnel) ni d'intégration continue.
 
 ---
 

@@ -238,32 +238,25 @@ Suivre les orientations
 
 ### 3.1 Structure de navigation
 
-**Web (Next.js) :**
+**Web (Next.js), routes réelles (17/09/2026) :**
 ```
 / (accueil)
 ├── /catalogue (liste des filières)
-│   └── /catalogue/:id (fiche filière)
-├── /espace-apprenant
-│   ├── /espace-apprenant/profil
+│   ├── /catalogue/:id (fiche filière)
+│   └── /catalogue/comparer
+├── /espace-apprenant (tableau de bord)
+│   ├── /espace-apprenant/decouverte (questionnaire de découverte)
 │   ├── /espace-apprenant/notes
-│   ├── /espace-apprenant/preferences
-│   └── /espace-apprenant/recommandations
-├── /conseiller (chat IA)
-├── /information (guides par palier)
-├── /stats (DGES — dashboard)
-├── /admin (administration)
-├── /connexion
-└── /inscription
+│   ├── /espace-apprenant/preferences (vœux)
+│   ├── /espace-apprenant/recommandations
+│   └── /espace-apprenant/conseiller (chat IA)
+├── /conseiller (présentation publique, redirige les élèves/parents connectés)
+├── /identification (élèves et parents — EducMaster, remplace l'ancien /connexion)
+├── /personnels (administration, DGES, établissement — remplace l'ancien /inscription)
+├── /stats (DGES — dashboard, encore à brancher sur les vraies données, voir JOURNAL.md)
+└── /guide, /faq, /contact, /mentions-legales, /donnees-personnelles, /accessibilite
 ```
-
-**Mobile (Flutter) :**
-```
-Bottom Navigation (4 tabs):
-├── Accueil (home)
-├── Catalogue (explore)
-├── Mon Espace (profil)
-└── Conseiller (chat)
-```
+Pas de version mobile (décision du 17/09/2026) ; pas de back-office `/admin` (TASKS.md 3.10, non commencé).
 
 ### 3.2 Plan des pages web
 
@@ -773,43 +766,8 @@ Base : **4px** (unité fondamentale)
 
 ---
 
-## 9. Spécifications mobile (Flutter)
-
-### 9.1 Bottom Navigation Bar
-
-```
-┌──────────────────────────────────┐
-│                                  │
-│         [Contenu page]           │
-│                                  │
-├──────────────────────────────────┤
-│  🏠      🔍      👤      💬     │
-│ Accueil Catalogue Espace Conseiller│
-└──────────────────────────────────┘
-```
-
-- 4 items maximum (conforme guidelines Material Design)
-- Icône + label
-- Badge de notification sur "Conseiller" si nouveau message
-- Animation de transition subtile entre les tabs
-
-### 9.2 Safe areas
-
-- Respect des safe areas iOS (notch, home indicator)
-- Padding en bas pour le bottom nav
-- Status bar : couleur du header
-
-### 9.3 Touch targets
-
-- Minimum 44×44px pour tous les éléments interactifs
-- Espacement minimum 8px entre les éléments cliquables
-- Feedback visuel : changement de couleur au touch (150ms)
-
-### 9.4 Pull-to-refresh
-
-- Sur le catalogue et les listes
-- Indicateur de rafraîchissement
-- Sync des données EducMaster en arrière-plan
+*(Section 9 « Spécifications mobile (Flutter) » retirée — décision du 17/09/2026, pas de version mobile, voir
+JOURNAL.md. Numérotation suivante inchangée.)*
 
 ---
 

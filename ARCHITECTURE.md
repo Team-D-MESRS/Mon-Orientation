@@ -17,14 +17,14 @@ La plateforme Mon Orientation est un système composé de trois couches principa
 ```
 ┌─────────────────────────────────────────────────────┐
 │                   PRÉSENTATION                      │
-│  ┌──────────────┐  ┌──────────────┐  ┌───────────┐ │
-│  │   Web App    │  │ Mobile App   │  │  Admin    │ │
-│  │  (Next.js)   │  │  (Flutter)   │  │  (Next.js)│ │
-│  └──────┬───────┘  └──────┬───────┘  └─────┬─────┘ │
-│         │                 │                │        │
-├─────────┼─────────────────┼────────────────┼────────┤
+│  ┌──────────────┐                    ┌───────────┐ │
+│  │   Web App    │                    │  Admin    │ │
+│  │  (Next.js)   │                    │  (Next.js)│ │
+│  └──────┬───────┘                    └─────┬─────┘ │
+│         │                                  │        │
+├─────────┼──────────────────────────────────┼────────┤
 │         │     API GATEWAY / REST API       │        │
-│  ┌──────┴─────────────────┴────────────────┴─────┐  │
+│  ┌──────┴──────────────────────────────────┴─────┐  │
 │  │              BACKEND (NestJS)                  │  │
 │  │  ┌─────────┐ ┌──────────┐ ┌───────────────┐  │  │
 │  │  │  Auth   │ │ Orientation│ │  Conseiller   │  │  │
@@ -34,10 +34,10 @@ La plateforme Mon Orientation est un système composé de trois couches principa
 │                     │                               │
 ├─────────────────────┼───────────────────────────────┤
 │               DONNÉES                               │
-│  ┌──────────┐ ┌──────────┐ ┌──────────────────┐    │
-│  │PostgreSQL│ │  Redis   │ │ EducMaster API   │    │
-│  │(principal)│ │ (cache)  │ │ (SIGE externe)   │    │
-│  └──────────┘ └──────────┘ └──────────────────┘    │
+│  ┌──────────────┐          ┌──────────────────┐     │
+│  │  PostgreSQL   │          │ EducMaster API   │     │
+│  │  (principal)  │          │ (SIGE externe)   │     │
+│  └──────────────┘          └──────────────────┘     │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -47,29 +47,23 @@ La plateforme Mon Orientation est un système composé de trois couches principa
 
 ### 2.1 Frontend Web
 
-| Technologie | Choix | Justification |
-|---|---|---|
-| **Framework** | Next.js 14+ (App Router) | SSR/SSG, SEO, performance, écosystème React |
-| **UI Library** | DSBJ (`@flrxnt/dsbj`) + React | Conformité charte gouvernementale, 44+ composants |
-| **State management** | Zustand | Léger, performant, TypeScript-friendly |
-| **Styling** | Tailwind CSS + DSBJ | Utilitaires + composants officiels |
-| **Formulaires** | React Hook Form + Zod | Validation typée, performant |
-| **i18n** | next-intl | Multilinguisme (français + langues nationales) |
-| **API client** | Axios + React Query (TanStack Query) | Cache, retry, synchronisation |
-| **PWA** | next-pwa | Mode hors-ligne pour contenus |
+Colonne « Choix » : ce qui est réellement en service aujourd'hui. Colonne « Prévu au démarrage » : ce que ce
+document visait le 11/09, gardé pour mémoire — plusieurs paquets sont installés (`package.json`) mais jamais
+branchés dans le code ; pas la peine de les désinstaller tant que la décision (les garder ou les retirer) n'est
+pas prise, mais ne pas se fier à leur seule présence pour croire qu'ils sont utilisés.
 
-### 2.2 Application Mobile
-
-| Technologie | Choix | Justification |
+| Technologie | Choix réel | Prévu au démarrage (11/09), pas branché |
 |---|---|---|
-| **Framework** | Flutter 3.x (Dart) | Cross-platform (iOS/Android), performant |
-| **State management** | Riverpod | Moderne, testable, scalable |
-| **Navigation** | GoRouter | Routes déclaratives, deep links |
-| **HTTP** | Dio + Retrofit | API typée, intercepteurs |
-| **Local storage** | Hive + SQLite | Hors-ligne (contenus mis en cache) |
-| **UI** | Material 3 + composants custom | Conformité visuelle DSBJ |
-| **IA vocale** | speech_to_text + flutter_tts | Conseiller IA vocal |
-| **Connectivité** | connectivity_plus | Détection réseau, mode hors-ligne |
+| **Framework** | Next.js 14+ (App Router) | — |
+| **UI** | Tailwind CSS aux couleurs du DSBJ, composants `.bj-*` maison | DSBJ (`@flrxnt/dsbj`) : paquet jamais publié/utilisé |
+| **State management** | Zustand (session) ; `useState`/`useEffect` partout ailleurs | React Query (`@tanstack/react-query`) : installé, aucun `useQuery` dans le code |
+| **Formulaires** | Formulaires contrôlés simples (`useState`) | React Hook Form + Zod : jamais installés |
+| **i18n** | Paramètre `langue` du conseiller (`fr`/`fon`), pas de i18n d'interface | next-intl : installé, aucun import dans `src/` |
+| **API client** | Axios (`lib/api.ts`) | — |
+| **PWA** | Aucune (pas de manifest, pas de service worker, `next.config.js` sans `withPWA`) | next-pwa : installé, jamais configuré |
+
+*(2.2 « Application Mobile » retirée — décision du 17/09/2026, web uniquement, voir JOURNAL.md. Numérotation
+suivante inchangée pour ne pas casser les renvois déjà écrits ailleurs, ex. « ARCHITECTURE §2.4 ».)*
 
 ### 2.3 Backend
 
@@ -79,11 +73,13 @@ La plateforme Mon Orientation est un système composé de trois couches principa
 | **API** | REST (OpenAPI/Swagger) | Standard, documentation auto, interopérabilité |
 | **ORM** | Prisma | Type-safe, migrations, introspection |
 | **Base de données** | PostgreSQL 16 | Robuste, performant, géospatial (pg_extension) |
-| **Cache** | Redis | Sessions, cache des données EducMaster |
 | **Auth** | JWT + NIP | Authentification par NIP, tokens JWT |
 | **Validation** | class-validator + Zod | Validation DTO |
-| **File d'attente** | BullMQ (Redis) | Jobs asynchrones (sync EducMaster, notifications) |
 | **Logs** | Pino | Structuré, performant |
+
+*(Cache Redis et file d'attente BullMQ retirés — décision du 17/09/2026 : jamais branchés, dépendances
+désinstallées, voir JOURNAL.md. La limitation des tentatives de connexion reste en mémoire dans le process
+backend.)*
 
 ### 2.4 Intelligence Artificielle
 
@@ -212,11 +208,15 @@ l'élève (pas par palier, contrairement aux vœux) et modifiable ensuite ; bloq
 - `affinites` (JSONB) — affinité par domaine déduite des réponses (0 à 1), lue par le moteur d'orientation (critère « intérêt »)
 - `date_saisie`, `updated_at` (TIMESTAMP)
 
-**`preferences`** — choix des apprenants
+**`preferences`** — choix des apprenants. En 3e (entrée en lycée technique), réalignée sur la fiche unique
+d'inscription (MESRS/DESTFP) : 2 choix de spécialité classés + 1 établissement qui doit dispenser les deux
+(`filiere_id_3` refusé par l'API à ce niveau). En Terminale (admission au supérieur, circuit distinct) : 3
+choix libres, sans établissement (`etablissement_id` refusé par l'API à ce niveau).
 - `id` (PK, UUID)
 - `apprenant_nip` (FK)
 - `palier` (ENUM: quatrieme, troisieme, premiere, terminale)
-- `filiere_id_1`, `filiere_id_2`, `filiere_id_3` (FK, nullable)
+- `filiere_id_1`, `filiere_id_2`, `filiere_id_3` (FK, nullable) — `filiere_id_3` : Terminale seulement
+- `etablissement_id` (FK, nullable) — 3e seulement
 - `motivation` (TEXT, nullable)
 - `date_saisie` (TIMESTAMP)
 - `valide_parent` (BOOLEAN, défaut false)
@@ -281,8 +281,7 @@ l'élève (pas par palier, contrairement aux vœux) et modifiable ensuite ; bloq
 - `GET /filiere/filtres` — valeurs des filtres (domaines avec leur nombre de filières, séries du bac)
 - `GET /filiere/:id` — détail d'une filière
 - `GET /filiere/:id/debouches` — débouchés et taux d'insertion
-- `GET /etablissement` — liste des établissements
-- `GET /etablissement/:id` — détail d'un établissement
+- `GET /filiere/etablissements?filiere1=&filiere2=` — établissements qui dispensent toutes les filières données (choix d'établissement de la fiche unique, 3e)
 
 **Orientation**
 - `GET /orientation/:nip/recommandations` — recommandations du moteur
@@ -332,7 +331,6 @@ Mon Orientation                    EducMaster (SIGE)
      │                                    │
      │  Fréquence : sync quotidienne 02h00
      │  + sync à la demande (login apprenant)
-     │  + cache Redis (TTL 1h)
 ```
 
 ---
@@ -381,11 +379,6 @@ Mon Orientation                    EducMaster (SIGE)
 - IndexedDB pour les données structurées
 - Sync backgroud quand la connexion revient
 
-**Mobile (Flutter)** :
-- Hive/SQLite pour les données locales
-- Téléchargement sélectif des contenus
-- File d'attente de soumissions (sync quand en ligne)
-
 ### 6.3 Fonctionnalités en ligne uniquement
 
 - Soumission des préférences
@@ -433,7 +426,6 @@ Code push → GitHub Actions → Tests → Build → Deploy
 | **Setup** | Sem 1 | Repo, CI/CD, Docker, DB, auth de base |
 | **Backend core** | Sem 2-3 | API EducMaster, catalogue, moteur d'orientation |
 | **Frontend web** | Sem 2-4 | Pages principales, catalogue, espace apprenant |
-| **Mobile** | Sem 3-5 | App Flutter, catalogue, profil, hors-ligne |
 | **IA** | Sem 4-6 | Conseiller IA (texte), RAG, base de connaissances |
 | **Stats** | Sem 5-6 | Tableaux de bord, exports |
 | **QA** | Sem 6-7 | Tests, corrections, optimisation |

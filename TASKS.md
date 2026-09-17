@@ -14,7 +14,7 @@
 
 - **Statut** : `pending` | `in_progress` | `done` | `blocked`
 - **Priorité** : `P0` (critique MVP) | `P1` (important) | `P2` (souhaitable)
-- **Rôle** : `architecte` | `backend-dev` | `frontend-dev` | `mobile-dev` | `ai-dev` | `devops` | `qa-reviewer`
+- **Rôle** : `architecte` | `backend-dev` | `frontend-dev` | `ai-dev` | `devops` | `qa-reviewer`
 
 ---
 
@@ -23,12 +23,11 @@
 | # | Tâche | Rôle | Priorité | Statut | Dépendances |
 |---|---|---|---|---|---|
 | 1.1 | Initialiser le repo Git, `.gitignore`, structure de dossiers | architecte | P0 | `done` | — |
-| 1.2 | Setup Docker Compose (PostgreSQL, Redis, MinIO) | devops | P0 | `in_progress` | 1.1 |
+| 1.2 | Setup Docker Compose (PostgreSQL) | devops | P0 | `done` | 1.1 |
 | 1.3 | Setup NestJS (backend) — structure modulaire, Prisma, Swagger | backend-dev | P0 | `done` | 1.2 |
 | 1.4 | Setup Next.js (frontend web) — App Router, DSBJ, Tailwind | frontend-dev | P0 | `done` | 1.1 |
-| 1.5 | Setup Flutter (mobile) — projet, structure, Riverpod | mobile-dev | P0 | `in_progress` | 1.1 |
 | 1.6 | Schéma Prisma initial (utilisateurs, apprenants, établissements) | backend-dev | P0 | `done` | 1.3 |
-| 1.7 | Système d'authentification (JWT + NIP) — inscription, connexion | backend-dev | P0 | `done` | 1.6 |
+| 1.7 | Système d'authentification (JWT) — remplacé le 16/09 par l'identification EducMaster (NIP ou numéro EducMaster, plus d'inscription ni de mot de passe choisi par l'élève, voir JOURNAL.md) | backend-dev | P0 | `done` | 1.6 |
 | 1.8 | CI/CD GitHub Actions (lint, test, build, Docker) | devops | P1 | `pending` | 1.1 |
 
 ---
@@ -37,16 +36,18 @@
 
 | # | Tâche | Rôle | Priorité | Statut | Dépendances |
 |---|---|---|---|---|---|
-| 2.1 | API EducMaster — client HTTP, synchronisation des données | backend-dev | P0 | `pending` | 1.3 |
+| 2.1 | API EducMaster — client HTTP, synchronisation des données | backend-dev | P0 | `blocked` (adaptateur prêt en mode `fictif`, accès réel à l'API en attente — seul verrou avant la mise en ligne, voir JOURNAL.md) | 1.3 |
 | 2.2 | Schéma DB complet (notes, filières, préférences, recommandations, conversations) | backend-dev | P0 | `done` | 1.6 |
 | 2.3 | CRUD Catalogue de filières (référentiel national) | backend-dev | P0 | `done` | 2.2 |
 | 2.4 | API Apprenant — profil, notes, parcours | backend-dev | P0 | `done` | 2.1, 2.2 |
 | 2.5 | API Préférences — saisie, validation, historique | backend-dev | P0 | `done` | 2.2, 2.4 |
 | 2.6 | Moteur d'orientation — algorithme de matching (notes + préférences) | backend-dev | P0 | `done` | 2.3, 2.4, 2.5 |
 | 2.7 | API Recommandations — génération, explication, historique | backend-dev | P0 | `done` | 2.6 |
-| 2.8 | Cache Redis — sessions, données EducMaster, catalogue | backend-dev | P1 | `pending` | 1.3 |
-| 2.9 | File d'attente BullMQ — sync EducMaster asynchrone | backend-dev | P1 | `pending` | 1.3, 2.1 |
 | 2.10 | Gestion des rôles et habilitations (apprenant, parent, etablissement, dges, admin) | backend-dev | P0 | `in_progress` | 1.7 |
+
+*(2.8 « Cache Redis » et 2.9 « File d'attente BullMQ » retirées — décision du 17/09/2026 : ni l'un ni l'autre
+n'a jamais été branché, dépendances désinstallées. La limitation des tentatives de connexion reste en mémoire
+dans le process backend.)*
 
 ---
 
@@ -55,7 +56,7 @@
 | # | Tâche | Rôle | Priorité | Statut | Dépendances |
 |---|---|---|---|---|---|
 | 3.1 | Page d'accueil — hero, services, actualités (composants DSBJ) | frontend-dev | P0 | `done` | 1.4 |
-| 3.2 | Page connexion / inscription — formulaire NIP + mot de passe | frontend-dev | P0 | `done` | 1.4, 1.7 |
+| 3.2 | Page d'identification EducMaster (`/identification`, `/personnels`) — remplace l'ancienne page connexion/inscription NIP + mot de passe | frontend-dev | P0 | `done` | 1.4, 1.7 |
 | 3.3 | Layout principal — header DSBJ, navigation, footer | frontend-dev | P0 | `done` | 1.4 |
 | 3.4 | Espace apprenant — tableau de bord, profil, notes | frontend-dev | P0 | `done` | 2.4, 3.3 |
 | 3.5 | Catalogue — recherche multicritère, fiches filières, comparaison | frontend-dev | P0 | `done` | 2.3, 3.3 |
@@ -67,19 +68,8 @@
 
 ---
 
-## Phase 4 — Application mobile Flutter (Sem 3-5)
-
-| # | Tâche | Rôle | Priorité | Statut | Dépendances |
-|---|---|---|---|---|---|
-| 4.1 | Structure Flutter — navigation, thème DSBJ, providers | mobile-dev | P0 | `pending` | 1.5 |
-| 4.2 | Écran connexion / inscription | mobile-dev | P0 | `pending` | 4.1, 1.7 |
-| 4.3 | Tableau de bord apprenant — profil, notes, parcours | mobile-dev | P0 | `pending` | 2.4, 4.1 |
-| 4.4 | Catalogue — recherche, fiches filières, détails | mobile-dev | P0 | `pending` | 2.3, 4.1 |
-| 4.5 | Saisie des préférences | mobile-dev | P0 | `pending` | 2.5, 4.3 |
-| 4.6 | Recommandations — affichage et explication | mobile-dev | P0 | `pending` | 2.7, 4.5 |
-| 4.7 | Mode hors-ligne — cache SQLite/Hive, sync différée | mobile-dev | P1 | `pending` | 4.3, 4.4 |
-| 4.8 | Intégration conseiller IA — interface conversationnelle | mobile-dev | P1 | `pending` | 5.2, 4.1 |
-| 4.9 | Support vocal — STT/TTS pour le conseiller IA | mobile-dev | P2 | `pending` | 4.8, 5.3 |
+*(Phase 4 « Application mobile Flutter » retirée — décision du 17/09/2026 : pas de version mobile, web
+uniquement, voir JOURNAL.md. Le dossier `mobile/` a été supprimé.)*
 
 ---
 
@@ -143,11 +133,10 @@
 | architecte | 2 | 2 | 0 | 4 |
 | backend-dev | 9 | 4 | 0 | 13 |
 | frontend-dev | 6 | 4 | 1 | 11 |
-| mobile-dev | 5 | 2 | 2 | 9 |
 | ai-dev | 3 | 1 | 1 | 5 |
 | devops | 3 | 2 | 0 | 5 |
 | qa-reviewer | 4 | 3 | 1 | 8 |
-| **Total** | **32** | **18** | **5** | **55** |
+| **Total** | **27** | **16** | **3** | **46** |
 
 ---
 
@@ -157,7 +146,8 @@ Pour le MVP, se concentrer sur les tâches **P0** uniquement :
 
 - Setup complet (1.1 → 1.8)
 - Backend core : EducMaster, catalogue, moteur d'orientation, préférences
-- Frontend web : accueil, connexion, espace apprenant, catalogue, préférences, recommandations
-- Mobile : connexion, tableau de bord, catalogue, préférences, recommandations
+- Frontend web : accueil, identification EducMaster, espace apprenant, catalogue, préférences, recommandations
 - IA : conseiller texte (pas encore vocal)
 - Déploiement staging + production
+
+Pas de version mobile (décision du 17/09/2026, voir JOURNAL.md) : le MVP est web uniquement.
