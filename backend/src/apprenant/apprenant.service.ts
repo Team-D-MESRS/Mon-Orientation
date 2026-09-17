@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { NiveauAcces, Palier, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrientationService } from '../orientation/orientation.service';
+import { FiliereService, ETABLISSEMENT_POUR_VOEU } from '../filiere/filiere.service';
 import { bilanNotes } from './bilan-notes';
 import { affinitesDomaines, validerReponses } from './decouverte';
 import { PreferencesDto } from './dto/preferences.dto';
@@ -13,7 +14,12 @@ const NIVEAU_DES_VOEUX: Partial<Record<Palier, NiveauAcces>> = {
   TERMINALE: 'APRES_BAC',
 };
 
-const FILIERES_DES_VOEUX = { filiere1: true, filiere2: true, filiere3: true } as const;
+const FILIERES_DES_VOEUX = {
+  filiere1: true,
+  filiere2: true,
+  filiere3: true,
+  etablissement: { select: ETABLISSEMENT_POUR_VOEU },
+} as const;
 
 /** Formations qu'un élève peut mettre de côté à la fois */
 export const FAVORIS_MAX = 50;
@@ -23,6 +29,7 @@ export class ApprenantService {
   constructor(
     private prisma: PrismaService,
     private orientationService: OrientationService,
+    private filiereService: FiliereService,
   ) {}
 
   async findByNip(nip: string) {
@@ -74,7 +81,16 @@ export class ApprenantService {
   async enregistrerPreferences(nip: string, dto: PreferencesDto) {
     const palier = await this.palierDeSaisie(nip);
     const niveau = NIVEAU_DES_VOEUX[palier] as NiveauAcces;
+    // Fiche unique d'inscription (MESRS/DESTFP) : en 3e, 2 choix de spécialité classés + 1 établissement qui
+    // dispense les deux. L'admission au supérieur (Terminale) suit un autre circuit, sans vœu d'établissement.
+    const estEntreeLyceeTechnique = niveau === 'APRES_BEPC';
 
+    if (estEntreeLyceeTechnique && dto.filiereId3) {
+      throw new BadRequestException("La fiche unique d'inscription ne retient que 2 choix de spécialité.");
+    }
+    if (!estEntreeLyceeTechnique && dto.etablissementId) {
+      throw new BadRequestException("L'établissement ne se choisit qu'à l'entrée en lycée technique (3e).");
+    }
     if (dto.filiereId3 && !dto.filiereId2) {
       throw new BadRequestException('Renseigne ton 2e choix avant le 3e.');
     }
@@ -90,11 +106,23 @@ export class ApprenantService {
         `Les vœux doivent porter sur des filières accessibles ${palier === 'TROISIEME' ? 'après le BEPC' : 'après le bac'}.`,
       );
     }
+    if (dto.etablissementId) {
+      const filieresChoisies = [dto.filiereId1, dto.filiereId2].filter((id): id is string => !!id);
+      const communs = await this.filiereService.etablissementsCommuns(filieresChoisies);
+      if (!communs.some((e) => e.id === dto.etablissementId)) {
+        throw new BadRequestException(
+          filieresChoisies.length > 1
+            ? 'Cet établissement ne dispense pas les deux spécialités choisies.'
+            : 'Cet établissement ne dispense pas la spécialité choisie.',
+        );
+      }
+    }
 
     const voeux = {
       filiereId1: dto.filiereId1,
       filiereId2: dto.filiereId2 ?? null,
       filiereId3: dto.filiereId3 ?? null,
+      etablissementId: dto.etablissementId ?? null,
       motivation: dto.motivation?.trim() || null,
     };
     const existante = await this.prisma.preference.findUnique({
@@ -105,6 +133,7 @@ export class ApprenantService {
       existante.filiereId1 === voeux.filiereId1 &&
       existante.filiereId2 === voeux.filiereId2 &&
       existante.filiereId3 === voeux.filiereId3 &&
+      existante.etablissementId === voeux.etablissementId &&
       existante.motivation === voeux.motivation;
 
     // Toute modification des vœux annule la validation du parent

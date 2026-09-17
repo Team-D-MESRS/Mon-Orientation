@@ -35,6 +35,15 @@ const LIEUX_DE_FORMATION = {
   orderBy: [{ etablissement: { departement: { sort: 'asc', nulls: 'last' } } }, { etablissement: { nom: 'asc' } }],
 } satisfies Prisma.Filiere$offresArgs;
 const AVEC_SOURCE_OFFICIELLE: Prisma.FiliereWhereInput = { sources: { array_contains: [{ officielle: true }] } };
+/** Pour le choix d'établissement de la fiche unique : contrairement à LIEUX_DE_FORMATION (lecture seule), l'id sert à l'enregistrer. */
+export const ETABLISSEMENT_POUR_VOEU = {
+  id: true,
+  code: true,
+  nom: true,
+  commune: true,
+  departement: true,
+  internat: true,
+} satisfies Prisma.EtablissementSelect;
 
 /** Apostrophes typographiques ramenées à l'apostrophe droite, espaces superflus retirés. */
 const normaliserRecherche = (texte?: string) =>
@@ -230,5 +239,31 @@ export class FiliereService {
     });
     if (!filiere) throw new NotFoundException('Filière non trouvée');
     return filiere;
+  }
+
+  /**
+   * Établissements qui dispensent TOUTES les filières demandées (fiche unique d'inscription : l'élève
+   * choisit un seul établissement, qui doit enseigner ses deux spécialités). Vide si aucun n'en propose
+   * qu'une, ce qui arrive naturellement si les deux spécialités relèvent de secteurs différents (LTP/LTA).
+   */
+  async etablissementsCommuns(filiereIds: string[]): Promise<Prisma.EtablissementGetPayload<{ select: typeof ETABLISSEMENT_POUR_VOEU }>[]> {
+    const offres = await this.prisma.offreFormation.findMany({
+      where: { filiereId: { in: filiereIds } },
+      select: { etablissementId: true, filiereId: true },
+    });
+    const filieresParEtablissement = new Map<string, Set<string>>();
+    for (const o of offres) {
+      const filieresVues = filieresParEtablissement.get(o.etablissementId) ?? new Set();
+      filieresVues.add(o.filiereId);
+      filieresParEtablissement.set(o.etablissementId, filieresVues);
+    }
+    const ids = [...filieresParEtablissement.entries()]
+      .filter(([, vues]) => filiereIds.every((id) => vues.has(id)))
+      .map(([etablissementId]) => etablissementId);
+    return this.prisma.etablissement.findMany({
+      where: { id: { in: ids } },
+      select: ETABLISSEMENT_POUR_VOEU,
+      orderBy: [{ departement: { sort: 'asc', nulls: 'last' } }, { nom: 'asc' }],
+    });
   }
 }

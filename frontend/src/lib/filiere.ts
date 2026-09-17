@@ -88,6 +88,16 @@ export interface LieuDeFormation {
 export const resumeLieux = (offres: LieuDeFormation[]) =>
   offres.map(({ etablissement: e }) => (e.commune ? `${e.nom} (${e.commune})` : e.nom)).join(', ');
 
+/** Établissement proposé au choix de la fiche unique d'inscription (contrairement à LieuDeFormation, porte un id : sert à l'enregistrer). */
+export interface EtablissementPourVoeu {
+  id: string;
+  code: string | null;
+  nom: string;
+  commune: string | null;
+  departement: string | null;
+  internat: boolean | null;
+}
+
 /** Élément de liste, ou groupe d'éléments sous un intertitre du document officiel. */
 export type ElementListe = string | { titre: string; elements: string[] };
 

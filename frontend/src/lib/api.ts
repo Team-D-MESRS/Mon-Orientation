@@ -1,5 +1,5 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
-import type { Filiere, PageFilieres, ValeursFiltres } from './filiere';
+import type { EtablissementPourVoeu, Filiere, PageFilieres, ValeursFiltres } from './filiere';
 import type { Decouverte, Favori, Palier, Preference, ProfilApprenant, Recommandation, ReponsesDecouverte } from './apprenant';
 import { CLES_JETONS, useAuthStore, type Utilisateur } from '@/stores/authStore';
 
@@ -94,7 +94,10 @@ export interface ApprenantResume {
 export interface DonneesVoeux {
   filiereId1: string;
   filiereId2?: string;
+  /** Terminale seulement */
   filiereId3?: string;
+  /** 3e seulement */
+  etablissementId?: string;
   motivation?: string;
 }
 
@@ -135,6 +138,11 @@ export const filiereApi = {
   filtres: () => api.get<ValeursFiltres>('/filiere/filtres'),
   get: (id: string) => api.get<Filiere>(`/filiere/${id}`),
   getDebouches: (id: string) => api.get(`/filiere/${id}/debouches`),
+  /** Établissements qui dispensent toutes les filières données (choix d'établissement de la fiche unique). */
+  etablissementsCommuns: (filiereIds: string[]) =>
+    api.get<EtablissementPourVoeu[]>('/filiere/etablissements', {
+      params: { filiere1: filiereIds[0], filiere2: filiereIds[1] },
+    }),
 };
 
 export const apprenantApi = {

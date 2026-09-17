@@ -13,13 +13,15 @@ import {
   type Preference,
   type ProfilApprenant,
 } from '@/lib/apprenant';
-import { TYPE_LABELS, correspond, type Filiere, type TypeFiliere } from '@/lib/filiere';
+import { TYPE_LABELS, correspond, type EtablissementPourVoeu, type Filiere, type TypeFiliere } from '@/lib/filiere';
 import { messageErreur } from '@/lib/erreurs';
 import { useEspace, useProfil } from '@/components/espace/EspaceContext';
 import { Alerte, BadgeType, CHAMP, Chargement, PastilleRang } from '@/components/espace/ui';
 
-const NB_VOEUX = 3;
-const RECAPITULATIF = NB_VOEUX + 1;
+// En 3e (entrée en lycée technique) comme en Terminale (admission au supérieur) : 3 étapes. Ce qui
+// change selon le niveau, c'est ce qu'on y choisit — voir SaisieDesVoeux.
+const NB_ETAPES = 3;
+const RECAPITULATIF = NB_ETAPES + 1;
 
 export default function PreferencesPage() {
   const profil = useProfil();
@@ -89,6 +91,25 @@ function ListeVoeux({ voeux }: { voeux: (Filiere | null | undefined)[] }) {
   );
 }
 
+/** Établissement demandé (3e seulement, fiche unique d'inscription) : pas un choix classé comme les vœux, pas de pastille de rang. */
+function CarteEtablissement({ etablissement }: { etablissement: EtablissementPourVoeu | null }) {
+  return (
+    <div className="flex items-center gap-3v p-4v rounded-bj-sm border border-bj-gray-925">
+      {etablissement ? (
+        <div className="flex-1 min-w-0">
+          <p className="font-medium">{etablissement.nom}</p>
+          <p className="mt-1v text-xs text-bj-gray-500">
+            {[etablissement.commune, etablissement.departement].filter(Boolean).join(', ') || 'Lieu non renseigné'}
+            {etablissement.internat ? ' · Internat' : ''}
+          </p>
+        </div>
+      ) : (
+        <p className="flex-1 text-bj-gray-500">Établissement non renseigné</p>
+      )}
+    </div>
+  );
+}
+
 function VoeuxEnLecture({
   profil,
   preference,
@@ -106,6 +127,7 @@ function VoeuxEnLecture({
   if (!preference) {
     return <Alerte ton="info">{profil.prenom} n&apos;a pas encore saisi ses vœux.</Alerte>;
   }
+  const estBepc = niveauDuPalier(profil.palier as NonNullable<ProfilApprenant['palier']>) === 'APRES_BEPC';
 
   const valider = async () => {
     setEnvoi(true);
@@ -123,7 +145,13 @@ function VoeuxEnLecture({
   return (
     <section className="bg-white rounded-bj-md border border-bj-gray-925 p-6v">
       <h2 className="text-xl font-bold mb-4v">Vœux de {profil.prenom}</h2>
-      <ListeVoeux voeux={[preference.filiere1, preference.filiere2, preference.filiere3]} />
+      <ListeVoeux voeux={estBepc ? [preference.filiere1, preference.filiere2] : [preference.filiere1, preference.filiere2, preference.filiere3]} />
+      {estBepc && (
+        <div className="mt-3v">
+          <p className="text-sm font-medium mb-2v">Établissement demandé</p>
+          <CarteEtablissement etablissement={preference.etablissement} />
+        </div>
+      )}
       {preference.motivation && (
         <blockquote className="mt-4v text-sm border-l-4 border-bj-green pl-4v italic">« {preference.motivation} »</blockquote>
       )}
@@ -162,11 +190,17 @@ function SaisieDesVoeux({
   onEnregistre: (preference: Preference | null) => void;
 }) {
   const palier = profil.palier as NonNullable<ProfilApprenant['palier']>;
+  // 3e (entrée en lycée technique) : 2 choix de spécialité classés + 1 établissement qui les dispense tous
+  // deux (fiche unique d'inscription MESRS/DESTFP). Terminale (admission au supérieur) : 3 choix libres,
+  // sans établissement — un circuit différent, non couvert par cette fiche.
+  const estBepc = niveauDuPalier(palier) === 'APRES_BEPC';
   const [choix, setChoix] = useState<(string | null)[]>([
     preference?.filiereId1 ?? null,
     preference?.filiereId2 ?? null,
     preference?.filiereId3 ?? null,
   ]);
+  const [etablissement, setEtablissement] = useState<EtablissementPourVoeu | null>(preference?.etablissement ?? null);
+  const [etablissements, setEtablissements] = useState<EtablissementPourVoeu[] | null>(null);
   const [motivation, setMotivation] = useState(preference?.motivation ?? '');
   const [etape, setEtape] = useState(preference ? RECAPITULATIF : 1);
   const [filieres, setFilieres] = useState<Filiere[] | null>(null);
@@ -190,11 +224,38 @@ function SaisieDesVoeux({
       .catch(() => undefined);
   }, [palier, profil.nip]);
 
+  const estEtapeEtablissement = estBepc && etape === 3;
+  const premierChoix = choix[0];
+  const deuxiemeChoix = choix[1];
+
+  // Établissement de la fiche unique : chargé seulement à l'étape 3 en 3e, filtré aux deux spécialités choisies
+  useEffect(() => {
+    if (!estEtapeEtablissement) return;
+    const filiereIds = [premierChoix, deuxiemeChoix].filter((id): id is string => !!id);
+    if (filiereIds.length === 0) {
+      setEtablissements([]);
+      return;
+    }
+    let annule = false;
+    setEtablissements(null);
+    filiereApi
+      .etablissementsCommuns(filiereIds)
+      .then(({ data }) => {
+        if (!annule) setEtablissements(data);
+      })
+      .catch((err) => {
+        if (!annule) setErreur(messageErreur(err));
+      });
+    return () => {
+      annule = true;
+    };
+  }, [estEtapeEtablissement, premierChoix, deuxiemeChoix]);
+
   const parId = useMemo(() => new Map((filieres ?? []).map((f) => [f.id, f])), [filieres]);
   const types = useMemo(() => Array.from(new Set((filieres ?? []).map((f) => f.type))), [filieres]);
 
   // Enregistrement à chaque étape : un vœu choisi n'est jamais perdu
-  const enregistrer = async (nouveauxChoix: (string | null)[]) => {
+  const enregistrer = async (nouveauxChoix: (string | null)[], nouvelEtablissement: EtablissementPourVoeu | null = etablissement) => {
     const [f1, f2, f3] = nouveauxChoix;
     if (!f1) return false;
     setEnvoi(true);
@@ -204,7 +265,7 @@ function SaisieDesVoeux({
       const { data } = await apprenantApi.enregistrerPreferences(profil.nip, {
         filiereId1: f1,
         ...(f2 ? { filiereId2: f2 } : {}),
-        ...(f2 && f3 ? { filiereId3: f3 } : {}),
+        ...(estBepc ? (nouvelEtablissement ? { etablissementId: nouvelEtablissement.id } : {}) : f2 && f3 ? { filiereId3: f3 } : {}),
         ...(motivation.trim() ? { motivation: motivation.trim() } : {}),
       });
       onEnregistre(data.find((p) => p.palier === palier) ?? null);
@@ -227,12 +288,15 @@ function SaisieDesVoeux({
   const passer = async () => {
     const sansLaSuite = choix.map((c, i) => (i >= etape - 1 ? null : c));
     setChoix(sansLaSuite);
-    if (await enregistrer(sansLaSuite)) setEtape(RECAPITULATIF);
+    const nouvelEtablissement = estEtapeEtablissement ? null : etablissement;
+    setEtablissement(nouvelEtablissement);
+    if (await enregistrer(sansLaSuite, nouvelEtablissement)) setEtape(RECAPITULATIF);
   };
 
   if (!filieres) return erreur ? <Alerte ton="erreur">{erreur}</Alerte> : <Chargement />;
 
   if (etape === RECAPITULATIF) {
+    const choixAffiches = estBepc ? choix.slice(0, 2) : choix;
     return (
       <section className="bg-white rounded-bj-md border border-bj-gray-925 p-6v space-y-6v">
         <div>
@@ -240,14 +304,25 @@ function SaisieDesVoeux({
           <p className="text-sm text-bj-gray-500">Vérifie tes choix, ajoute une motivation si tu le souhaites, puis enregistre.</p>
         </div>
 
-        <ListeVoeux voeux={choix.map((id) => (id ? parId.get(id) : null))} />
+        <ListeVoeux voeux={choixAffiches.map((id) => (id ? parId.get(id) : null))} />
+        {estBepc && (
+          <div>
+            <p className="text-sm font-medium mb-2v">Établissement demandé</p>
+            <CarteEtablissement etablissement={etablissement} />
+          </div>
+        )}
         <div className="flex flex-wrap gap-3v">
-          {choix.map((id, i) =>
+          {choixAffiches.map((id, i) =>
             i === 0 || choix[i - 1] ? (
               <button key={i} type="button" onClick={() => setEtape(i + 1)} className="text-sm font-medium text-bj-green hover:underline">
                 {id ? `Modifier le ${ORDINAUX[i]} choix` : `Ajouter un ${ORDINAUX[i]} choix`}
               </button>
             ) : null,
+          )}
+          {estBepc && premierChoix && (
+            <button type="button" onClick={() => setEtape(3)} className="text-sm font-medium text-bj-green hover:underline">
+              {etablissement ? "Modifier l'établissement" : 'Choisir un établissement'}
+            </button>
           )}
         </div>
 
@@ -288,6 +363,92 @@ function SaisieDesVoeux({
     );
   }
 
+  const progression = (
+    <div className="mb-6v">
+      <p className="text-sm font-medium text-bj-green mb-2v">
+        Étape {etape} sur {NB_ETAPES}
+      </p>
+      <div
+        className="h-2 rounded-full bg-bj-gray-925 overflow-hidden"
+        role="progressbar"
+        aria-label="Progression de la saisie des vœux"
+        aria-valuemin={0}
+        aria-valuemax={NB_ETAPES}
+        aria-valuenow={etape}
+      >
+        <div className="h-full bg-bj-green transition-all" style={{ width: `${(etape / NB_ETAPES) * 100}%` }} />
+      </div>
+    </div>
+  );
+
+  if (estEtapeEtablissement) {
+    return (
+      <section className="bg-white rounded-bj-md border border-bj-gray-925 p-6v">
+        {progression}
+
+        <h2 className="text-xl font-bold mb-1v">Ton établissement</h2>
+        <p className="text-sm text-bj-gray-500 mb-4v">
+          Assure-toi que l&apos;établissement choisi dispense bien {deuxiemeChoix ? 'tes deux choix de spécialité' : 'ton choix de spécialité'}.
+        </p>
+
+        {etablissements === null ? (
+          <Chargement />
+        ) : etablissements.length === 0 ? (
+          <Alerte ton="info">
+            Aucun établissement ne dispense {deuxiemeChoix ? 'ces deux formations à la fois' : 'cette formation'}.{' '}
+            {deuxiemeChoix ? 'Modifie un de tes choix pour continuer.' : 'Modifie ton choix pour continuer.'}
+          </Alerte>
+        ) : (
+          <fieldset>
+            <legend className="sr-only">Choisis un établissement</legend>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3v max-h-[28rem] overflow-y-auto pr-1v">
+              {etablissements.map((e) => (
+                <label
+                  key={e.id}
+                  className={`flex gap-3v p-4v rounded-bj-sm border cursor-pointer transition-colors ${
+                    etablissement?.id === e.id ? 'border-bj-green bg-bj-green/5 ring-1 ring-bj-green' : 'border-bj-gray-925 hover:border-bj-green'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="etablissement-voeu"
+                    value={e.id}
+                    checked={etablissement?.id === e.id}
+                    onChange={() => setEtablissement(e)}
+                    className="mt-1 accent-bj-green"
+                  />
+                  <span className="flex-1 min-w-0">
+                    <span className="block font-medium">{e.nom}</span>
+                    <span className="mt-1v block text-xs text-bj-gray-500">
+                      {[e.commune, e.departement].filter(Boolean).join(', ') || 'Lieu non renseigné'}
+                      {e.internat ? ' · Internat' : ''}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        )}
+
+        {erreur && <Alerte ton="erreur">{erreur}</Alerte>}
+
+        <div className="flex flex-wrap gap-3v justify-between mt-6v">
+          <button type="button" onClick={() => setEtape(etape - 1)} className="bj-btn bj-btn-secondary">
+            ← Retour
+          </button>
+          <div className="flex flex-wrap gap-3v">
+            <button type="button" onClick={passer} disabled={envoi} className="bj-btn bj-btn-secondary">
+              Je choisirai plus tard
+            </button>
+            <button type="button" onClick={continuer} disabled={!etablissement || envoi} className="bj-btn bj-btn-primary disabled:opacity-60">
+              {envoi ? 'Enregistrement…' : 'Enregistrer et continuer →'}
+            </button>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   const autresChoix = choix.filter((c, i) => c && i !== etape - 1);
   const proposees = filieres
     .filter(
@@ -304,21 +465,7 @@ function SaisieDesVoeux({
 
   return (
     <section className="bg-white rounded-bj-md border border-bj-gray-925 p-6v">
-      <div className="mb-6v">
-        <p className="text-sm font-medium text-bj-green mb-2v">
-          Étape {etape} sur {NB_VOEUX}
-        </p>
-        <div
-          className="h-2 rounded-full bg-bj-gray-925 overflow-hidden"
-          role="progressbar"
-          aria-label="Progression de la saisie des vœux"
-          aria-valuemin={0}
-          aria-valuemax={NB_VOEUX}
-          aria-valuenow={etape}
-        >
-          <div className="h-full bg-bj-green transition-all" style={{ width: `${(etape / NB_VOEUX) * 100}%` }} />
-        </div>
-      </div>
+      {progression}
 
       <h2 className="text-xl font-bold mb-1v">{etape === 1 ? "Quelle formation t'intéresse le plus ?" : `Ton ${ORDINAUX[etape - 1]} choix`}</h2>
       <p className="text-sm text-bj-gray-500 mb-4v">
@@ -395,7 +542,11 @@ function SaisieDesVoeux({
                 name={`voeu-${etape}`}
                 value={f.id}
                 checked={selection === f.id}
-                onChange={() => setChoix(choix.map((c, i) => (i === etape - 1 ? f.id : c)))}
+                onChange={() => {
+                  setChoix(choix.map((c, i) => (i === etape - 1 ? f.id : c)));
+                  // L'établissement choisi doit dispenser les deux spécialités : un changement de choix l'invalide.
+                  if (estBepc && etablissement) setEtablissement(null);
+                }}
                 className="mt-1 accent-bj-green"
               />
               <span className="flex-1 min-w-0">

@@ -57,9 +57,9 @@ model Utilisateur {
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
-  apprenant         Apprenant?
-  parentLinks       ParentApprenant[] @relation("Parent")
-  sessions          Session[]
+  apprenant   Apprenant?
+  parentLinks ParentApprenant[] @relation("Parent")
+  sessions    Session[]
 
   @@map("utilisateurs")
 }
@@ -72,30 +72,30 @@ model Session {
   expiresAt     DateTime @map("expires_at")
   createdAt     DateTime @default(now()) @map("created_at")
 
-  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  utilisateur Utilisateur @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
 }
 
 model Apprenant {
-  nip             String   @id
+  nip              String    @id
   /// Numéro figurant sur les documents officiels du ministère (fiche unique d'inscription ITP) ;
   /// accepté à l'identification au même titre que le NIP.
-  numeroEducmaster String? @unique @map("numero_educmaster")
-  utilisateurId   String?  @unique @map("utilisateur_id")
-  nom             String
-  prenom          String
-  dateNaissance   DateTime @map("date_naissance")
-  sexe            String
-  departement     String
-  commune         String
-  palier          Palier?
-  serie           String?
-  derniereSync    DateTime? @map("derniere_sync")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  numeroEducmaster String?   @unique @map("numero_educmaster")
+  utilisateurId    String?   @unique @map("utilisateur_id")
+  nom              String
+  prenom           String
+  dateNaissance    DateTime  @map("date_naissance")
+  sexe             String
+  departement      String
+  commune          String
+  palier           Palier?
+  serie            String?
+  derniereSync     DateTime? @map("derniere_sync")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  utilisateur     Utilisateur? @relation(fields: [utilisateurId], references: [id])
+  utilisateur     Utilisateur?      @relation(fields: [utilisateurId], references: [id])
   notes           Note[]
   preferences     Preference[]
   recommandations Recommandation[]
@@ -112,56 +112,57 @@ model Apprenant {
 /// modifiable ensuite. Bloquant avant les pistes côté frontend (décision du 16/09) ; le moteur
 /// dégrade sans lui, comme pour une note ou un taux d'insertion absents.
 model Decouverte {
-  apprenantNip  String   @id @map("apprenant_nip")
+  apprenantNip String   @id @map("apprenant_nip")
   /// Réponses brutes du questionnaire (voir ReponsesDecouverte, backend/src/apprenant/decouverte.ts) ;
   /// JSON pour ajuster le contenu du questionnaire sans migration
-  reponses      Json
+  reponses     Json
   /// Affinité par domaine déduite des réponses, normalisée entre 0 et 1 ; alimente le critère
   /// "intérêt" du moteur d'orientation (backend/src/apprenant/decouverte.ts)
-  affinites     Json
-  dateSaisie    DateTime @default(now()) @map("date_saisie")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  affinites    Json
+  dateSaisie   DateTime @default(now()) @map("date_saisie")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  apprenant     Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
+  apprenant Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
 
   @@map("decouvertes")
 }
 
 model ParentApprenant {
-  id              String    @id @default(uuid())
-  parentUserId    String    @map("parent_user_id")
-  apprenantNip    String    @map("apprenant_nip")
-  relation        String
-  createdAt       DateTime  @default(now()) @map("created_at")
+  id           String   @id @default(uuid())
+  parentUserId String   @map("parent_user_id")
+  apprenantNip String   @map("apprenant_nip")
+  relation     String
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  parent          Utilisateur @relation("Parent", fields: [parentUserId], references: [id], onDelete: Cascade)
-  apprenant       Apprenant   @relation("Apprenant", fields: [apprenantNip], references: [nip], onDelete: Cascade)
+  parent    Utilisateur @relation("Parent", fields: [parentUserId], references: [id], onDelete: Cascade)
+  apprenant Apprenant   @relation("Apprenant", fields: [apprenantNip], references: [nip], onDelete: Cascade)
 
   @@map("parent_apprenant")
 }
 
 model Etablissement {
-  id              String            @id @default(uuid())
-  educmasterId    String?           @unique @map("educmaster_id")
+  id           String            @id @default(uuid())
+  educmasterId String?           @unique @map("educmaster_id")
   /// Identifiant stable du référentiel (ex. « UAC-FSS »), utilisé par le seed
-  code            String?           @unique
-  nom             String
-  sigle           String?
-  universite      String?
-  type            TypeEtablissement
+  code         String?           @unique
+  nom          String
+  sigle        String?
+  universite   String?
+  type         TypeEtablissement
   /// Non renseignés par le guide du MESRS
-  departement     String?
-  commune         String?
+  departement  String?
+  commune      String?
   /// Répertoires officiels des lycées techniques (DESTFP) ; inconnus pour les écoles des métiers
-  quartier        String?
-  internat        Boolean?
-  externat        Boolean?
-  capacite        Int?
-  createdAt       DateTime          @default(now()) @map("created_at")
-  updatedAt       DateTime          @updatedAt @map("updated_at")
+  quartier     String?
+  internat     Boolean?
+  externat     Boolean?
+  capacite     Int?
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
 
-  filieres        Filiere[]
-  offres          OffreFormation[]
+  filieres    Filiere[]
+  offres      OffreFormation[]
+  preferences Preference[]
 
   @@map("etablissements")
 }
@@ -170,13 +171,13 @@ model Etablissement {
 /// établissements. Sources : répertoires officiels des LTP et LTA ; écoles des métiers d'après le
 /// catalogue des nouveaux métiers. Le supérieur garde son établissement unique (Filiere.etablissementId).
 model OffreFormation {
-  filiereId       String   @map("filiere_id")
-  etablissementId String   @map("etablissement_id")
+  filiereId       String  @map("filiere_id")
+  etablissementId String  @map("etablissement_id")
   duree           String?
   source          String
 
-  filiere         Filiere       @relation(fields: [filiereId], references: [id], onDelete: Cascade)
-  etablissement   Etablissement @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
+  filiere       Filiere       @relation(fields: [filiereId], references: [id], onDelete: Cascade)
+  etablissement Etablissement @relation(fields: [etablissementId], references: [id], onDelete: Cascade)
 
   @@id([filiereId, etablissementId])
   @@index([etablissementId])
@@ -184,138 +185,144 @@ model OffreFormation {
 }
 
 model Filiere {
-  id                String      @id @default(uuid())
-  code              String?     @unique
-  nom               String
-  type              TypeFiliere
-  niveauAcces       NiveauAcces? @map("niveau_acces")
-  description       String?
-  diplomesDelivres  Json?       @map("diplomes_delivres")
-  metiersVises      Json?       @map("metiers_vises")
-  debouches         String?
-  tauxInsertion     Float?      @map("taux_insertion")
-  conditionsAcces   String?     @map("conditions_acces")
-  seriesAdmises     Json?       @map("series_admises")
-  ouSeFormer        String?     @map("ou_se_former")
-  bourses           Boolean?
-  sources           Json?
+  id                 String       @id @default(uuid())
+  code               String?      @unique
+  nom                String
+  type               TypeFiliere
+  niveauAcces        NiveauAcces? @map("niveau_acces")
+  description        String?
+  diplomesDelivres   Json?        @map("diplomes_delivres")
+  metiersVises       Json?        @map("metiers_vises")
+  debouches          String?
+  tauxInsertion      Float?       @map("taux_insertion")
+  conditionsAcces    String?      @map("conditions_acces")
+  seriesAdmises      Json?        @map("series_admises")
+  ouSeFormer         String?      @map("ou_se_former")
+  bourses            Boolean?
+  sources            Json?
   /// Codes de src/filiere/domaines.ts (secteurs d'activité, filtre du catalogue)
-  domaines          String[]    @default([])
+  domaines           String[]     @default([])
   /// Admission au supérieur, d'après le guide officiel du MESRS : places avec bourse, aides universitaires ou places
   /// partiellement payantes, mode d'entrée (Classement, Concours…), séries et matières telles qu'écrites dans le guide
-  quotaBourses      Int?        @map("quota_bourses")
-  quotaAides        Int?        @map("quota_aides")
-  modeEntree        String?     @map("mode_entree")
-  seriesRecommandees String?    @map("series_recommandees")
-  matieresClassement String?    @map("matieres_classement")
+  quotaBourses       Int?         @map("quota_bourses")
+  quotaAides         Int?         @map("quota_aides")
+  modeEntree         String?      @map("mode_entree")
+  seriesRecommandees String?      @map("series_recommandees")
+  matieresClassement String?      @map("matieres_classement")
   /// Matières des bulletins retenues par le moteur d'orientation (sinon : règles de src/orientation/profils-filieres.ts)
-  matieresCles      Json?       @map("matieres_cles")
+  matieresCles       Json?        @map("matieres_cles")
   /// Fiche retirée des listes, des recommandations et des comptages, mais toujours consultable par
   /// son lien : les séries générales du bac restent la clé de tri du filtre « Et après ce bac ? »
-  masquee           Boolean     @default(false)
+  masquee            Boolean      @default(false)
   /// Fiche métier des catalogues officiels des nouveaux métiers (DTM) : secteur, missions, compétences,
   /// qualités requises, débouchés, employeurs… Forme décrite dans prisma/data/fiches-metiers.ts
-  contenuMetier     Json?       @map("contenu_metier")
-  etablissementId   String?     @map("etablissement_id")
-  imageUrl          String?     @map("image_url")
-  createdAt         DateTime    @default(now()) @map("created_at")
-  updatedAt         DateTime    @updatedAt @map("updated_at")
+  contenuMetier      Json?        @map("contenu_metier")
+  etablissementId    String?      @map("etablissement_id")
+  imageUrl           String?      @map("image_url")
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
 
-  etablissement     Etablissement? @relation(fields: [etablissementId], references: [id])
-  notes             Note[]
-  preferences1      Preference[] @relation("PrefFiliere1")
-  preferences2      Preference[] @relation("PrefFiliere2")
-  preferences3      Preference[] @relation("PrefFiliere3")
-  recommandations   Recommandation[]
-  conversations     ConversationIA[]
-  favoris           Favori[]
-  offres            OffreFormation[]
+  etablissement   Etablissement?   @relation(fields: [etablissementId], references: [id])
+  notes           Note[]
+  preferences1    Preference[]     @relation("PrefFiliere1")
+  preferences2    Preference[]     @relation("PrefFiliere2")
+  preferences3    Preference[]     @relation("PrefFiliere3")
+  recommandations Recommandation[]
+  conversations   ConversationIA[]
+  favoris         Favori[]
+  offres          OffreFormation[]
 
   @@map("filieres")
 }
 
 /// Formations mises de côté par l'élève en parcourant le catalogue ; proposées en premier lors de la saisie des vœux
 model Favori {
-  apprenantNip    String   @map("apprenant_nip")
-  filiereId       String   @map("filiere_id")
-  createdAt       DateTime @default(now()) @map("created_at")
+  apprenantNip String   @map("apprenant_nip")
+  filiereId    String   @map("filiere_id")
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  apprenant       Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
-  filiere         Filiere   @relation(fields: [filiereId], references: [id], onDelete: Cascade)
+  apprenant Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
+  filiere   Filiere   @relation(fields: [filiereId], references: [id], onDelete: Cascade)
 
   @@id([apprenantNip, filiereId])
   @@map("favoris")
 }
 
 model Note {
-  id              String   @id @default(uuid())
-  apprenantNip    String   @map("apprenant_nip")
-  matiere         String
-  note            Float
-  bareme          Int      @default(20)
-  trimestre       Int
-  anneeScolaire   String   @map("annee_scolaire")
-  derniereSync    DateTime? @map("derniere_sync")
-  createdAt       DateTime @default(now()) @map("created_at")
+  id            String    @id @default(uuid())
+  apprenantNip  String    @map("apprenant_nip")
+  matiere       String
+  note          Float
+  bareme        Int       @default(20)
+  trimestre     Int
+  anneeScolaire String    @map("annee_scolaire")
+  derniereSync  DateTime? @map("derniere_sync")
+  createdAt     DateTime  @default(now()) @map("created_at")
 
-  apprenant       Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
-  filiereId       String?   @map("filiere_id")
-  filiere         Filiere?  @relation(fields: [filiereId], references: [id])
+  apprenant Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
+  filiereId String?   @map("filiere_id")
+  filiere   Filiere?  @relation(fields: [filiereId], references: [id])
 
   @@unique([apprenantNip, matiere, trimestre, anneeScolaire])
   @@map("notes")
 }
 
 model Preference {
-  id              String   @id @default(uuid())
-  apprenantNip    String   @map("apprenant_nip")
-  palier          Palier
-  filiereId1      String?  @map("filiere_id_1")
-  filiereId2      String?  @map("filiere_id_2")
-  filiereId3      String?  @map("filiere_id_3")
-  motivation      String?
-  dateSaisie      DateTime @default(now()) @map("date_saisie")
-  valideParent    Boolean  @default(false) @map("valide_parent")
+  id                   String    @id @default(uuid())
+  apprenantNip         String    @map("apprenant_nip")
+  palier               Palier
+  filiereId1           String?   @map("filiere_id_1")
+  filiereId2           String?   @map("filiere_id_2")
+  /// Terminale (admission au supérieur) seulement : la fiche unique d'inscription en lycée technique
+  /// (3e) ne retient que 2 choix de spécialité, voir etablissementId.
+  filiereId3           String?   @map("filiere_id_3")
+  /// 3e seulement : établissement demandé, d'après la fiche unique d'inscription (2 choix de spécialité
+  /// + 1 établissement qui doit dispenser les deux, pas de vœu d'établissement à l'entrée au supérieur)
+  etablissementId      String?   @map("etablissement_id")
+  motivation           String?
+  dateSaisie           DateTime  @default(now()) @map("date_saisie")
+  valideParent         Boolean   @default(false) @map("valide_parent")
   dateValidationParent DateTime? @map("date_validation_parent")
 
-  apprenant       Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
-  filiere1        Filiere?  @relation("PrefFiliere1", fields: [filiereId1], references: [id])
-  filiere2        Filiere?  @relation("PrefFiliere2", fields: [filiereId2], references: [id])
-  filiere3        Filiere?  @relation("PrefFiliere3", fields: [filiereId3], references: [id])
+  apprenant     Apprenant      @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
+  filiere1      Filiere?       @relation("PrefFiliere1", fields: [filiereId1], references: [id])
+  filiere2      Filiere?       @relation("PrefFiliere2", fields: [filiereId2], references: [id])
+  filiere3      Filiere?       @relation("PrefFiliere3", fields: [filiereId3], references: [id])
+  etablissement Etablissement? @relation(fields: [etablissementId], references: [id])
 
   @@unique([apprenantNip, palier])
   @@map("preferences")
 }
 
 model Recommandation {
-  id              String   @id @default(uuid())
-  apprenantNip    String   @map("apprenant_nip")
-  palier          Palier
-  filiereId       String   @map("filiere_id")
-  score           Float
-  explication     String?
-  criteres        Json?
-  dateGeneration  DateTime @default(now()) @map("date_generation")
-  active          Boolean  @default(true)
+  id             String   @id @default(uuid())
+  apprenantNip   String   @map("apprenant_nip")
+  palier         Palier
+  filiereId      String   @map("filiere_id")
+  score          Float
+  explication    String?
+  criteres       Json?
+  dateGeneration DateTime @default(now()) @map("date_generation")
+  active         Boolean  @default(true)
 
-  apprenant       Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
-  filiere         Filiere   @relation(fields: [filiereId], references: [id])
+  apprenant Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
+  filiere   Filiere   @relation(fields: [filiereId], references: [id])
 
   @@map("recommandations")
 }
 
 model ConversationIA {
-  id              String   @id @default(uuid())
-  apprenantNip    String   @map("apprenant_nip")
-  messages        Json
-  langue          String   @default("fr")
-  palier          Palier
-  dateDebut       DateTime @default(now()) @map("date_debut")
-  dateFin         DateTime? @map("date_fin")
+  id           String    @id @default(uuid())
+  apprenantNip String    @map("apprenant_nip")
+  messages     Json
+  langue       String    @default("fr")
+  palier       Palier
+  dateDebut    DateTime  @default(now()) @map("date_debut")
+  dateFin      DateTime? @map("date_fin")
 
-  apprenant       Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
-  filiereId       String?   @map("filiere_id")
-  filiere         Filiere?  @relation(fields: [filiereId], references: [id])
+  apprenant Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
+  filiereId String?   @map("filiere_id")
+  filiere   Filiere?  @relation(fields: [filiereId], references: [id])
 
   @@map("conversations_ia")
 }

@@ -85,6 +85,18 @@ export class FiliereController {
     return this.filiereService.filtres();
   }
 
+  // Déclarée avant « :id », qui l'intercepterait sinon
+  @Get('etablissements')
+  @ApiOperation({ summary: "Établissements dispensant toutes les filières données (choix d'établissement de la fiche unique)" })
+  @ApiQuery({ name: 'filiere1', required: true })
+  @ApiQuery({ name: 'filiere2', required: false })
+  async etablissements(@Query('filiere1') filiere1Brut?: unknown, @Query('filiere2') filiere2Brut?: unknown) {
+    const filiere1 = unique('filiere1', filiere1Brut);
+    const filiere2 = unique('filiere2', filiere2Brut);
+    if (!filiere1) throw new BadRequestException('filiere1 est requis');
+    return this.filiereService.etablissementsCommuns([filiere1, filiere2].filter((id): id is string => !!id));
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Détail d\'une filière' })
   async findOne(@Param('id') id: string) {

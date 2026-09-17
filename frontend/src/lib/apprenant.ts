@@ -1,4 +1,4 @@
-import type { Domaine, Filiere, NiveauAcces } from './filiere';
+import type { Domaine, EtablissementPourVoeu, Filiere, NiveauAcces } from './filiere';
 
 export type Palier = 'QUATRIEME' | 'TROISIEME' | 'PREMIERE' | 'TERMINALE';
 
@@ -41,10 +41,14 @@ export interface Preference {
   palier: Palier;
   filiereId1: string | null;
   filiereId2: string | null;
+  /** Terminale seulement : en 3e, la fiche unique d'inscription ne retient que 2 choix de spécialité. */
   filiereId3: string | null;
   filiere1: Filiere | null;
   filiere2: Filiere | null;
   filiere3: Filiere | null;
+  /** 3e seulement : établissement demandé, qui doit dispenser les spécialités choisies. */
+  etablissementId: string | null;
+  etablissement: EtablissementPourVoeu | null;
   motivation: string | null;
   dateSaisie: string;
   valideParent: boolean;

@@ -6,6 +6,8 @@ personnel() { req POST /auth/personnel "" "{\"identifiant\":\"$1\",\"motDePasse\
 id_filiere() { curl -s "$A/filiere?search=$1" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);console.log((j.items.find(f=>f.code===process.argv[1])||j.items[0]).id)})' "$1"; }
 # Fiche masquée (série générale) : absente des listes, son id vient des filtres du catalogue
 id_serie() { curl -s "$A/filiere/filtres" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).series.find(x=>x.serie===process.argv[1]).filiereId))' "$1"; }
+# Établissement dispensant la (ou les deux) filière(s) donnée(s), résolu par code (fiche unique d'inscription)
+id_etablissement() { curl -s "$A/filiere/etablissements?filiere1=$2${3:+&filiere2=$3}" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);console.log((j.find(e=>e.code===process.argv[1])||{}).id)})' "$1"; }
 reinitialiser() { $PSQL <<SQL
 delete from preferences where apprenant_nip like 'DEMO-%';
 delete from recommandations where apprenant_nip like 'DEMO-%';
@@ -20,7 +22,10 @@ curl -s -o /dev/null --retry 30 --retry-all-errors --retry-delay 1 --max-time 3 
 reinitialiser
 TF=$(jeton DEMO-3E-0001); TK=$(jeton DEMO-TLE-0001); TP=$(jeton parent.demo@monorientation.bj); TD=$(personnel dges.demo@monorientation.bj)
 F3=$(id_filiere BAC-F3); G2=$(id_filiere BAC-G2); ELEC=$(id_filiere DTM-LTP-ELEC); MED=$(id_filiere UNIV-FSS-MEDECINE); MASQUEE=$(id_serie D)
-echo "jetons: F=${TF:0:8}… K=${TK:0:8}… P=${TP:0:8}… D=${TD:0:8}… | filières F3=${F3:0:8} G2=${G2:0:8} ELEC=${ELEC:0:8} MED=${MED:0:8}"
+ENEAM=$(id_filiere UNIV-ENEAM-GESTION); EPAC=$(id_filiere UNIV-EPAC-GC)
+# LTP Coulibaly (Cotonou) dispense F3 et G2 ; LTP Tchaourou dispense F3 mais pas G2 (fiche unique : rejeté)
+COULIBALY=$(id_etablissement LTP-COULIBALY "$F3" "$G2"); TCHAOUROU=$(id_etablissement LTP-TCHAOUROU "$F3")
+echo "jetons: F=${TF:0:8}… K=${TK:0:8}… P=${TP:0:8}… D=${TD:0:8}… | filières F3=${F3:0:8} G2=${G2:0:8} ELEC=${ELEC:0:8} MED=${MED:0:8} | établ. Coulibaly=${COULIBALY:0:8}"
 
 echo "── Profil et bilan"
 check "Fatou → son profil" 200 $(req GET /apprenant/DEMO-3E-0001 "$TF")
@@ -100,24 +105,33 @@ delete from utilisateurs where nip like 'TEST-LOT4-%';
 delete from apprenants where nip like 'TEST-LOT4-%';
 SQL
 
-echo "── Vœux"
+echo "── Vœux (3e : fiche unique d'inscription — 2 choix de spécialité + 1 établissement qui les dispense tous deux)"
 check "vœux avec une filière du supérieur (3e) → 400" 400 $(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$MED\"}")
 check "vœu sur une fiche masquée (bac général) → 400" 400 $(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$MASQUEE\"}")
 check "vœux en double → 400" 400 $(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$F3\",\"filiereId2\":\"$F3\"}")
-check "3e vœu sans 2e → 400" 400 $(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$F3\",\"filiereId3\":\"$G2\"}")
+check "3e choix en 3e → 400 (la fiche unique n'en retient que 2)" 400 $(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$F3\",\"filiereId2\":\"$G2\",\"filiereId3\":\"$ELEC\"}")
 check "identifiant invalide → 400" 400 $(req POST /apprenant/DEMO-3E-0001/preferences "$TF" '{"filiereId1":"pas-un-uuid"}')
 check "parent ne saisit pas les vœux → 403" 403 $(req POST /apprenant/DEMO-3E-0001/preferences "$TP" "{\"filiereId1\":\"$F3\"}")
 check "autre élève → 403" 403 $(req POST /apprenant/DEMO-3E-0001/preferences "$TK" "{\"filiereId1\":\"$F3\"}")
-check "Fatou enregistre 3 vœux" 201 $(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$F3\",\"filiereId2\":\"$G2\",\"filiereId3\":\"$ELEC\",\"motivation\":\"J'aime les maths\"}")
+check "établissement qui ne dispense pas les 2 choix → 400" 400 $(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$F3\",\"filiereId2\":\"$G2\",\"etablissementId\":\"$TCHAOUROU\"}")
+check "Fatou enregistre ses 2 choix et son établissement" 201 $(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$F3\",\"filiereId2\":\"$G2\",\"etablissementId\":\"$COULIBALY\",\"motivation\":\"J'aime les maths\"}")
 check "  non validés par le parent" false "$(js 'return j[0].valideParent')"
 check "  1er vœu = série F3" BAC-F3 "$(js 'return j[0].filiere1.code')"
+check "  pas de 3e vœu (2 choix seulement)" true "$(js 'return j[0].filiereId3===null')"
+check "  établissement demandé = LTP Coulibaly" LTP\ Coulibaly "$(js 'return j[0].etablissement.nom')"
 check "recommandations recalculées : série F3 marquée 1er choix" true "$(req GET /orientation/DEMO-3E-0001/recommandations "$TF" >/dev/null; js 'return j.some(r=>r.filiere.code==="BAC-F3"&&r.criteres.some(c=>c.critere==="preference"&&c.rang===1))')"
-check "  le 3e vœu (DTM) est évalué même hors du top" true "$(js 'return j.some(r=>r.filiere.code==="DTM-LTP-ELEC-ENERGIE")')"
+
+echo "── Vœux (Terminale : 3 choix libres pour l'admission au supérieur, pas la fiche unique — sans établissement)"
+check "établissement refusé en terminale → 400" 400 $(req POST /apprenant/DEMO-TLE-0001/preferences "$TK" "{\"filiereId1\":\"$MED\",\"etablissementId\":\"$COULIBALY\"}")
+check "Koffi enregistre 3 vœux du supérieur" 201 $(req POST /apprenant/DEMO-TLE-0001/preferences "$TK" "{\"filiereId1\":\"$MED\",\"filiereId2\":\"$ENEAM\",\"filiereId3\":\"$EPAC\"}")
+check "  3e choix conservé (pas de restriction à 2 hors de la 3e)" true "$(js 'return !!j[0].filiereId3')"
+check "  pas d'établissement (admission au supérieur, pas la fiche unique)" true "$(js 'return j[0].etablissementId===null')"
+check "  le 3e vœu est évalué même hors du top" true "$(req GET /orientation/DEMO-TLE-0001/recommandations "$TK" >/dev/null; js 'return j.some(r=>r.criteres.some(c=>c.critere==="preference"&&c.rang===3))')"
 
 echo "── Validation parent"
 check "Fatou ne valide pas elle-même → 403" 403 $(req POST /apprenant/DEMO-3E-0001/preferences/validation "$TF")
 check "parent valide" 200 $(req POST /apprenant/DEMO-3E-0001/preferences/validation "$TP"); check "  validés" true "$(js 'return j.valideParent')"
-check "même vœux ré-enregistrés → validation conservée" true "$(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$F3\",\"filiereId2\":\"$G2\",\"filiereId3\":\"$ELEC\",\"motivation\":\"J'aime les maths\"}" >/dev/null; js 'return j[0].valideParent')"
+check "mêmes vœux ré-enregistrés → validation conservée" true "$(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$F3\",\"filiereId2\":\"$G2\",\"etablissementId\":\"$COULIBALY\",\"motivation\":\"J'aime les maths\"}" >/dev/null; js 'return j[0].valideParent')"
 check "vœux modifiés → validation annulée" false "$(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$G2\",\"filiereId2\":\"$F3\"}" >/dev/null; js 'return j[0].valideParent')"
 
 echo "── Élève de 4e (1re identification puis pistes)"

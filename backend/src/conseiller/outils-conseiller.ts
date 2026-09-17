@@ -163,7 +163,14 @@ export class OutilsConseillerService {
         departement: true,
         notes: true,
         preferences: {
-          select: { palier: true, valideParent: true, filiere1: filiereResumee, filiere2: filiereResumee, filiere3: filiereResumee },
+          select: {
+            palier: true,
+            valideParent: true,
+            filiere1: filiereResumee,
+            filiere2: filiereResumee,
+            filiere3: filiereResumee,
+            etablissement: { select: { nom: true, commune: true } },
+          },
         },
         decouverte: { select: { reponses: true } },
       },
@@ -193,6 +200,8 @@ export class OutilsConseillerService {
             .map((f, i) => (f ? { rang: i + 1, code: f.code, nom: f.nom, lien: lien(f.id) } : null))
             .filter((v) => v !== null)
         : [],
+      // Établissement demandé (3e seulement, fiche unique d'inscription) : sans objet en terminale
+      etablissementDemande: voeux?.etablissement ? `${voeux.etablissement.nom} (${voeux.etablissement.commune ?? 'commune non renseignée'})` : null,
       voeuxValidesParLeParent: voeux ? voeux.valideParent : null,
       // Questionnaire de découverte : ce que l'élève a dit de lui-même avant de voir ses pistes
       decouverte: reponses

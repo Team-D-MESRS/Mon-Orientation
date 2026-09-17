@@ -33,6 +33,12 @@ async function choisirVoeu(recherche, libelle) {
   await nav.cliquerTexte(libelle, 'fieldset label');
   await nav.cliquerTexte('Enregistrer et continuer', 'button');
 }
+// Dernière étape en 3e (fiche unique d'inscription) : un établissement, pas un 3e choix de spécialité — pas de recherche.
+async function choisirEtablissement(libelle) {
+  await nav.attendre(`[...document.querySelectorAll('fieldset label')].some((l) => l.textContent.includes(${JSON.stringify(libelle)}))`);
+  await nav.cliquerTexte(libelle, 'fieldset label');
+  await nav.cliquerTexte('Enregistrer et continuer', 'button');
+}
 
 try {
   await nav.taille(1280, 900);
@@ -50,7 +56,7 @@ try {
   r.verifier('Invitation à saisir ses vœux', true);
   await nav.capture(`${OUT}/b2-tableau-de-bord.png`);
 
-  // Saisie des vœux en 3 étapes
+  // Saisie des vœux en 3 étapes : 2 choix de spécialité classés + 1 établissement (fiche unique d'inscription)
   await nav.aller(`${BASE}/espace-apprenant/preferences`);
   await nav.attendre(contient('Étape 1 sur 3'));
   await nav.capture(`${OUT}/b2-voeux-etape1.png`, false);
@@ -59,9 +65,14 @@ try {
   await nav.attendre(contient('Étape 2 sur 3'));
   await choisirVoeu('série G2', 'Baccalauréat série G2');
   await nav.attendre(contient('Étape 3 sur 3'));
-  await choisirVoeu('électricité', "DTM — Métiers de l'électricité");
+  r.verifier("Dernière étape : choix d'un établissement, pas un 3e choix de spécialité", await nav.evaluer(contient('Ton établissement')));
+  // LTP Coulibaly (Cotonou) dispense F3 et G2 : les deux spécialités choisies
+  await choisirEtablissement('LTP Coulibaly');
   await nav.attendre(contient('Tes vœux pour la 3e'));
-  r.verifier('Vœux : récapitulatif des 3 choix', await nav.evaluer(`document.querySelectorAll('main ol > li').length === 3 && ${contient('Baccalauréat série F3')} && ${contient("DTM — Métiers de l'électricité")}`));
+  r.verifier(
+    'Vœux : récapitulatif des 2 choix et de l’établissement',
+    await nav.evaluer(`document.querySelectorAll('main ol > li').length === 2 && ${contient('Baccalauréat série F3')} && ${contient('LTP Coulibaly')}`),
+  );
   await nav.saisir('#motivation', "J'aime les mathématiques et la physique.");
   await nav.cliquerTexte('Enregistrer mes vœux', 'button');
   await nav.attendre(contient('Vœux enregistrés'));
