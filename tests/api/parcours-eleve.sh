@@ -42,6 +42,31 @@ check "  toutes admettent la série D (séries officielles du guide du MESRS)" t
 check "  au plus 2 par établissement" true "$(js 'const c={};j.forEach(r=>c[r.filiere.etablissementId]=(c[r.filiere.etablissementId]||0)+1);return Object.values(c).every(n=>n<=2)')"
 echo "  → $(js 'return j.map(r=>r.filiere.code+" "+r.score).join(" | ")')"
 
+echo "── Condition officielle par matière (lot 4 : paire, pas une moyenne)"
+$PSQL <<SQL
+delete from recommandations where apprenant_nip like 'TEST-LOT4-%';
+delete from notes where apprenant_nip like 'TEST-LOT4-%';
+delete from utilisateurs where nip like 'TEST-LOT4-%';
+delete from apprenants where nip like 'TEST-LOT4-%';
+insert into apprenants (nip, nom, prenom, date_naissance, sexe, departement, commune, palier, updated_at) values
+ ('TEST-LOT4-A','Test','Paire échouée','2011-01-01','F','Littoral','Cotonou','TROISIEME', now()),
+ ('TEST-LOT4-B','Test','Paire remplie','2011-01-01','M','Littoral','Cotonou','TROISIEME', now());
+insert into notes (id, apprenant_nip, matiere, note, bareme, trimestre, annee_scolaire) values
+ (gen_random_uuid(),'TEST-LOT4-A','Mathématiques',14,20,1,'2025-2026'), (gen_random_uuid(),'TEST-LOT4-A','PCT',7,20,1,'2025-2026'),
+ (gen_random_uuid(),'TEST-LOT4-B','Mathématiques',14,20,1,'2025-2026'), (gen_random_uuid(),'TEST-LOT4-B','PCT',12,20,1,'2025-2026');
+SQL
+TA=$(jeton TEST-LOT4-A 2011-01-01); TB=$(jeton TEST-LOT4-B 2011-01-01)
+check "14 en Maths, 7 en PCT (moyenne 10,5 ≥ 10) → calcul" 201 $(req POST /orientation/TEST-LOT4-A/calcul "$TA")
+check "  aucun DTM ou bac industriel (paire Maths+PCT non remplie sur PCT)" true "$(js 'return !j.some(r=>/^(DTM-LTP-|BAC-F)/.test(r.filiere.code)&&!r.filiere.code.startsWith("DTM-LTP-ACCUEIL"))')"
+check "14 en Maths, 12 en PCT (paire remplie) → calcul" 201 $(req POST /orientation/TEST-LOT4-B/calcul "$TB")
+check "  un DTM ou bac industriel proposé, condition confirmée" true "$(js 'return j.some(r=>/^(DTM-LTP-|BAC-F)/.test(r.filiere.code)&&!r.filiere.code.startsWith("DTM-LTP-ACCUEIL")&&r.criteres.some(c=>c.critere==="condition"&&!c.alerte&&c.detail.includes("PCT")))')"
+$PSQL <<SQL
+delete from recommandations where apprenant_nip like 'TEST-LOT4-%';
+delete from notes where apprenant_nip like 'TEST-LOT4-%';
+delete from utilisateurs where nip like 'TEST-LOT4-%';
+delete from apprenants where nip like 'TEST-LOT4-%';
+SQL
+
 echo "── Vœux"
 check "vœux avec une filière du supérieur (3e) → 400" 400 $(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$MED\"}")
 check "vœu sur une fiche masquée (bac général) → 400" 400 $(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$MASQUEE\"}")

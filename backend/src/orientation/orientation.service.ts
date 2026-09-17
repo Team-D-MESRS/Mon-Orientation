@@ -32,7 +32,6 @@ const NIVEAU_PAR_PALIER: Record<Palier, NiveauAcces> = {
 const POIDS_RESULTATS = 60;
 const POINTS_VOEUX = [30, 20, 10];
 const POIDS_INSERTION = 10;
-const PENALITE_SEUIL = 15;
 const PENALITE_SERIE_SOUS_CONDITIONS = 10;
 
 const NB_RECOMMANDATIONS = 5;
@@ -198,21 +197,53 @@ export class OrientationService {
       criteres.push({ critere: 'resultats', points: 0, detail: "Aucune note disponible pour l'instant." });
     }
 
+    let admissible = true;
+
     const rang = voeux.indexOf(filiere.id);
     if (rang >= 0) {
       criteres.push({ critere: 'preference', points: POINTS_VOEUX[rang], rang: rang + 1, detail: `C'est ton ${ORDINAUX[rang]} choix.` });
     }
 
-    if (profil.seuil !== undefined && moyenneCles !== null && moyenneCles < profil.seuil) {
-      criteres.push({
-        critere: 'condition',
-        points: -PENALITE_SEUIL,
-        alerte: true,
-        detail: `Attention : l'accès demande au moins ${profil.seuil}/20 dans les matières de spécialité ; ta moyenne y est de ${noteLisible(moyenneCles)}/20.`,
-      });
+    if (profil.conditions) {
+      const echouees: string[] = [];
+      const manquantes: string[] = [];
+      for (const c of profil.conditions) {
+        const matieres = Array.isArray(c.matiere) ? c.matiere : [c.matiere];
+        const notes = matieres.map((nom) => bilan.matieres.find((m) => m.matiere === nom)).filter((m) => m !== undefined);
+        if (notes.length === 0) {
+          manquantes.push(matieres.join(' ou '));
+          continue;
+        }
+        const meilleure = Math.max(...notes.map((m) => m.moyenne));
+        if (meilleure < c.seuil) {
+          echouees.push(`${matieres.join(' ou ')} (${noteLisible(meilleure)}/20, ${c.seuil}/20 exigé)`);
+        }
+      }
+      // Une matière manquante ne rend pas la filière inadmissible : on ne peut pas prouver qu'elle échoue.
+      // Un seuil connu et non atteint, si : la condition est une exigence sur CHAQUE matière, pas une moyenne.
+      if (echouees.length > 0) {
+        admissible = false;
+        criteres.push({
+          critere: 'condition',
+          points: 0,
+          alerte: true,
+          detail: `Condition officielle d'inscription non remplie : ${echouees.join(' ; ')}.`,
+        });
+      } else if (manquantes.length > 0) {
+        criteres.push({
+          critere: 'condition',
+          points: 0,
+          alerte: true,
+          detail: `Condition officielle à vérifier : note manquante en ${manquantes.join(' et ')}.`,
+        });
+      } else {
+        const resume = profil.conditions
+          .map((c) => `${Array.isArray(c.matiere) ? c.matiere.join(' ou ') : c.matiere} ≥ ${c.seuil}/20`)
+          .join(', ');
+        criteres.push({ critere: 'condition', points: 0, detail: `Tu remplis la condition officielle d'inscription (${resume}).` });
+      }
     }
 
-    let admissible = true;
     if (niveau === 'APRES_BAC') {
       const seriesAdmises = filiere.seriesAdmises as string[] | null;
       switch (compatibiliteSerie(seriesAdmises, serie)) {

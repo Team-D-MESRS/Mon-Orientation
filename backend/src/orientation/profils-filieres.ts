@@ -1,35 +1,71 @@
 import { Filiere } from '@prisma/client';
 
 /**
- * Matières déterminantes et seuil d'accès de chaque filière, utilisés par le moteur d'orientation.
+ * Matières déterminantes de chaque filière, utilisées par le moteur d'orientation pour noter les
+ * résultats et vérifier les conditions officielles d'admission.
  *
- * Première version déduite des intitulés de séries et des conditions publiées (ex. « au moins
- * 12/20 dans les matières de spécialité » pour le bac technique) : à faire valider par les
- * conseillers d'orientation de la DGES.
+ * Secondaire technique et bac technologique : `conditions` reprend exactement les seuils du communiqué
+ * N°0902 du MESRS (rentrées 2026-2027), tels que rendus en prose dans les constantes COND_* de
+ * `prisma/data/referentiel-filieres.ts` — les deux doivent rester alignés. Une filière sans `conditions`
+ * n'a pas de seuil publié : `matieresCles` sert alors seulement à noter les résultats, pas à statuer
+ * sur l'admissibilité.
  */
+export interface ConditionMatiere {
+  /** Une matière, ou plusieurs si l'une d'elles suffit (ex. Allemand ou Espagnol) */
+  matiere: string | string[];
+  seuil: number;
+}
+
 export interface ProfilFiliere {
   matieresCles: string[];
-  seuil?: number;
+  /**
+   * Condition officielle d'admission : chaque entrée doit être remplie SÉPARÉMENT, avec son propre
+   * seuil — ce n'est jamais une moyenne des matières. Un élève à 14/20 en Mathématiques et 7/20 en PCT
+   * ne remplit pas « Mathématiques ≥ 10 et PCT ≥ 10 », même si sa moyenne des deux dépasse 10.
+   */
+  conditions?: ConditionMatiere[];
 }
 
 const SCIENCES = ['Mathématiques', 'PCT'];
 const VIVANT = ['SVT', 'PCT'];
+
+// Communiqué N°0902 (MESRS), rentrées 2026-2027 — voir les constantes COND_* du référentiel pour la prose.
+const PAIRE_BAC_INDUSTRIEL: ConditionMatiere[] = [
+  { matiere: 'Mathématiques', seuil: 12 },
+  { matiere: 'PCT', seuil: 12 },
+];
+const PAIRE_DTM_INDUSTRIEL: ConditionMatiere[] = [
+  { matiere: 'Mathématiques', seuil: 10 },
+  { matiere: 'PCT', seuil: 10 },
+];
+const PAIRE_DTM_AGRICOLE: ConditionMatiere[] = [
+  { matiere: 'Mathématiques', seuil: 10 },
+  { matiere: 'SVT', seuil: 10 },
+];
+const PAIRE_DTM_TOURISME: ConditionMatiere[] = [
+  { matiere: 'Anglais', seuil: 10 },
+  { matiere: ['Allemand', 'Espagnol'], seuil: 10 },
+];
 
 const PROFILS: [RegExp, ProfilFiliere][] = [
   [/^BAC-A[12]$/, { matieresCles: ['Français', 'Anglais', 'Histoire-Géographie'] }],
   [/^BAC-B$/, { matieresCles: ['Histoire-Géographie', 'Français', 'Mathématiques'] }],
   [/^BAC-C$/, { matieresCles: SCIENCES }],
   [/^BAC-D$/, { matieresCles: ['SVT', 'PCT', 'Mathématiques'] }],
-  [/^BAC-(E|F[1-4])$/, { matieresCles: SCIENCES, seuil: 12 }],
-  [/^BAC-G2$/, { matieresCles: ['Mathématiques', 'Français'], seuil: 12 }],
-  [/^BAC-G[13]$/, { matieresCles: ['Français', 'Anglais'], seuil: 12 }],
-  [/^BAC-EA$/, { matieresCles: VIVANT, seuil: 12 }],
+  [/^BAC-F[1-4]$/, { matieresCles: SCIENCES, conditions: PAIRE_BAC_INDUSTRIEL }],
+  // Série E : absente de l'offre d'inscription 2026-2027 (communiqué N°0902), pas de seuil publié
+  [/^BAC-E$/, { matieresCles: SCIENCES }],
+  // Séries de gestion : le communiqué ne fixe pas de moyenne minimale (COND_BAC_GESTION)
+  [/^BAC-G2$/, { matieresCles: ['Mathématiques', 'Français'] }],
+  [/^BAC-G[13]$/, { matieresCles: ['Français', 'Anglais'] }],
+  // Eau et Assainissement : absente de l'offre 2026-2027, pas de seuil publié
+  [/^BAC-EA$/, { matieresCles: VIVANT }],
   [/^DT-MODE$/, { matieresCles: [] }],
+  // DT (diplôme de technicien) : le communiqué ne publie pas de condition chiffrée pour ces filières
   [/^DT-/, { matieresCles: SCIENCES }],
-  // Secteur tourisme : le communiqué N°0902 exige anglais ET allemand ou espagnol (paire complète : lot 4)
-  [/^DTM-LTP-ACCUEIL-TOURISTIQUE$/, { matieresCles: ['Anglais'], seuil: 10 }],
-  [/^DTM-LTP-/, { matieresCles: SCIENCES, seuil: 10 }],
-  [/^DTM-LTA-/, { matieresCles: VIVANT, seuil: 10 }],
+  [/^DTM-LTP-ACCUEIL-TOURISTIQUE$/, { matieresCles: ['Anglais'], conditions: PAIRE_DTM_TOURISME }],
+  [/^DTM-LTP-/, { matieresCles: SCIENCES, conditions: PAIRE_DTM_INDUSTRIEL }],
+  [/^DTM-LTA-/, { matieresCles: VIVANT, conditions: PAIRE_DTM_AGRICOLE }],
   [/^DEAT$/, { matieresCles: VIVANT }],
   [/^EFMS-/, { matieresCles: ['SVT', 'Français'] }],
 ];
@@ -38,6 +74,7 @@ const PROFILS: [RegExp, ProfilFiliere][] = [
  * Au supérieur, les matières clés sont celles du classement officiel (guide du MESRS, champ matieresCles).
  * Le guide pondère ces matières par les coefficients du bac de chaque série, qu'il ne publie pas :
  * le moteur les compte à parts égales. Sans matière connue, la moyenne générale compte pour moitié.
+ * Le supérieur n'a pas de condition à seuil par matière : l'admission se joue sur le classement.
  */
 export function profilFiliere(filiere: Pick<Filiere, 'code' | 'matieresCles'>): ProfilFiliere {
   const officielles = Array.isArray(filiere.matieresCles) ? (filiere.matieresCles as string[]) : [];
