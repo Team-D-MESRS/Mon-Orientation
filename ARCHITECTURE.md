@@ -205,6 +205,13 @@ La recherche du catalogue utilise l'extension PostgreSQL `unaccent` (insensible 
 - `annee_scolaire` (VARCHAR)
 - `derniere_sync` (TIMESTAMP)
 
+**`decouvertes`** — questionnaire de découverte (goûts, ambitions, qualités, contraintes), rempli une fois par
+l'élève (pas par palier, contrairement aux vœux) et modifiable ensuite ; bloquant avant les recommandations côté frontend
+- `apprenant_nip` (PK, FK)
+- `reponses` (JSONB) — réponses brutes du questionnaire
+- `affinites` (JSONB) — affinité par domaine déduite des réponses (0 à 1), lue par le moteur d'orientation (critère « intérêt »)
+- `date_saisie`, `updated_at` (TIMESTAMP)
+
 **`preferences`** — choix des apprenants
 - `id` (PK, UUID)
 - `apprenant_nip` (FK)
@@ -264,6 +271,7 @@ La recherche du catalogue utilise l'extension PostgreSQL `unaccent` (insensible 
 - `GET /apprenant/:nip` — profil apprenant
 - `GET /apprenant/:nip/notes` — notes (sync EducMaster)
 - `GET /apprenant/:nip/parcours` — historique du parcours
+- `GET /apprenant/:nip/decouverte`, `POST /apprenant/:nip/decouverte` — questionnaire de découverte
 - `GET /apprenant/:nip/preferences` — préférences saisies
 - `POST /apprenant/:nip/preferences` — sauvegarder les préférences
 - `GET /apprenant/:nip/favoris`, `PUT` et `DELETE /apprenant/:nip/favoris/:filiereId` — formations mises de côté

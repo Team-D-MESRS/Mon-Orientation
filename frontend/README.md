@@ -134,9 +134,10 @@ frontend/src/
 | `/identification` | public | ✅ API | Identifiants EducMaster : NIP ou numéro EducMaster (élève), adresse (parent) ; le compte est créé à la première identification ; retour à la page demandée (`?redirect=`) |
 | `/personnels` | public | ✅ API | Accès des personnels du ministère (administration, DGES, établissement), séparé de l'identification EducMaster |
 | `/espace-apprenant` | élève, parent, admin | ✅ API | Profil, résultats, étape d'orientation, pistes du moment, formations mises de côté |
+| `/espace-apprenant/decouverte` | élève (saisie), parent/admin (lecture) | ✅ API | Questionnaire de découverte en 5 étapes (goûts, ambitions, qualités, contraintes) ; modifiable ensuite ; bloquant avant les recommandations |
 | `/espace-apprenant/notes` | élève, parent, admin | ✅ API | Tableau par matière et trimestre (vue compacte sur mobile) |
 | `/espace-apprenant/preferences` | élève (saisie), parent (validation), admin (lecture) | ✅ API | Vœux en 3 étapes, enregistrés à chaque étape, récapitulatif, motivation ; formations mises de côté proposées en premier, recherche sans accents |
-| `/espace-apprenant/recommandations` | élève, parent, admin | ✅ API | Pistes classées, score sur 100, critères détaillés, alertes |
+| `/espace-apprenant/recommandations` | élève, parent, admin | ✅ API | Pistes classées, score sur 100, critères détaillés (dont l'intérêt, tiré du questionnaire de découverte), alertes ; bloqué tant que la découverte n'est pas remplie |
 | `/espace-apprenant/conseiller` | élève, parent | ✅ API | Conversation avec le conseiller : suggestions, question conservée en cas d'erreur, nouvelle conversation ; réponses en français ou en fongbé (choix retenu par l'appareil, réponses marquées `lang="fon"`) |
 | `/conseiller` | public | ✅ | Présentation ; élèves et parents connectés redirigés vers leur espace |
 | `/guide`, `/faq`, `/contact` | public | ✅ statique | Guide d'utilisation, questions fréquentes (dépliables), à qui s'adresser |
