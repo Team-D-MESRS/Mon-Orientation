@@ -11,7 +11,6 @@ services:
       NODE_ENV: development
       PORT: 8080
       DATABASE_URL: postgresql://mo_user:mo_password@postgres:5432/mon_orientation
-      REDIS_URL: redis://redis:6379
       JWT_SECRET: change-me-in-production
       JWT_EXPIRATION: 15m
       JWT_REFRESH_EXPIRATION: 7d
@@ -22,8 +21,6 @@ services:
       MINIO_SECRET_KEY: mo_minio_password
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
 
   frontend:

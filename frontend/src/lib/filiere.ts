@@ -3,7 +3,6 @@ export type TypeFiliere =
   | 'TECHNIQUE'
   | 'TECHNIQUE_AGRICOLE'
   | 'PROFESSIONNELLE'
-  | 'ECOLE_METIER'
   | 'UNIVERSITE';
 
 export type NiveauAcces = 'APRES_BEPC' | 'APRES_BAC';
@@ -155,7 +154,6 @@ export const TYPE_LABELS: Record<TypeFiliere, string> = {
   TECHNIQUE: 'Technique',
   TECHNIQUE_AGRICOLE: 'Technique agricole',
   PROFESSIONNELLE: 'Professionnel',
-  ECOLE_METIER: 'École des métiers',
   UNIVERSITE: 'Université',
 };
 
@@ -164,7 +162,6 @@ export const TYPE_COLORS: Record<TypeFiliere, string> = {
   TECHNIQUE: 'bg-purple-100 text-purple-800',
   TECHNIQUE_AGRICOLE: 'bg-yellow-100 text-yellow-800',
   PROFESSIONNELLE: 'bg-orange-100 text-orange-800',
-  ECOLE_METIER: 'bg-green-100 text-green-800',
   UNIVERSITE: 'bg-sky-100 text-sky-800',
 };
 
