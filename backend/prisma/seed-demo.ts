@@ -2,8 +2,9 @@
  * Données de démonstration : élèves et notes fictifs, comptes de test, en attendant EducMaster.
  * Interdit en production (les mots de passe sont publics). Usage : npm run prisma:seed:demo
  */
-import { Palier, PrismaClient, Role } from '@prisma/client';
+import { Palier, Prisma, PrismaClient, Role } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { ReponsesDecouverte, affinitesDomaines } from '../src/apprenant/decouverte';
 
 const prisma = new PrismaClient();
 
@@ -29,6 +30,13 @@ interface EleveDemo {
   avecCompte: boolean;
   /** Notes des trois trimestres, sur 20 */
   notes: Record<string, [number, number, number]>;
+  /**
+   * Questionnaire de découverte déjà rempli, pour Fatou et Koffi : depuis le 16/09, les pistes ne
+   * sont visibles côté frontend qu'une fois le questionnaire rempli, et les suites existantes
+   * naviguent jusqu'aux recommandations de ces deux élèves. Absent pour Adama, qui exerce donc le
+   * chemin « pas encore rempli » (le moteur dégrade, la page invite à le remplir).
+   */
+  decouverte?: ReponsesDecouverte;
 }
 
 const ELEVES: EleveDemo[] = [
@@ -52,6 +60,19 @@ const ELEVES: EleveDemo[] = [
       'Histoire-Géographie': [11, 10.5, 11],
       EPS: [15, 14, 15],
     },
+    decouverte: {
+      interets: ['ELECTRICITE', 'NUMERIQUE'],
+      matierePreferee: 'PCT',
+      metierEnvisage: "Technicienne en électricité ou en énergies renouvelables",
+      apresCollege: 'TECHNIQUE',
+      styleTravail: 'MANUEL',
+      statut: 'SALARIE',
+      dureeEtudes: 'COURTE',
+      priorites: ['REVENU', 'SECURITE'],
+      qualites: ['MANUEL', 'SCIENTIFIQUE', 'ORGANISE'],
+      internat: 'NON',
+      mobiliteDepartement: 'NON',
+    },
   },
   {
     nip: 'DEMO-TLE-0001',
@@ -74,6 +95,19 @@ const ELEVES: EleveDemo[] = [
       Anglais: [12, 12, 13],
       'Histoire-Géographie': [11, 12, 11.5],
       EPS: [14, 15, 14],
+    },
+    decouverte: {
+      interets: ['SANTE', 'SCIENCES'],
+      matierePreferee: 'SVT',
+      metierEnvisage: 'Infirmier ou technicien de laboratoire médical',
+      apresCollege: 'GENERAL',
+      styleTravail: 'INTELLECTUEL',
+      statut: 'SALARIE',
+      dureeEtudes: 'LONGUE',
+      priorites: ['UTILITE', 'SECURITE'],
+      qualites: ['SCIENTIFIQUE', 'BIENVEILLANT', 'MINUTIEUX'],
+      internat: 'OUI',
+      mobiliteDepartement: 'OUI',
     },
   },
   {
@@ -142,6 +176,14 @@ async function main() {
         create: { nip: e.nip, nom: e.nom, prenom: e.prenom, hashMotDePasse: hash, role: 'APPRENANT' },
       });
       await prisma.apprenant.update({ where: { nip: e.nip }, data: { utilisateurId: compte.id } });
+    }
+
+    if (e.decouverte) {
+      const donnees = {
+        reponses: e.decouverte as unknown as Prisma.InputJsonValue,
+        affinites: affinitesDomaines(e.decouverte) as Prisma.InputJsonValue,
+      };
+      await prisma.decouverte.upsert({ where: { apprenantNip: e.nip }, update: donnees, create: { apprenantNip: e.nip, ...donnees } });
     }
   }
 

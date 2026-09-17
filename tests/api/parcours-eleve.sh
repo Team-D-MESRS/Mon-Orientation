@@ -10,6 +10,9 @@ reinitialiser() { $PSQL <<SQL
 delete from preferences where apprenant_nip like 'DEMO-%';
 delete from recommandations where apprenant_nip like 'DEMO-%';
 delete from utilisateurs where nip = 'DEMO-4E-0001';
+-- Decouverte est rattachée à l'apprenant, pas au compte : la suppression ci-dessus ne l'efface pas.
+-- Sans ça, un questionnaire rempli par ailleurs (e2e) fait mentir « pas de questionnaire rempli ».
+delete from decouvertes where apprenant_nip = 'DEMO-4E-0001';
 SQL
 }
 
@@ -41,6 +44,36 @@ check "  toutes accessibles après le bac" true "$(js 'return j.every(r=>r.filie
 check "  toutes admettent la série D (séries officielles du guide du MESRS)" true "$(js 'return j.every(r=>(r.filiere.seriesAdmises||[]).includes("D")||(r.filiere.seriesAdmises||[]).includes("Toutes séries"))')"
 check "  au plus 2 par établissement" true "$(js 'const c={};j.forEach(r=>c[r.filiere.etablissementId]=(c[r.filiere.etablissementId]||0)+1);return Object.values(c).every(n=>n<=2)')"
 echo "  → $(js 'return j.map(r=>r.filiere.code+" "+r.score).join(" | ")')"
+
+echo "── Questionnaire de découverte (lot 5)"
+$PSQL <<SQL
+delete from recommandations where apprenant_nip like 'TEST-LOT5-%';
+delete from decouvertes where apprenant_nip like 'TEST-LOT5-%';
+delete from notes where apprenant_nip like 'TEST-LOT5-%';
+delete from utilisateurs where nip like 'TEST-LOT5-%';
+delete from apprenants where nip like 'TEST-LOT5-%';
+insert into apprenants (nip, nom, prenom, date_naissance, sexe, departement, commune, palier, updated_at) values
+ ('TEST-LOT5-A','Test','Découverte','2011-06-01','F','Littoral','Cotonou','TROISIEME', now());
+SQL
+TA=$(jeton TEST-LOT5-A 2011-06-01)
+check "avant remplissage : rien" 200 $(req GET /apprenant/TEST-LOT5-A/decouverte "$TA"); check "  corps vide (rien à lire)" true "$([ -s "$BODY" ] && echo false || echo true)"
+check "réponse hors énumération → 400" 400 $(req POST /apprenant/TEST-LOT5-A/decouverte "$TA" '{"reponses":{"interets":[],"matierePreferee":null,"metierEnvisage":null,"apresCollege":"BOF","styleTravail":"MIXTE","statut":"INDECIS","dureeEtudes":"PEU_IMPORTE","priorites":[],"qualites":[],"internat":"INDECIS","mobiliteDepartement":"INDECIS"}}')
+check "plus de 5 intérêts → 400" 400 $(req POST /apprenant/TEST-LOT5-A/decouverte "$TA" '{"reponses":{"interets":["AGRICULTURE","ARTISANAT","ARTS","BTP","DROIT","ELECTRICITE"],"matierePreferee":null,"metierEnvisage":null,"apresCollege":"INDECIS","styleTravail":"MIXTE","statut":"INDECIS","dureeEtudes":"PEU_IMPORTE","priorites":[],"qualites":[],"internat":"INDECIS","mobiliteDepartement":"INDECIS"}}')
+check "parent (accès à Fatou) ne remplit pas pour elle → 403" 403 $(req POST /apprenant/DEMO-3E-0001/decouverte "$TP" '{"reponses":{"interets":[],"matierePreferee":null,"metierEnvisage":null,"apresCollege":"INDECIS","styleTravail":"MIXTE","statut":"INDECIS","dureeEtudes":"PEU_IMPORTE","priorites":[],"qualites":[],"internat":"INDECIS","mobiliteDepartement":"INDECIS"}}')
+REPONSES='{"interets":["AGRICULTURE"],"matierePreferee":"SVT","metierEnvisage":"Technicienne agricole","apresCollege":"TECHNIQUE","styleTravail":"MANUEL","statut":"SALARIE","dureeEtudes":"COURTE","priorites":["REVENU"],"qualites":["NATURE"],"internat":"NON","mobiliteDepartement":"OUI"}'
+check "élève remplit son questionnaire → 201" 201 $(req POST /apprenant/TEST-LOT5-A/decouverte "$TA" "{\"reponses\":$REPONSES}")
+check "  affinité agriculture au maximum (3 signaux convergents)" 1 "$(js 'return j.affinites.AGRICULTURE')"
+check "après remplissage : réponses relues à l'identique" Technicienne\ agricole "$(req GET /apprenant/TEST-LOT5-A/decouverte "$TA" >/dev/null; js 'return j.reponses.metierEnvisage')"
+check "calcul → pistes" 201 $(req POST /orientation/TEST-LOT5-A/calcul "$TA")
+check "  chaque piste porte un critère intérêt" true "$(js 'return j.every(r=>r.criteres.some(c=>c.critere==="interet"))')"
+check "  au moins une piste agricole valorisée par l'intérêt" true "$(js 'return j.some(r=>r.filiere.code.startsWith("DTM-LTA-")&&r.criteres.find(c=>c.critere==="interet").points>0)')"
+$PSQL <<SQL
+delete from recommandations where apprenant_nip like 'TEST-LOT5-%';
+delete from decouvertes where apprenant_nip like 'TEST-LOT5-%';
+delete from notes where apprenant_nip like 'TEST-LOT5-%';
+delete from utilisateurs where nip like 'TEST-LOT5-%';
+delete from apprenants where nip like 'TEST-LOT5-%';
+SQL
 
 echo "── Condition officielle par matière (lot 4 : paire, pas une moyenne)"
 $PSQL <<SQL
@@ -92,6 +125,7 @@ check "Adama s'identifie (1re fois : son compte est créé)" 200 $(req POST /aut
 TA=$(js 'return j.accessToken')
 check "Adama → pistes (4e)" 201 $(req POST /orientation/DEMO-4E-0001/calcul "$TA")
 check "  aucune piste « vœu » en 4e" true "$(js 'return j.every(r=>!r.criteres.some(c=>c.critere==="preference"))')"
+check "  critère intérêt en invitation, sans points (pas de questionnaire rempli)" true "$(js 'return j.every(r=>r.criteres.find(c=>c.critere==="interet").points===0)')"
 check "Adama → vœux en 4e → 400" 400 $(req POST /apprenant/DEMO-4E-0001/preferences "$TA" "{\"filiereId1\":\"$F3\"}")
 
 echo "── DGES"

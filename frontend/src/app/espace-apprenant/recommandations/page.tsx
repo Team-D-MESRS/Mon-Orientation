@@ -2,18 +2,36 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-react';
-import { orientationApi } from '@/lib/api';
-import { ORDINAUX, type Recommandation } from '@/lib/apprenant';
+import { AlertTriangle, CheckCircle2, Compass, RefreshCw } from 'lucide-react';
+import { apprenantApi, orientationApi } from '@/lib/api';
+import { ORDINAUX, type Decouverte, type Recommandation } from '@/lib/apprenant';
 import { messageErreur } from '@/lib/erreurs';
-import { useProfil } from '@/components/espace/EspaceContext';
+import { useEspace, useProfil } from '@/components/espace/EspaceContext';
 import { Alerte, BadgeType, Chargement } from '@/components/espace/ui';
 
 export default function RecommandationsPage() {
   const profil = useProfil();
+  const { estEleve } = useEspace();
+  const [decouverte, setDecouverte] = useState<Decouverte | null | undefined>(undefined);
   const [recommandations, setRecommandations] = useState<Recommandation[] | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [calcul, setCalcul] = useState(false);
+
+  useEffect(() => {
+    let annule = false;
+    setDecouverte(undefined);
+    apprenantApi
+      .getDecouverte(profil.nip)
+      .then(({ data }) => {
+        if (!annule) setDecouverte(data);
+      })
+      .catch(() => {
+        if (!annule) setDecouverte(null);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [profil.nip]);
 
   const calculer = useCallback(async () => {
     setCalcul(true);
@@ -30,6 +48,8 @@ export default function RecommandationsPage() {
   }, [profil.nip]);
 
   useEffect(() => {
+    // Bloquant : pas de calcul tant que le questionnaire de découverte n'est pas rempli (décision du 16/09)
+    if (!decouverte) return;
     let annule = false;
     setRecommandations(null);
     orientationApi
@@ -48,9 +68,29 @@ export default function RecommandationsPage() {
     return () => {
       annule = true;
     };
-  }, [profil.nip, calculer]);
+  }, [profil.nip, calculer, decouverte]);
 
   const exploration = profil.palier === 'QUATRIEME';
+
+  if (decouverte === undefined) return <Chargement />;
+  if (!decouverte) {
+    return (
+      <section className="bg-white rounded-bj-md border border-bj-gray-925 p-8v text-center">
+        <Compass size={32} className="text-bj-green mx-auto mb-3v" aria-hidden="true" />
+        <h2 className="text-xl font-bold mb-2v">D&apos;abord, faisons connaissance</h2>
+        <p className="text-bj-gray-500 max-w-md mx-auto mb-6v">
+          {estEleve
+            ? 'Avant de te proposer des pistes, réponds au questionnaire de découverte : ce que tu aimes, ce que tu envisages, tes ambitions.'
+            : `${profil.prenom} n'a pas encore rempli le questionnaire de découverte, nécessaire avant de voir ses pistes.`}
+        </p>
+        {estEleve && (
+          <Link href="/espace-apprenant/decouverte" className="bj-btn bj-btn-primary">
+            Remplir le questionnaire
+          </Link>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section>

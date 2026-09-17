@@ -3,13 +3,16 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { BookOpen, FlaskConical, Heart, LayoutDashboard, Lightbulb, MessageCircle } from 'lucide-react';
+import { BookOpen, Compass, FlaskConical, Heart, LayoutDashboard, Lightbulb, MessageCircle } from 'lucide-react';
 import { classeLisible } from '@/lib/apprenant';
 import { useEspace } from './EspaceContext';
 import { Alerte, CHAMP, Chargement } from './ui';
 
+// « Découverte » juste après le tableau de bord : le questionnaire se remplit avant de voir ses
+// pistes (décision du 16/09) — le blocage se fait sur la page Recommandations, pas ici.
 const ONGLETS = [
   { href: '/espace-apprenant', label: 'Tableau de bord', Icone: LayoutDashboard },
+  { href: '/espace-apprenant/decouverte', label: 'Découverte', Icone: Compass },
   { href: '/espace-apprenant/notes', label: 'Notes', Icone: BookOpen },
   { href: '/espace-apprenant/preferences', label: 'Vœux', Icone: Heart },
   { href: '/espace-apprenant/recommandations', label: 'Recommandations', Icone: Lightbulb },

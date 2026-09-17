@@ -19,6 +19,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { ApprenantService } from './apprenant.service';
 import { PreferencesDto } from './dto/preferences.dto';
+import { DecouverteDto } from './dto/decouverte.dto';
 
 const ID_FILIERE = new ParseUUIDPipe({
   version: '4',
@@ -48,6 +49,20 @@ export class ApprenantController {
   @ApiOperation({ summary: 'Parcours de l\'apprenant' })
   async getParcours(@Param('nip') nip: string) {
     return this.apprenantService.getParcours(nip);
+  }
+
+  @Get(':nip/decouverte')
+  @ApiOperation({ summary: 'Questionnaire de découverte (goûts, ambitions, qualités…)' })
+  async getDecouverte(@Param('nip') nip: string) {
+    return this.apprenantService.getDecouverte(nip);
+  }
+
+  @Post(':nip/decouverte')
+  @UseGuards(RolesGuard)
+  @Roles('APPRENANT')
+  @ApiOperation({ summary: 'Enregistrer le questionnaire de découverte ; recalcule les recommandations' })
+  async enregistrerDecouverte(@Param('nip') nip: string, @Body() dto: DecouverteDto) {
+    return this.apprenantService.enregistrerDecouverte(nip, dto);
   }
 
   @Get(':nip/preferences')

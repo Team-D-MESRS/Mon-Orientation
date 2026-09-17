@@ -1,4 +1,4 @@
-import type { Filiere, NiveauAcces } from './filiere';
+import type { Domaine, Filiere, NiveauAcces } from './filiere';
 
 export type Palier = 'QUATRIEME' | 'TROISIEME' | 'PREMIERE' | 'TERMINALE';
 
@@ -59,7 +59,7 @@ export interface Favori {
 }
 
 export interface Critere {
-  critere: 'resultats' | 'preference' | 'condition' | 'serie' | 'insertion';
+  critere: 'resultats' | 'interet' | 'preference' | 'condition' | 'serie' | 'insertion';
   points: number;
   detail: string;
   alerte?: boolean;
@@ -75,6 +75,49 @@ export interface Recommandation {
   criteres: Critere[] | null;
   dateGeneration: string;
   filiere: Filiere;
+}
+
+/**
+ * Questionnaire de découverte : ce que l'élève aime, envisage, ses ambitions, les qualités qu'il se
+ * trouve, ses contraintes pratiques — à remplir avant de voir ses pistes. Miroir du type backend
+ * (backend/src/apprenant/decouverte.ts).
+ */
+export interface ReponsesDecouverte {
+  interets: Domaine[];
+  matierePreferee: MatierePreferee | null;
+  metierEnvisage: string | null;
+  apresCollege: 'GENERAL' | 'TECHNIQUE' | 'INDECIS';
+  styleTravail: 'MANUEL' | 'INTELLECTUEL' | 'MIXTE';
+  statut: 'SALARIE' | 'ENTREPRENEUR' | 'LES_DEUX' | 'INDECIS';
+  dureeEtudes: 'COURTE' | 'LONGUE' | 'PEU_IMPORTE';
+  priorites: Priorite[];
+  qualites: Qualite[];
+  internat: 'OUI' | 'NON' | 'INDECIS';
+  mobiliteDepartement: 'OUI' | 'NON' | 'INDECIS';
+}
+
+export type MatierePreferee = 'Mathématiques' | 'PCT' | 'SVT' | 'Français' | 'Histoire-Géographie' | 'Anglais' | 'EPS' | 'Arts' | 'Aucune';
+export type Priorite = 'REVENU' | 'UTILITE' | 'CREATIVITE' | 'SECURITE' | 'MOBILITE' | 'PROXIMITE_FAMILLE';
+export type Qualite =
+  | 'MANUEL'
+  | 'SCIENTIFIQUE'
+  | 'CREATIF'
+  | 'ORGANISE'
+  | 'RELATIONNEL'
+  | 'MINUTIEUX'
+  | 'SPORTIF'
+  | 'LOGIQUE'
+  | 'BIENVEILLANT'
+  | 'NATURE'
+  | 'MENEUR'
+  | 'PEDAGOGUE';
+
+export interface Decouverte {
+  apprenantNip: string;
+  reponses: ReponsesDecouverte;
+  affinites: Partial<Record<Domaine, number>>;
+  dateSaisie: string;
+  updatedAt: string;
 }
 
 export const ORDINAUX = ['1er', '2e', '3e'];

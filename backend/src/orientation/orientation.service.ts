@@ -2,10 +2,11 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Filiere, NiveauAcces, Palier, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { BilanNotes, bilanNotes } from '../apprenant/bilan-notes';
+import { DOMAINES } from '../filiere/domaines';
 import { compatibiliteSerie, profilFiliere } from './profils-filieres';
 
 export interface Critere {
-  critere: 'resultats' | 'preference' | 'condition' | 'serie' | 'insertion';
+  critere: 'resultats' | 'interet' | 'preference' | 'condition' | 'serie' | 'insertion';
   points: number;
   detail: string;
   alerte?: boolean;
@@ -28,8 +29,10 @@ const NIVEAU_PAR_PALIER: Record<Palier, NiveauAcces> = {
   TERMINALE: 'APRES_BAC',
 };
 
-// Barème sur 100 : résultats 60, vœux 30/20/10, insertion 10 (seulement si le taux est connu)
-const POIDS_RESULTATS = 60;
+// Barème sur 100 (décision du 16/09) : résultats 40, intérêts 30, vœux 30/20/10, insertion 10 — les
+// deux derniers seulement quand la donnée existe (vœu formulé, taux d'insertion connu).
+const POIDS_RESULTATS = 40;
+const POIDS_INTERET = 30;
 const POINTS_VOEUX = [30, 20, 10];
 const POIDS_INSERTION = 10;
 const PENALITE_SERIE_SOUS_CONDITIONS = 10;
@@ -49,7 +52,7 @@ export class OrientationService {
   async calculerRecommandations(nip: string) {
     const apprenant = await this.prisma.apprenant.findUnique({
       where: { nip },
-      include: { notes: true, preferences: true },
+      include: { notes: true, preferences: true, decouverte: true },
     });
     if (!apprenant) throw new NotFoundException('Apprenant non trouvé');
     if (!apprenant.palier) throw new BadRequestException("La classe de l'élève n'est pas renseignée");
@@ -59,13 +62,14 @@ export class OrientationService {
     const bilan = bilanNotes(apprenant.notes);
     const preference = apprenant.preferences.find((p) => p.palier === palier);
     const voeux = preference ? [preference.filiereId1, preference.filiereId2, preference.filiereId3] : [];
+    const affinites = (apprenant.decouverte?.affinites as Record<string, number> | null) ?? null;
 
     const filieres = await this.prisma.filiere.findMany({
       where: { niveauAcces: niveau, masquee: false },
       orderBy: { nom: 'asc' },
     });
     const evaluations = filieres
-      .map((f) => this.evaluer(f, bilan, voeux, apprenant.serie, niveau))
+      .map((f) => this.evaluer(f, bilan, voeux, apprenant.serie, niveau, affinites))
       .sort((a, b) => b.score - a.score);
     const retenues = this.selectionner(evaluations);
 
@@ -105,7 +109,7 @@ export class OrientationService {
   async evaluerFiliere(nip: string, code: string) {
     const apprenant = await this.prisma.apprenant.findUnique({
       where: { nip },
-      include: { notes: true, preferences: true },
+      include: { notes: true, preferences: true, decouverte: true },
     });
     if (!apprenant) throw new NotFoundException('Apprenant non trouvé');
     if (!apprenant.palier) throw new BadRequestException("La classe de l'élève n'est pas renseignée");
@@ -118,7 +122,8 @@ export class OrientationService {
     }
     const preference = apprenant.preferences.find((p) => p.palier === apprenant.palier);
     const voeux = preference ? [preference.filiereId1, preference.filiereId2, preference.filiereId3] : [];
-    const evaluation = this.evaluer(filiere, bilanNotes(apprenant.notes), voeux, apprenant.serie, niveau);
+    const affinites = (apprenant.decouverte?.affinites as Record<string, number> | null) ?? null;
+    const evaluation = this.evaluer(filiere, bilanNotes(apprenant.notes), voeux, apprenant.serie, niveau, affinites);
     return {
       filiere,
       niveauEleve: niveau,
@@ -167,6 +172,7 @@ export class OrientationService {
     voeux: (string | null)[],
     serie: string | null,
     niveau: NiveauAcces,
+    affinites: Record<string, number> | null,
   ): Evaluation {
     const criteres: Critere[] = [];
     const profil = profilFiliere(filiere);
@@ -195,6 +201,30 @@ export class OrientationService {
       });
     } else {
       criteres.push({ critere: 'resultats', points: 0, detail: "Aucune note disponible pour l'instant." });
+    }
+
+    // Intérêts du questionnaire de découverte : la meilleure correspondance entre les domaines de la
+    // formation et ceux que l'élève a mentionnés (centres d'intérêt, qualités, matière préférée).
+    if (affinites) {
+      const correspondances = filiere.domaines
+        .map((d) => ({ domaine: d, poids: affinites[d] ?? 0 }))
+        .filter((c) => c.poids > 0)
+        .sort((a, b) => b.poids - a.poids);
+      const meilleure = correspondances[0]?.poids ?? 0;
+      criteres.push({
+        critere: 'interet',
+        points: Math.round(POIDS_INTERET * meilleure),
+        detail:
+          correspondances.length > 0
+            ? `Cette formation touche à ${DOMAINES[correspondances[0].domaine as keyof typeof DOMAINES] ?? correspondances[0].domaine}, que tu as mentionné dans le questionnaire de découverte.`
+            : 'Aucun domaine de cette formation ne recoupe ce que tu as coché dans le questionnaire de découverte.',
+      });
+    } else {
+      criteres.push({
+        critere: 'interet',
+        points: 0,
+        detail: "Remplis le questionnaire de découverte pour que tes centres d'intérêt comptent dans le calcul.",
+      });
     }
 
     let admissible = true;

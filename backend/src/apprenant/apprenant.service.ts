@@ -1,9 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { NiveauAcces, Palier } from '@prisma/client';
+import { NiveauAcces, Palier, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrientationService } from '../orientation/orientation.service';
 import { bilanNotes } from './bilan-notes';
+import { affinitesDomaines, validerReponses } from './decouverte';
 import { PreferencesDto } from './dto/preferences.dto';
+import { DecouverteDto } from './dto/decouverte.dto';
 
 /** Les vœux se saisissent en 3e (filières après le BEPC) et en Terminale (filières après le bac). */
 const NIVEAU_DES_VOEUX: Partial<Record<Palier, NiveauAcces>> = {
@@ -158,6 +160,41 @@ export class ApprenantService {
 
   async retirerFavori(nip: string, filiereId: string) {
     await this.prisma.favori.deleteMany({ where: { apprenantNip: nip, filiereId } });
+  }
+
+  async getDecouverte(nip: string) {
+    return this.prisma.decouverte.findUnique({ where: { apprenantNip: nip } });
+  }
+
+  /**
+   * Enregistre (ou met à jour) le questionnaire de découverte et recalcule les affinités par domaine
+   * qui alimentent le critère « intérêt » du moteur. Un élève peut le remplir à nouveau à tout moment.
+   */
+  async enregistrerDecouverte(nip: string, dto: DecouverteDto) {
+    const apprenant = await this.prisma.apprenant.findUnique({ where: { nip }, select: { nip: true } });
+    if (!apprenant) throw new NotFoundException('Apprenant non trouvé');
+
+    let reponses;
+    try {
+      reponses = validerReponses(dto.reponses);
+    } catch (e) {
+      throw new BadRequestException((e as Error).message);
+    }
+    const affinites = affinitesDomaines(reponses);
+
+    const decouverte = await this.prisma.decouverte.upsert({
+      where: { apprenantNip: nip },
+      update: { reponses: reponses as unknown as Prisma.InputJsonValue, affinites: affinites as Prisma.InputJsonValue },
+      create: {
+        apprenantNip: nip,
+        reponses: reponses as unknown as Prisma.InputJsonValue,
+        affinites: affinites as Prisma.InputJsonValue,
+      },
+    });
+    // Les réponses sont enregistrées même si le recalcul échoue (palier non renseigné, etc.) : il
+    // se refera à la prochaine consultation des recommandations.
+    await this.orientationService.calculerRecommandations(nip).catch(() => undefined);
+    return decouverte;
   }
 
   private async palierDeSaisie(nip: string): Promise<Palier> {

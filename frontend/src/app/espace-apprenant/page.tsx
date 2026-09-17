@@ -111,7 +111,7 @@ export default function TableauDeBordPage() {
           <p className="text-sm text-bj-gray-500">
             Pas encore de recommandation.{' '}
             <Link href="/espace-apprenant/recommandations" className={LIEN}>
-              Les calculer
+              Voir mes pistes
             </Link>
           </p>
         ) : (

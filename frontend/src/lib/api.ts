@@ -1,6 +1,6 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 import type { Filiere, PageFilieres, ValeursFiltres } from './filiere';
-import type { Favori, Palier, Preference, ProfilApprenant, Recommandation } from './apprenant';
+import type { Decouverte, Favori, Palier, Preference, ProfilApprenant, Recommandation, ReponsesDecouverte } from './apprenant';
 import { CLES_JETONS, useAuthStore, type Utilisateur } from '@/stores/authStore';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -147,6 +147,9 @@ export const apprenantApi = {
   enregistrerPreferences: (nip: string, data: DonneesVoeux) =>
     api.post<Preference[]>(`/apprenant/${nip}/preferences`, data),
   validerPreferences: (nip: string) => api.post<Preference>(`/apprenant/${nip}/preferences/validation`),
+  getDecouverte: (nip: string) => api.get<Decouverte | null>(`/apprenant/${nip}/decouverte`),
+  enregistrerDecouverte: (nip: string, reponses: ReponsesDecouverte) =>
+    api.post<Decouverte>(`/apprenant/${nip}/decouverte`, { reponses }),
 };
 
 export const orientationApi = {

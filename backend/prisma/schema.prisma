@@ -102,8 +102,29 @@ model Apprenant {
   conversations   ConversationIA[]
   favoris         Favori[]
   parentLinks     ParentApprenant[] @relation("Apprenant")
+  decouverte      Decouverte?
 
   @@map("apprenants")
+}
+
+/// Questionnaire de découverte : ce que l'élève aime, envisage, ses ambitions, les qualités qu'il se
+/// trouve, ses contraintes pratiques. Rempli une fois (pas par palier, contrairement aux vœux) et
+/// modifiable ensuite. Bloquant avant les pistes côté frontend (décision du 16/09) ; le moteur
+/// dégrade sans lui, comme pour une note ou un taux d'insertion absents.
+model Decouverte {
+  apprenantNip  String   @id @map("apprenant_nip")
+  /// Réponses brutes du questionnaire (voir ReponsesDecouverte, backend/src/apprenant/decouverte.ts) ;
+  /// JSON pour ajuster le contenu du questionnaire sans migration
+  reponses      Json
+  /// Affinité par domaine déduite des réponses, normalisée entre 0 et 1 ; alimente le critère
+  /// "intérêt" du moteur d'orientation (backend/src/apprenant/decouverte.ts)
+  affinites     Json
+  dateSaisie    DateTime @default(now()) @map("date_saisie")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  apprenant     Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
+
+  @@map("decouvertes")
 }
 
 model ParentApprenant {

@@ -11,11 +11,14 @@ const r = rapporteur();
 const texte = (sel) => `(document.querySelector(${JSON.stringify(sel)})?.textContent ?? '')`;
 const contient = (t) => `document.body.textContent.includes(${JSON.stringify(t)})`;
 
-async function connecter(identifiant, cible) {
+// Mot de passe par défaut : celui des comptes de démonstration déjà créés (Fatou, Koffi, parent, DGES).
+// Adama n'a pas encore de compte après une réinitialisation : sa 1re identification prend sa date de
+// naissance comme mot de passe fictif, qui devient ensuite son mot de passe réel.
+async function connecter(identifiant, cible, motDePasse = 'Demo2026!') {
   await nav.aller(`${BASE}/identification`);
   await nav.attendre("!!document.querySelector('#identifiant')");
   await nav.saisir('#identifiant', identifiant);
-  await nav.saisir('#password', 'Demo2026!');
+  await nav.saisir('#password', motDePasse);
   await nav.cliquer('button[type=submit]');
   await nav.attendre(`location.pathname === ${JSON.stringify(cible)}`);
 }
@@ -103,6 +106,57 @@ try {
   await nav.attendre("document.querySelectorAll('main ol > li').length > 0");
   r.verifier('Koffi (Tle D) : pistes du supérieur compatibles avec sa série', await nav.evaluer(`${contient('Ta série (D) est admise')} && !${contient('ne fait pas partie des séries admises')}`), await nav.evaluer("[...document.querySelectorAll('main ol > li h3')].map((h) => h.textContent).join(' | ')"));
   await nav.capture(`${OUT}/b2-terminale.png`);
+  await deconnecter();
+
+  // Adama (4e) : questionnaire de découverte, du blocage des pistes à sa levée. Sans compte après une
+  // réinitialisation : sa 1re identification prend sa date de naissance comme mot de passe (comme
+  // dans tests/reinitialiser-demo.sh et le seed de démonstration).
+  await connecter('DEMO-4E-0001', '/espace-apprenant', '2012-07-08');
+  await nav.aller(`${BASE}/espace-apprenant/recommandations`);
+  await nav.attendre(contient("D'abord, faisons connaissance"));
+  r.verifier(
+    "Pistes bloquées tant que la découverte n'est pas remplie",
+    await nav.evaluer(`${contient('Remplir le questionnaire')} && document.querySelectorAll('main ol > li').length === 0`),
+  );
+  await nav.capture(`${OUT}/b2-decouverte-bloque.png`, false);
+
+  await nav.cliquerTexte('Remplir le questionnaire', 'a');
+  await nav.attendre("location.pathname === '/espace-apprenant/decouverte'");
+  await nav.attendre(contient('Étape 1 sur 5'));
+  await nav.capture(`${OUT}/b2-decouverte-etape1.png`, false);
+
+  // Étape 1 : ce qui lui plaît
+  await nav.cliquerTexte('Mécanique, industrie et automobile', 'button');
+  await nav.cliquerTexte('Physique-Chimie-Technologie', 'button');
+  await nav.cliquerTexte('Suivant', 'button');
+  await nav.attendre(contient('Étape 2 sur 5'));
+
+  // Étape 2 : métier envisagé, le reste aux valeurs par défaut
+  await nav.saisir('#metier-envisage', 'Mécanicien automobile');
+  await nav.cliquerTexte('Suivant', 'button');
+  await nav.attendre(contient('Étape 3 sur 5'));
+
+  await nav.cliquerTexte('Suivant', 'button');
+  await nav.attendre(contient('Étape 4 sur 5'));
+
+  // Étape 4 : une qualité, cohérente avec l'intérêt choisi à l'étape 1
+  await nav.cliquerTexte('Bricoleur(se), manuel(le)', 'button');
+  await nav.cliquerTexte('Suivant', 'button');
+  await nav.attendre(contient('Étape 5 sur 5'));
+
+  await nav.cliquerTexte('Enregistrer mes réponses', 'button');
+  await nav.attendre(contient('Réponses enregistrées'));
+  r.verifier('Questionnaire de découverte enregistré', true);
+  await nav.capture(`${OUT}/b2-decouverte-enregistre.png`, false);
+
+  await nav.cliquerTexte('Voir mes pistes', 'a');
+  await nav.attendre("location.pathname === '/espace-apprenant/recommandations' && document.querySelectorAll('main ol > li').length > 0");
+  r.verifier(
+    'Pistes débloquées après le questionnaire : le critère intérêt a des données, plus jamais l’invitation à le remplir',
+    await nav.evaluer(`!${contient('Remplis le questionnaire de découverte')}`),
+    await nav.evaluer("[...document.querySelectorAll('main ol > li h3')].map((h) => h.textContent).join(' | ')"),
+  );
+  await nav.capture(`${OUT}/b2-decouverte-pistes.png`);
   await deconnecter();
 } catch (e) {
   r.verifier('Scénario interrompu', false, e.message);

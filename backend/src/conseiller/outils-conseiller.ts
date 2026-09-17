@@ -165,9 +165,13 @@ export class OutilsConseillerService {
         preferences: {
           select: { palier: true, valideParent: true, filiere1: filiereResumee, filiere2: filiereResumee, filiere3: filiereResumee },
         },
+        decouverte: { select: { reponses: true } },
       },
     });
     if (!apprenant) throw new ErreurOutil('Dossier introuvable.');
+    const reponses = apprenant.decouverte?.reponses as
+      | { metierEnvisage: string | null; interets: string[]; qualites: string[]; apresCollege: string; dureeEtudes: string }
+      | undefined;
 
     const bilan = bilanNotes(apprenant.notes);
     const voeux = apprenant.preferences.find((p) => p.palier === apprenant.palier);
@@ -190,6 +194,16 @@ export class OutilsConseillerService {
             .filter((v) => v !== null)
         : [],
       voeuxValidesParLeParent: voeux ? voeux.valideParent : null,
+      // Questionnaire de découverte : ce que l'élève a dit de lui-même avant de voir ses pistes
+      decouverte: reponses
+        ? {
+            metierEnvisage: reponses.metierEnvisage,
+            centresDInteret: reponses.interets,
+            qualitesQuIlSeTrouve: reponses.qualites,
+            apresLeCollege: reponses.apresCollege,
+            dureeDEtudesSouhaitee: reponses.dureeEtudes,
+          }
+        : 'pas encore rempli',
     };
   }
 
