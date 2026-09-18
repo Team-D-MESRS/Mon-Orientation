@@ -1,4 +1,4 @@
-import type { Domaine, EtablissementPourVoeu, Filiere, NiveauAcces } from './filiere';
+import { DOMAINE_LABELS, type Domaine, type EtablissementPourVoeu, type Filiere, type NiveauAcces } from './filiere';
 
 export type Palier = 'QUATRIEME' | 'TROISIEME' | 'PREMIERE' | 'TERMINALE';
 
@@ -122,6 +122,47 @@ export interface Decouverte {
   affinites: Partial<Record<Domaine, number>>;
   dateSaisie: string;
   updatedAt: string;
+}
+
+/** Score minimal (proportion du domaine dominant) pour citer un 2e domaine à ses côtés. */
+const SEUIL_DOMAINE_SECONDAIRE = 0.8;
+
+/** Domaine(s) au(x) score(s) le(s) plus élevé(s) ; jusqu'à 2 si le second est proche du premier. */
+export function domainesDominants(affinites: Partial<Record<Domaine, number>>, seuil = SEUIL_DOMAINE_SECONDAIRE): Domaine[] {
+  const entrees = (Object.entries(affinites) as [Domaine, number][]).sort((a, b) => b[1] - a[1]);
+  if (entrees.length === 0 || entrees[0][1] <= 0) return [];
+  const [meilleur, score] = entrees[0];
+  const second = entrees[1];
+  return second && second[1] >= score * seuil ? [meilleur, second[0]] : [meilleur];
+}
+
+/** Domaine dominant seul : pour un usage à valeur unique (ex. filtre catalogue, choix simple). */
+export const domaineDominant = (affinites: Partial<Record<Domaine, number>>): Domaine | null => domainesDominants(affinites)[0] ?? null;
+
+const ADJECTIF_STYLE: Record<ReponsesDecouverte['styleTravail'], string | null> = {
+  MANUEL: 'manuel',
+  INTELLECTUEL: 'intellectuel',
+  MIXTE: null, // pas de signal net sur cet axe
+};
+const ADJECTIF_ORIENTATION: Record<ReponsesDecouverte['apresCollege'], string | null> = {
+  TECHNIQUE: 'technique',
+  GENERAL: 'général',
+  INDECIS: null,
+};
+
+/**
+ * Étiquette de profil lisible, dérivée du questionnaire déjà rempli : combine les axes manuel/
+ * intellectuel et technique/général des réponses avec le(s) domaine(s) dominant(s) des affinités.
+ * Purement présentationnel — ne change ni le calcul des affinités ni le moteur d'orientation.
+ */
+export function etiquetteProfil(decouverte: Decouverte): string {
+  const adjectifs = [ADJECTIF_STYLE[decouverte.reponses.styleTravail], ADJECTIF_ORIENTATION[decouverte.reponses.apresCollege]].filter(
+    (a): a is string => !!a,
+  );
+  const domaines = domainesDominants(decouverte.affinites).map((d) => DOMAINE_LABELS[d]);
+  const profil = adjectifs.length > 0 ? `Profil ${adjectifs.join(' et ')}` : 'Profil';
+  if (domaines.length === 0) return `${profil}, intérêts encore à préciser.`;
+  return `${profil}, avec un intérêt marqué pour ${domaines.join(' et ')}.`;
 }
 
 export const ORDINAUX = ['1er', '2e', '3e'];

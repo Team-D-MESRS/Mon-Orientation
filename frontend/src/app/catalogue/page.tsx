@@ -1,11 +1,13 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { GraduationCap, Info, RotateCcw, Search } from 'lucide-react';
 import { authApi, filiereApi, type ParametresCatalogue } from '@/lib/api';
-import { NIVEAU_LABELS, TYPE_LABELS, type Filiere, type NiveauAcces, type TypeFiliere, type ValeursFiltres } from '@/lib/filiere';
+import { DOMAINE_LABELS, NIVEAU_LABELS, TYPE_LABELS, type Domaine, type Filiere, type NiveauAcces, type TypeFiliere, type ValeursFiltres } from '@/lib/filiere';
+import { domaineDominant } from '@/lib/apprenant';
 import { useAuthStore } from '@/stores/authStore';
+import { useDecouverteStore } from '@/stores/decouverteStore';
 import { useFavoris } from '@/stores/favorisStore';
 import { CarteFiliere } from '@/components/catalogue/CarteFiliere';
 import { Alerte } from '@/components/espace/ui';
@@ -71,6 +73,9 @@ function Catalogue() {
   const [maSerie, setMaSerie] = useState<string | null>(null);
   const role = useAuthStore((s) => s.user?.role);
   const { erreur: erreurFavoris } = useFavoris();
+  const { statut: statutMur, decouverte, nip: nipMur } = useDecouverteStore();
+  const [filtreProfilActif, setFiltreProfilActif] = useState(false);
+  const decisionProfilPrise = useRef(false);
 
   // Lu dans l'adresse au moment du changement : un filtre modifié pendant la saisie n'est pas écrasé
   const modifier = (changements: Partial<Record<Cle, string>>) => {
@@ -121,6 +126,24 @@ function Catalogue() {
       })
       .catch(() => setMaSerie(null));
   }, [role]);
+
+  // Filtre par défaut sur le domaine dominant du profil de découverte : une fois par dossier et par
+  // session de navigateur, et seulement si la page s'ouvre sans aucun filtre déjà choisi (sinon une
+  // recherche explicite se combinerait silencieusement avec un domaine sans rapport). Inactif pour
+  // un visiteur anonyme ou un rôle non concerné : statutMur reste alors 'inactif' en permanence.
+  useEffect(() => {
+    if (decisionProfilPrise.current || statutMur !== 'pret') return;
+    decisionProfilPrise.current = true;
+    const cle = `catalogue-filtre-profil:${nipMur}`;
+    if (sessionStorage.getItem(cle) || window.location.search) return;
+    sessionStorage.setItem(cle, '1');
+    const domaine = decouverte ? domaineDominant(decouverte.affinites) : null;
+    if (domaine) {
+      modifier({ domaine });
+      setFiltreProfilActif(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statutMur, decouverte, nipMur]);
 
   useEffect(() => {
     let annule = false;
@@ -304,6 +327,24 @@ function Catalogue() {
             )}
           </div>
         </div>
+
+        {filtreProfilActif && params.get('domaine') && (
+          <div role="note" className="flex flex-wrap gap-3v items-center justify-between p-4v mb-6v rounded-bj-sm border border-bj-green/30 bg-bj-green/5 text-sm">
+            <p>
+              Filtré sur <strong>{DOMAINE_LABELS[params.get('domaine') as Domaine]}</strong>, d&apos;après le questionnaire de découverte.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                modifier({ domaine: '' });
+                setFiltreProfilActif(false);
+              }}
+              className="font-medium text-bj-green hover:underline shrink-0"
+            >
+              Tout afficher
+            </button>
+          </div>
+        )}
 
         {serieChoisie && (
           <div role="note" className="flex gap-3v items-start p-4v mb-6v rounded-bj-sm border border-bj-green/30 bg-bj-green/5 text-sm">

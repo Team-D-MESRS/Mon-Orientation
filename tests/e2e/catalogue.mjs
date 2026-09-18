@@ -218,6 +218,12 @@ try {
   r.verifier('Koffi : aucune formation mise de côté au départ', true);
 
   await nav.aller(`${BASE}/catalogue`);
+  await nav.attendre(`location.search.includes('domaine=SANTE') && ${contient('Tout afficher')}`);
+  r.verifier('Élève avec profil : catalogue filtré par défaut sur son domaine dominant', true);
+  await nav.cliquerTexte('Tout afficher', 'button');
+  await nav.attendre(`!location.search.includes('domaine=SANTE')`);
+  r.verifier('« Tout afficher » lève le filtre de profil', true);
+
   await nav.attendre(`${contient('Que faire avec mon bac D ?')} && !!document.querySelector('main article button[title]:not([disabled])')`);
   await nav.cliquerTexte('Que faire avec mon bac D ?', 'button');
   await nav.attendre(`location.search.includes('serie=D') && ${contient('accessibles avec un bac D')}`);

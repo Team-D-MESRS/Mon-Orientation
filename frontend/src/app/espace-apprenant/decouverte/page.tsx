@@ -11,11 +11,13 @@ import {
   type Qualite,
   type ReponsesDecouverte,
   dateLisible,
+  etiquetteProfil,
 } from '@/lib/apprenant';
 import { DOMAINE_LABELS, type Domaine } from '@/lib/filiere';
 import { messageErreur } from '@/lib/erreurs';
 import { useEspace, useProfil } from '@/components/espace/EspaceContext';
 import { Alerte, Chargement } from '@/components/espace/ui';
+import { useDecouverteStore } from '@/stores/decouverteStore';
 
 const NB_ETAPES = 5;
 const MAX_INTERETS = 5;
@@ -136,6 +138,7 @@ function DecouverteEnLecture({ prenom, decouverte }: { prenom: string; decouvert
   return (
     <section className="bg-white rounded-bj-md border border-bj-gray-925 p-6v space-y-4v">
       <h2 className="text-xl font-bold">Ce que {prenom} a dit de lui-même</h2>
+      <p className="text-sm text-bj-gray-500">{etiquetteProfil(decouverte)}</p>
       {r.metierEnvisage && (
         <p>
           <span className="text-bj-gray-500">Métier envisagé : </span>« {r.metierEnvisage} »
@@ -270,6 +273,7 @@ function Questionnaire({
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [enregistre, setEnregistre] = useState(false);
+  const [decouverteEnregistree, setDecouverteEnregistree] = useState<Decouverte | null>(null);
 
   const maj = <K extends keyof ReponsesDecouverte>(champ: K, valeur: ReponsesDecouverte[K]) =>
     setR((actuel) => ({ ...actuel, [champ]: valeur }));
@@ -280,6 +284,10 @@ function Questionnaire({
     try {
       const { data } = await apprenantApi.enregistrerDecouverte(profil.nip, r);
       onEnregistre(data);
+      // Lève le mur immédiatement : sans ça, il continuerait de rediriger vers cette page en se
+      // basant sur l'état chargé avant la soumission (décision du 18/09).
+      useDecouverteStore.getState().definir(data);
+      setDecouverteEnregistree(data);
       setEnregistre(true);
     } catch (err) {
       setErreur(messageErreur(err));
@@ -421,9 +429,9 @@ function Questionnaire({
       )}
 
       {erreur && <Alerte ton="erreur">{erreur}</Alerte>}
-      {enregistre && (
+      {enregistre && decouverteEnregistree && (
         <Alerte ton="succes">
-          Réponses enregistrées.{' '}
+          Réponses enregistrées. {etiquetteProfil(decouverteEnregistree)}{' '}
           <Link href="/espace-apprenant/recommandations" className="font-medium underline">
             Voir mes pistes
           </Link>

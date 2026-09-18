@@ -6,8 +6,10 @@ import { CheckCircle2, Clock, GraduationCap, TrendingUp } from 'lucide-react';
 import { apprenantApi, orientationApi } from '@/lib/api';
 import {
   dateLisible,
+  etiquetteProfil,
   noteLisible,
   palierDeSaisie,
+  type Decouverte,
   type Favori,
   type Preference,
   type ProfilApprenant,
@@ -25,6 +27,23 @@ export default function TableauDeBordPage() {
   const [preference, setPreference] = useState<Preference | null | undefined>(undefined);
   const [recommandations, setRecommandations] = useState<Recommandation[] | null>(null);
   const [favoris, setFavoris] = useState<Favori[] | null>(null);
+  const [decouverte, setDecouverte] = useState<Decouverte | null | undefined>(undefined);
+
+  useEffect(() => {
+    let annule = false;
+    setDecouverte(undefined);
+    apprenantApi
+      .getDecouverte(profil.nip)
+      .then(({ data }) => {
+        if (!annule) setDecouverte(data);
+      })
+      .catch(() => {
+        if (!annule) setDecouverte(null);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [profil.nip]);
 
   useEffect(() => {
     let annule = false;
@@ -67,6 +86,13 @@ export default function TableauDeBordPage() {
   return (
     // Identité, classe, département et NIP figurent déjà dans l'en-tête de l'espace (CadreEspace)
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6v">
+      {decouverte && (
+        <div className="md:col-span-2 bg-bj-green/5 border border-bj-green/30 rounded-bj-md p-4v">
+          <p className="text-xs font-medium text-bj-green uppercase tracking-wide mb-1v">Ton profil</p>
+          <p className="text-sm">{etiquetteProfil(decouverte)}</p>
+        </div>
+      )}
+
       <Carte titre={`Résultats ${bilan.anneeScolaire ?? ''}`} icone={<TrendingUp size={18} />}>
         {bilan.moyenneGenerale === null ? (
           <p className="text-sm text-bj-gray-500">Aucune note disponible pour l&apos;instant.</p>

@@ -119,20 +119,19 @@ try {
   await nav.capture(`${OUT}/b2-terminale.png`);
   await deconnecter();
 
-  // Adama (4e) : questionnaire de découverte, du blocage des pistes à sa levée. Sans compte après une
+  // Adama (4e) : questionnaire de découverte, du blocage à sa levée. Sans compte après une
   // réinitialisation : sa 1re identification prend sa date de naissance comme mot de passe (comme
-  // dans tests/reinitialiser-demo.sh et le seed de démonstration).
-  await connecter('DEMO-4E-0001', '/espace-apprenant', '2012-07-08');
-  await nav.aller(`${BASE}/espace-apprenant/recommandations`);
-  await nav.attendre(contient("D'abord, faisons connaissance"));
-  r.verifier(
-    "Pistes bloquées tant que la découverte n'est pas remplie",
-    await nav.evaluer(`${contient('Remplir le questionnaire')} && document.querySelectorAll('main ol > li').length === 0`),
-  );
+  // dans tests/reinitialiser-demo.sh et le seed de démonstration). Le mur redirige dès la connexion,
+  // avant même le tableau de bord — et bloque aussi le catalogue, pas seulement les recommandations
+  // (décisions du 18/09 : le test devient le point d'entrée central du parcours).
+  await connecter('DEMO-4E-0001', '/espace-apprenant/decouverte', '2012-07-08');
+  await nav.attendre(contient('Étape 1 sur 5'));
+  r.verifier("Mur dès la connexion : arrivée directe sur le questionnaire, pas le tableau de bord", true);
   await nav.capture(`${OUT}/b2-decouverte-bloque.png`, false);
 
-  await nav.cliquerTexte('Remplir le questionnaire', 'a');
+  await nav.aller(`${BASE}/catalogue`);
   await nav.attendre("location.pathname === '/espace-apprenant/decouverte'");
+  r.verifier('Le mur bloque aussi le catalogue tant que le questionnaire n’est pas rempli', true);
   await nav.attendre(contient('Étape 1 sur 5'));
   await nav.capture(`${OUT}/b2-decouverte-etape1.png`, false);
 
