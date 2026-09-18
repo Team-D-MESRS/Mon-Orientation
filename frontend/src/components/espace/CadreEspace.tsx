@@ -16,7 +16,7 @@ const ONGLETS = [
   { href: '/espace-apprenant/notes', label: 'Notes', Icone: BookOpen },
   { href: '/espace-apprenant/preferences', label: 'Vœux', Icone: Heart },
   { href: '/espace-apprenant/recommandations', label: 'Recommandations', Icone: Lightbulb },
-  { href: '/espace-apprenant/conseiller', label: 'Conseiller', Icone: MessageCircle },
+  { href: '/espace-apprenant/conseiller', label: 'Guido', Icone: MessageCircle },
 ];
 
 export function CadreEspace({ children }: { children: ReactNode }) {

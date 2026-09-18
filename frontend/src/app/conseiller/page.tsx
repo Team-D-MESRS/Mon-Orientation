@@ -32,7 +32,7 @@ export default function ConseillerAccueilPage() {
       <div className="bj-container max-w-3xl">
         <div className="flex items-center gap-3v mb-2v">
           <Bot size={28} className="text-bj-green" aria-hidden="true" />
-          <h1 className="text-3xl font-bold">Conseiller pédagogique</h1>
+          <h1 className="text-3xl font-bold">Guido, le conseiller pédagogique</h1>
         </div>
         <p className="text-bj-gray-500 mb-6v">
           Un assistant qui répond aux questions sur les formations et les métiers, et qui explique les propositions
@@ -44,10 +44,10 @@ export default function ConseillerAccueilPage() {
           <li>Il est accessible aux élèves et à leurs parents, depuis leur espace personnel.</li>
         </ul>
         {user ? (
-          <Alerte ton="info">Le conseiller est réservé aux élèves et à leurs parents.</Alerte>
+          <Alerte ton="info">Guido est réservé aux élèves et à leurs parents.</Alerte>
         ) : (
           <Link href={`/identification?redirect=${encodeURIComponent(CIBLE)}`} className="bj-btn bj-btn-primary">
-            S&apos;identifier pour échanger avec le conseiller
+            S&apos;identifier pour échanger avec Guido
           </Link>
         )}
       </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import axios from 'axios';
-import { Bot, RotateCcw, Send } from 'lucide-react';
+import { Bot, Mic, RotateCcw, Send, Square, Trash2 } from 'lucide-react';
 import { conseillerApi, type LangueConseiller } from '@/lib/api';
 import { messageErreur } from '@/lib/erreurs';
 import { useEspace, useProfil } from '@/components/espace/EspaceContext';
@@ -34,6 +34,13 @@ const SUGGESTIONS_PARENT = [
   'Quels débouchés après un bac technique ?',
 ];
 
+/** « 65 » → « 1:05 » */
+function formaterDuree(secondes: number) {
+  const min = Math.floor(secondes / 60);
+  const s = secondes % 60;
+  return `${min}:${s.toString().padStart(2, '0')}`;
+}
+
 /** Message du serveur pour les indisponibilités (non configuré, trop de demandes), sinon message générique. */
 function erreurConseiller(err: unknown) {
   if (axios.isAxiosError(err) && (err.response?.status === 503 || err.response?.status === 429)) {
@@ -52,7 +59,13 @@ export default function ConseillerPage() {
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [langue, setLangue] = useState<LangueConseiller>('fr');
+  const [enregistrement, setEnregistrement] = useState(false);
+  const [duree, setDuree] = useState(0);
   const finRef = useRef<HTMLDivElement>(null);
+  const enregistreurRef = useRef<MediaRecorder | null>(null);
+  const morceauxRef = useRef<Blob[]>([]);
+  const envoyerAuStopRef = useRef(true);
+  const minuteurRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     try {
@@ -85,7 +98,7 @@ export default function ConseillerPage() {
   if (moi.role !== 'APPRENANT' && moi.role !== 'PARENT') {
     return (
       <Alerte ton="info">
-        Le conseiller est réservé aux élèves et à leurs parents. Les conversations pourront être consultées pour la
+        Guido est réservé aux élèves et à leurs parents. Les conversations pourront être consultées pour la
         supervision dans l&apos;outil d&apos;administration.
       </Alerte>
     );
@@ -125,6 +138,79 @@ export default function ConseillerPage() {
     }
   };
 
+  // Note vocale : à la place du message écrit, pour le fon, le yoruba, le mina et les autres langues locales
+  // peu écrites — l'élève ou le parent parle, Guido comprend l'audio directement, sans étape de transcription.
+  const envoyerNoteVocale = async (blob: Blob) => {
+    if (envoi) return;
+    setErreur(null);
+    setMessages((m) => [...m, { role: 'user', texte: '🎤 Note vocale' }]);
+    setEnvoi(true);
+    const langueDemandee = langue;
+    try {
+      const data = await new Promise<string>((resolve, reject) => {
+        const lecteur = new FileReader();
+        lecteur.onload = () => resolve((lecteur.result as string).split(',')[1] ?? '');
+        lecteur.onerror = () => reject(lecteur.error);
+        lecteur.readAsDataURL(blob);
+      });
+      const { data: reponse } = await conseillerApi.chat(profil.nip, undefined, conversationId, langueDemandee, {
+        data,
+        mimeType: blob.type || 'audio/webm',
+      });
+      setConversationId(reponse.conversationId);
+      setMessages((m) => [...m, { role: 'assistant', texte: reponse.reponse, langue: langueDemandee }]);
+    } catch (err) {
+      setMessages((m) => m.slice(0, -1));
+      setErreur(erreurConseiller(err));
+    } finally {
+      setEnvoi(false);
+    }
+  };
+
+  const demarrerEnregistrement = async () => {
+    setErreur(null);
+    try {
+      const flux = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const enregistreur = new MediaRecorder(flux);
+      morceauxRef.current = [];
+      envoyerAuStopRef.current = true;
+      enregistreur.ondataavailable = (e) => {
+        if (e.data.size > 0) morceauxRef.current.push(e.data);
+      };
+      enregistreur.onstop = () => {
+        flux.getTracks().forEach((piste) => piste.stop());
+        if (envoyerAuStopRef.current && morceauxRef.current.length > 0) {
+          envoyerNoteVocale(new Blob(morceauxRef.current, { type: enregistreur.mimeType }));
+        }
+      };
+      enregistreur.start();
+      enregistreurRef.current = enregistreur;
+      setEnregistrement(true);
+      setDuree(0);
+      minuteurRef.current = setInterval(() => setDuree((d) => d + 1), 1000);
+    } catch {
+      setErreur("Le microphone n'est pas accessible depuis ce navigateur. Vérifie les autorisations, ou écris ta question.");
+    }
+  };
+
+  const arreterEnregistrement = (envoyerLaNote: boolean) => {
+    if (minuteurRef.current) clearInterval(minuteurRef.current);
+    setEnregistrement(false);
+    envoyerAuStopRef.current = envoyerLaNote;
+    enregistreurRef.current?.stop();
+  };
+
+  useEffect(
+    () => () => {
+      if (minuteurRef.current) clearInterval(minuteurRef.current);
+      if (enregistreurRef.current?.state === 'recording') {
+        envoyerAuStopRef.current = false;
+        enregistreurRef.current.stop();
+      }
+    },
+    [],
+  );
+
   const nouvelleConversation = () => {
     setMessages([]);
     setConversationId(undefined);
@@ -139,7 +225,7 @@ export default function ConseillerPage() {
         <div className="flex items-center gap-3v">
           <Bot size={22} className="text-bj-green shrink-0" aria-hidden="true" />
           <div>
-            <h2 className="font-bold text-sm">Conseiller pédagogique</h2>
+            <h2 className="font-bold text-sm">Guido</h2>
             <p className="text-xs text-bj-gray-500">Assistant automatique : il explique, il ne décide pas.</p>
           </div>
         </div>
@@ -181,7 +267,7 @@ export default function ConseillerPage() {
               {estParent ? `Posez vos questions sur l'orientation de ${profil.prenom}.` : 'Pose tes questions sur ton orientation.'}
             </p>
             <p className="text-sm text-bj-gray-500 mb-4v">
-              Formations, métiers, résultats, propositions du moteur : le conseiller s&apos;appuie sur le catalogue
+              Formations, métiers, résultats, propositions du moteur : Guido s&apos;appuie sur le catalogue
               officiel et sur le dossier scolaire.
             </p>
             <div className="flex flex-wrap justify-center gap-2v">
@@ -216,7 +302,7 @@ export default function ConseillerPage() {
         {envoi && (
           <div className="flex justify-start">
             <div className="bubble-assistant text-sm text-bj-gray-500" role="status">
-              Le conseiller réfléchit…
+              Guido réfléchit…
             </div>
           </div>
         )}
@@ -229,31 +315,68 @@ export default function ConseillerPage() {
         </div>
       )}
 
-      <form onSubmit={soumettre} className="border-t border-bj-gray-925 p-3v md:p-4v flex gap-2v items-end">
-        <label htmlFor="question" className="sr-only">
-          {estParent ? 'Votre question' : 'Ta question'}
-        </label>
-        <textarea
-          id="question"
-          rows={2}
-          maxLength={2000}
-          value={saisie}
-          onChange={(e) => setSaisie(e.target.value)}
-          onKeyDown={toucheClavier}
-          disabled={envoi}
-          placeholder={estParent ? 'Votre question… (Entrée pour envoyer)' : 'Ta question… (Entrée pour envoyer)'}
-          className={`${CHAMP} resize-none`}
-        />
-        <button
-          type="submit"
-          disabled={envoi || !saisie.trim()}
-          className="bj-btn bj-btn-primary inline-flex items-center gap-2v disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          <Send size={16} aria-hidden="true" />
-          <span className="hidden sm:inline">Envoyer</span>
-          <span className="sr-only sm:hidden">Envoyer</span>
-        </button>
-      </form>
+      {enregistrement ? (
+        <div className="border-t border-bj-gray-925 p-3v md:p-4v flex items-center gap-3v" role="status">
+          <span className="relative flex h-3 w-3 shrink-0">
+            <span className="absolute inline-flex h-full w-full rounded-full bg-bj-red opacity-75 animate-ping" />
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-bj-red" />
+          </span>
+          <p className="flex-1 text-sm font-medium">Enregistrement… {formaterDuree(duree)}</p>
+          <button
+            type="button"
+            onClick={() => arreterEnregistrement(false)}
+            aria-label="Annuler la note vocale"
+            className="bj-btn bj-btn-secondary p-2v"
+          >
+            <Trash2 size={16} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={() => arreterEnregistrement(true)}
+            className="bj-btn bj-btn-primary inline-flex items-center gap-2v"
+          >
+            <Square size={14} aria-hidden="true" />
+            <span className="hidden sm:inline">Envoyer</span>
+            <span className="sr-only sm:hidden">Envoyer</span>
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={soumettre} className="border-t border-bj-gray-925 p-3v md:p-4v flex gap-2v items-end">
+          <label htmlFor="question" className="sr-only">
+            {estParent ? 'Votre question' : 'Ta question'}
+          </label>
+          <textarea
+            id="question"
+            rows={2}
+            maxLength={2000}
+            value={saisie}
+            onChange={(e) => setSaisie(e.target.value)}
+            onKeyDown={toucheClavier}
+            disabled={envoi}
+            placeholder={estParent ? 'Votre question… (Entrée pour envoyer)' : 'Ta question… (Entrée pour envoyer)'}
+            className={`${CHAMP} resize-none`}
+          />
+          <button
+            type="button"
+            onClick={demarrerEnregistrement}
+            disabled={envoi}
+            aria-label="Enregistrer une note vocale, par exemple en fon ou en yoruba"
+            title="Note vocale (fon, yoruba, mina…)"
+            className="bj-btn bj-btn-secondary p-3v disabled:opacity-60"
+          >
+            <Mic size={16} aria-hidden="true" />
+          </button>
+          <button
+            type="submit"
+            disabled={envoi || !saisie.trim()}
+            className="bj-btn bj-btn-primary inline-flex items-center gap-2v disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <Send size={16} aria-hidden="true" />
+            <span className="hidden sm:inline">Envoyer</span>
+            <span className="sr-only sm:hidden">Envoyer</span>
+          </button>
+        </form>
+      )}
       <p className="px-4v md:px-6v pb-3v text-xs text-bj-gray-500">
         {estParent
           ? "Vérifiez les informations importantes auprès de l'établissement. La décision d'orientation revient à votre enfant et à votre famille."

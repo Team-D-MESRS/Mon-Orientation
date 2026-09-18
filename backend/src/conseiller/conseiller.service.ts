@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiError, Content, FinishReason, FunctionCall, GenerateContentResponse, GoogleGenAI, Part } from '@google/genai';
 import { Prisma } from '@prisma/client';
@@ -35,6 +35,43 @@ const REPONSE_TROP_LONGUE =
   'Ta question demande plus de recherches que je ne peux en faire en une fois. Peux-tu la découper en questions plus simples ?';
 const REPONSE_VIDE = "Je n'ai pas pu formuler de réponse. Peux-tu reformuler ta question ?";
 
+/**
+ * Filet de sécurité déterministe (pas laissé au seul jugement du modèle) : des signaux sérieux — pas le
+ * stress ordinaire du choix d'orientation, un sujet légitime que la consigne du conseiller sait déjà
+ * traiter avec empathie — coupent court à toute réponse générée et renvoient vers un adulte. Liste volontairement
+ * étroite : « stressé », « je suis perdu » etc. sont des messages fréquents et normaux dans ce contexte,
+ * les y ajouter déclencherait sur la quasi-totalité des conversations sur le choix d'une filière.
+ */
+const SIGNAUX_DETRESSE = [
+  'harcèlement',
+  'harcelée',
+  'harcelé',
+  'harcele',
+  'me frappe',
+  'me tape',
+  'me bat',
+  'violence',
+  'abusé',
+  'abusée',
+  'agressée',
+  'agressé',
+  'envie de mourir',
+  'me suicider',
+  'suicide',
+  'me faire du mal',
+  'me blesser',
+  "j'ai peur de rentrer",
+  "j'ai peur de lui",
+  "j'ai peur d'elle",
+];
+
+const REPONSE_DETRESSE: Record<Interlocuteur, string> = {
+  eleve:
+    "Ce que tu dis est important, mais je ne suis pas la bonne personne pour t'aider avec ça : je suis un assistant sur l'orientation scolaire. Parle-en dès que possible à un adulte de confiance — un parent, ton professeur principal, le conseiller d'orientation ou le chef d'établissement. Tu peux revenir me parler d'orientation quand tu veux.",
+  parent:
+    "Ce que vous décrivez dépasse ce que je peux traiter : je suis un assistant sur l'orientation scolaire, pas un professionnel formé pour ce type de situation. Je vous invite à en parler sans attendre à un adulte de confiance de l'établissement (conseiller d'orientation, chef d'établissement) ou à un professionnel adapté. Je reste disponible pour toute question sur l'orientation de votre enfant.",
+};
+
 @Injectable()
 export class ConseillerService {
   private readonly logger = new Logger(ConseillerService.name);
@@ -55,31 +92,47 @@ export class ConseillerService {
     if (!this.client) this.logger.warn('GEMINI_API_KEY absente : le conseiller pédagogique est désactivé');
   }
 
-  async chat(nip: string, message: string, utilisateur: UtilisateurConnecte, conversationId?: string, langue: Langue = 'fr') {
+  async chat(
+    nip: string,
+    message: string | undefined,
+    utilisateur: UtilisateurConnecte,
+    conversationId?: string,
+    langue: Langue = 'fr',
+    audio?: { data: string; mimeType: string },
+  ) {
     const conversation = conversationId
       ? await this.prisma.conversationIA.findFirst({ where: { id: conversationId, apprenantNip: nip } })
       : null;
     if (conversationId && !conversation) throw new NotFoundException('Conversation introuvable');
+    if (!message && !audio) throw new BadRequestException('Le message est vide');
     if (!this.client) {
       throw new ServiceUnavailableException("Le conseiller n'est pas encore configuré sur ce serveur.");
     }
 
     const historique = (conversation?.messages as unknown as MessageEnregistre[] | null) ?? [];
+    // Note vocale : la partie audio est envoyée au modèle mais jamais conservée (ni le son, ni sa transcription
+    // brute) — seule la réponse de Guido, qui reformule ce qu'il a compris, reste dans l'historique.
+    const partieAudio: Part[] = audio ? [{ inlineData: { data: audio.data, mimeType: audio.mimeType } }] : [];
+    const partieTexte: Part[] = message ? [{ text: message }] : [];
     const contents: Content[] = [
       ...historique.slice(-MAX_MESSAGES_HISTORIQUE).map((m) => ({
         role: m.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: m.content }],
       })),
-      { role: 'user', parts: [{ text: this.blocContexte(await this.outils.contexteEleve(nip)) }, { text: message }] },
+      { role: 'user', parts: [{ text: this.blocContexte(await this.outils.contexteEleve(nip)) }, ...partieAudio, ...partieTexte] },
     ];
     const interlocuteur: Interlocuteur = utilisateur.role === 'PARENT' ? 'parent' : 'eleve';
     const questionPosee = new Date().toISOString();
 
-    const { texte, outilsUtilises } = await this.repondre(contents, interlocuteur, nip, langue);
+    // Filet de sécurité : un signal sérieux court-circuite le modèle, la réponse est fixe et validée d'avance.
+    // Ne porte que sur le texte : une note vocale s'appuie sur la seule consigne du modèle (même protection qu'avant ce filet).
+    const { texte, outilsUtilises } = message && this.signaleDetresse(message)
+      ? { texte: REPONSE_DETRESSE[interlocuteur], outilsUtilises: [] as string[] }
+      : await this.repondre(contents, interlocuteur, nip, langue);
 
     const conversationMaj = [
       ...historique,
-      { role: 'user', content: message, horodatage: questionPosee },
+      { role: 'user', content: message ?? '🎤 Note vocale', horodatage: questionPosee },
       { role: 'assistant', content: texte, horodatage: new Date().toISOString(), outils: outilsUtilises, langue },
     ] satisfies MessageEnregistre[];
     const donnees = conversationMaj as unknown as Prisma.InputJsonValue;
@@ -157,6 +210,15 @@ export class ConseillerService {
 
     this.logger.warn(`Limite de ${MAX_TOURS_MODELE} appels au modèle atteinte (outils : ${outilsUtilises.join(', ')})`);
     return { texte: REPONSE_TROP_LONGUE, outilsUtilises };
+  }
+
+  /** Signal sérieux (harcèlement, violence, mise en danger) : insensible aux accents et à la casse. */
+  private signaleDetresse(message: string): boolean {
+    const normalise = message
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '');
+    return SIGNAUX_DETRESSE.some((signal) => normalise.includes(signal.normalize('NFD').replace(/[̀-ͯ]/g, '')));
   }
 
   /** Contexte placé avant la question : dossier pseudonymisé et propositions, sans nom ni NIP. */

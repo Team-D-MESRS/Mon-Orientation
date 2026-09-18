@@ -29,18 +29,22 @@ try {
   await nav.taille(1280, 900);
 
   await nav.aller(`${BASE}/conseiller`);
-  await nav.attendre(contient("S'identifier pour échanger avec le conseiller"));
-  r.verifier("Visiteur : présentation du conseiller et invitation à s'identifier", true);
+  await nav.attendre(contient("S'identifier pour échanger avec Guido"));
+  r.verifier("Visiteur : présentation de Guido et invitation à s'identifier", true);
 
   await connecter('DEMO-3E-0001', '/espace-apprenant');
   await nav.aller(`${BASE}/conseiller`);
   await nav.attendre("location.pathname === '/espace-apprenant/conseiller'");
   await nav.attendre(contient('Pose tes questions sur ton orientation'));
   r.verifier(
-    'Élève : /conseiller mène à l\'onglet Conseiller de son espace',
-    await nav.evaluer("document.querySelector('nav[aria-label] a[aria-current=page]')?.textContent.includes('Conseiller') === true"),
+    "Élève : /conseiller mène à l'onglet Guido de son espace",
+    await nav.evaluer("document.querySelector('nav[aria-label] a[aria-current=page]')?.textContent.includes('Guido') === true"),
   );
   r.verifier('Suggestions de questions proposées', await nav.evaluer(`[...document.querySelectorAll('section button')].filter((b) => b.textContent.includes('?')).length >= 3`));
+  r.verifier(
+    'Bouton note vocale présent (fon, yoruba, mina…)',
+    await nav.evaluer("!!document.querySelector('button[aria-label*=\"note vocale\"]')"),
+  );
 
   // Langue des réponses : choix retenu par l'appareil (sans question envoyée, pour ménager le quota du modèle)
   const langueActive = "document.querySelector('[aria-label=\"Langue des réponses\"] button[aria-pressed=\"true\"]')?.textContent";
@@ -54,7 +58,7 @@ try {
   await nav.attendre(`${langueActive} === 'Français'`);
 
   await nav.cliquerTexte(QUESTION, 'section button');
-  await nav.attendre(`${contient('pas encore configuré')} || !!document.querySelector('[role=alert]') || (document.querySelectorAll('.bubble-assistant').length > 0 && !${contient('Le conseiller réfléchit')})`, 150000);
+  await nav.attendre(`${contient('pas encore configuré')} || !!document.querySelector('[role=alert]') || (document.querySelectorAll('.bubble-assistant').length > 0 && !${contient('Guido réfléchit')})`, 150000);
   const alerte = await nav.evaluer("document.querySelector('[role=alert]')?.textContent ?? ''");
   if (alerte && !alerte.includes('pas encore configuré')) {
     r.verifier('Réponse du conseiller', false, `erreur affichée (quota ou surcharge du modèle ?) : ${alerte}`);

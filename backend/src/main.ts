@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { json, urlencoded } from 'express';
 import helmet from 'helmet';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -7,6 +8,11 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Défaut Express (100kb) trop bas pour une note vocale encodée en base64 (conseiller) ; 6 Mo de marge
+  // au-dessus de la limite posée dans ChatDto (~4 Mo) pour le reste du JSON.
+  app.use(json({ limit: '6mb' }));
+  app.use(urlencoded({ extended: true, limit: '6mb' }));
 
   // Derrière nginx : nécessaire pour que la limitation des tentatives voie l'IP du client et non celle du proxy
   if (process.env.TRUST_PROXY === 'true') {

@@ -25,6 +25,9 @@ check "admin → historique (supervision) → 200" 200 $(req GET /conseiller/DEM
 
 echo "── Validation"
 check "message vide → 400" 400 $(req POST /conseiller/DEMO-3E-0001/chat "$TF" '{"message":""}')
+check "ni message ni note vocale → 400" 400 $(req POST /conseiller/DEMO-3E-0001/chat "$TF" '{}')
+check "note vocale d'un type non pris en charge → 400" 400 $(req POST /conseiller/DEMO-3E-0001/chat "$TF" '{"audio":{"data":"YWJj","mimeType":"video/mp4"}}')
+check "note vocale vide → 400" 400 $(req POST /conseiller/DEMO-3E-0001/chat "$TF" '{"audio":{"data":"","mimeType":"audio/webm"}}')
 LONG=$(printf 'a%.0s' $(seq 1 2001))
 check "message de plus de 2000 caractères → 400" 400 $(req POST /conseiller/DEMO-3E-0001/chat "$TF" "{\"message\":\"$LONG\"}")
 check "conversationId mal formé → 400" 400 $(req POST /conseiller/DEMO-3E-0001/chat "$TF" '{"message":"bonjour","conversationId":"abc"}')
@@ -67,6 +70,16 @@ else
   check "  réponse en fongbé (lettres ɖ, ɛ ou ɔ)" oui "$(js "return /[ɖɛɔƐƆ]/.test(j.reponse) ? 'oui' : 'non'")"
   check "  langue enregistrée avec la conversation" fon "$($PSQL -tA -c "select langue from conversations_ia where id = '$(jget j.conversationId)';")"
   echo "   → $(jget j.reponse | head -c 300)"
+fi
+
+echo "── Filet de sécurité détresse (déterministe, sans appel au modèle)"
+CODE=$(req POST /conseiller/DEMO-3E-0001/chat "$TF" '{"message":"Un camarade me harcèle tous les jours en classe"}')
+if [ "$CODE" = 503 ] || [ "$CODE" = 429 ]; then
+  check "modèle indisponible (sans clé, quota ou surcharge) : pas vérifiable ici" 201 "$CODE"
+else
+  check "signal de harcèlement → réponse fixe, 201" 201 "$CODE"
+  check "  redirige vers un adulte de confiance" oui "$(js "return /adulte de confiance/.test(j.reponse) ? 'oui' : 'non'")"
+  check "  court-circuite le modèle : aucun outil utilisé" 0 "$(js 'return j.outilsUtilises.length')"
 fi
 
 echo "── Limitation (10 messages par minute et par compte)"

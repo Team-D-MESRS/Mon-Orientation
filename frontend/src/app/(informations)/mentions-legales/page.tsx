@@ -30,7 +30,7 @@ export default function MentionsLegalesPage() {
           été validées par le Ministère, elles portent la mention « À confirmer ».
         </p>
         <p>
-          Les pistes recommandées et les réponses du conseiller IA sont des aides à la réflexion : elles ne constituent pas une décision
+          Les pistes recommandées et les réponses de Guido, le conseiller IA, sont des aides à la réflexion : elles ne constituent pas une décision
           d&apos;orientation.
         </p>
       </Bloc>

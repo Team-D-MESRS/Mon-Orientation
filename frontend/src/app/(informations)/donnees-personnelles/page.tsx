@@ -47,14 +47,14 @@ export default function DonneesPersonnellesPage() {
             leur explication.
           </li>
           <li>
-            <strong>Conseiller IA</strong> : questions posées et réponses reçues.
+            <strong>Guido, le conseiller IA</strong> : questions posées (écrites ou en note vocale) et réponses reçues.
           </li>
         </ul>
       </Bloc>
 
       <Bloc titre="Pourquoi">
         <ul>
-          <li>Accompagner l&apos;élève dans son orientation : résultats, pistes, vœux, réponses du conseiller.</li>
+          <li>Accompagner l&apos;élève dans son orientation : résultats, pistes, vœux, réponses de Guido.</li>
           <li>Permettre au parent de suivre son enfant et de valider ses vœux.</li>
           <li>Produire des statistiques globales pour le pilotage de l&apos;orientation, sans identifier les élèves.</li>
         </ul>
@@ -69,12 +69,16 @@ export default function DonneesPersonnellesPage() {
         <p>Les services statistiques du Ministère n&apos;accèdent qu&apos;à des chiffres globaux, jamais aux dossiers individuels.</p>
       </Bloc>
 
-      <Bloc titre="Le conseiller IA">
+      <Bloc titre="Guido, le conseiller IA">
         <p>
-          Pour répondre, le conseiller transmet la question à un service d&apos;intelligence artificielle, accompagnée de la classe, de
+          Pour répondre, Guido transmet la question à un service d&apos;intelligence artificielle, accompagnée de la classe, de
           la série, du bilan des notes, des vœux et des pistes proposées. Il ne transmet ni le nom, ni le NIP, ni la date de naissance, ni
           la commune de l&apos;élève. N&apos;écrivez pas d&apos;informations personnelles dans vos questions : elles seraient transmises
           telles quelles.
+        </p>
+        <p>
+          Une question peut aussi être posée en note vocale : le son est alors transmis au même service pour être compris, mais
+          n&apos;est conservé ni par la plateforme, ni au-delà de cet échange.
         </p>
         <p>
           <ACompleter>Prestataire et lieu de traitement du service d&apos;intelligence artificielle à préciser avant la mise en service.</ACompleter>

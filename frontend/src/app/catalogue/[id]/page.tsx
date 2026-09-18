@@ -539,7 +539,7 @@ export default function FicheFilierePage() {
 
             <div className="mt-8v print:hidden">
               <Link href="/conseiller" className="bj-btn bj-btn-primary inline-flex items-center gap-2v">
-                <MessageCircle size={18} aria-hidden="true" /> Poser une question au conseiller
+                <MessageCircle size={18} aria-hidden="true" /> Poser une question à Guido
               </Link>
             </div>
           </article>

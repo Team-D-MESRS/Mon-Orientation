@@ -25,7 +25,7 @@ export class ConseillerController {
     summary: "Poser une question au conseiller (élève ou parent rattaché) ; réponse fondée sur le catalogue et le dossier de l'élève",
   })
   async chat(@Param('nip') nip: string, @Body() dto: ChatDto, @UtilisateurCourant() user: UtilisateurConnecte) {
-    return this.conseillerService.chat(nip, dto.message, user, dto.conversationId, dto.langue);
+    return this.conseillerService.chat(nip, dto.message, user, dto.conversationId, dto.langue, dto.audio);
   }
 
   @Get(':nip/historique')

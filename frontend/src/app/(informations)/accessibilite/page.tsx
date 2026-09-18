@@ -34,7 +34,8 @@ export default function AccessibilitePage() {
           <li>des boutons et des tableaux décrits pour les lecteurs d&apos;écran (comparateur, vœux, cœur « Mettre de côté ») ;</li>
           <li>des couleurs de texte suffisamment contrastées, y compris pour les avertissements ;</li>
           <li>un affichage adapté aux téléphones, sans défilement horizontal ;</li>
-          <li>des fiches et des comparaisons imprimables.</li>
+          <li>des fiches et des comparaisons imprimables ;</li>
+          <li>la note vocale pour poser une question à Guido, sans avoir à écrire ni à lire une langue peu familière.</li>
         </ul>
       </Bloc>
 
@@ -42,7 +43,7 @@ export default function AccessibilitePage() {
         <ul>
           <li>pas encore de mode à contraste renforcé ;</li>
           <li>contenus proposés en français uniquement pour le moment ;</li>
-          <li>le conseiller IA répond par écrit uniquement.</li>
+          <li>Guido peut être interrogé par écrit ou par note vocale, mais répond par écrit uniquement.</li>
         </ul>
       </Bloc>
 

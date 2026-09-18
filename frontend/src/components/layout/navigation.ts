@@ -3,7 +3,7 @@ import type { Role, Utilisateur } from '@/stores/authStore';
 /** Navigation principale, partagée par l'en-tête et le pied de page. */
 const LIENS_PRINCIPAUX: { href: string; label: string; roles?: Role[] }[] = [
   { href: '/catalogue', label: 'Catalogue' },
-  { href: '/conseiller', label: 'Conseiller IA' },
+  { href: '/conseiller', label: 'Guido' },
   { href: '/espace-apprenant', label: 'Mon espace', roles: ['APPRENANT', 'PARENT', 'ADMIN'] },
   { href: '/stats', label: 'Statistiques', roles: ['DGES', 'ADMIN'] },
 ];

@@ -25,7 +25,7 @@ export function ActionsHero() {
         S&apos;identifier
       </Link>
       <p className="text-sm text-bj-gray-500">
-        Avec tes identifiants EducMaster&nbsp;: pas de compte à créer.
+        Avec tes identifiants EducMaster.
       </p>
     </div>
   );

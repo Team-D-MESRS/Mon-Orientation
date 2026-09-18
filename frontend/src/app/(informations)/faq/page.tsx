@@ -20,7 +20,7 @@ export default function FaqPage() {
         <Question question="Faut-il un compte ?">
           <p>
             Non pour consulter le <Link href="/catalogue">catalogue</Link>. Oui pour suivre tes notes, recevoir des pistes, saisir tes vœux
-            et poser tes questions au conseiller : voir le <Link href="/guide#compte">guide</Link>.
+            et poser tes questions à Guido : voir le <Link href="/guide#compte">guide</Link>.
           </p>
         </Question>
       </Bloc>
@@ -88,11 +88,18 @@ export default function FaqPage() {
         </Question>
       </Bloc>
 
-      <Bloc titre="Le conseiller IA">
-        <Question question="Le conseiller peut-il se tromper ?">
+      <Bloc titre="Guido, le conseiller IA">
+        <Question question="Guido peut-il se tromper ?">
           <p>
             Oui. Il s&apos;appuie sur le catalogue et sur ton dossier, mais vérifie toujours ses réponses sur les fiches, et parles-en avec
             tes parents, tes enseignants ou le conseiller d&apos;orientation de ton établissement.
+          </p>
+        </Question>
+        <Question question="Comment lui parler en fon, en yoruba ou en mina ?">
+          <p>
+            Par note vocale : appuie sur le micro dans l&apos;onglet Guido, dis ta question dans ta langue, puis envoie. Guido
+            reformule ce qu&apos;il a compris avant de répondre, pour que tu puisses vérifier. La note vocale elle-même
+            n&apos;est pas conservée.
           </p>
         </Question>
         <Question question="Quelles informations reçoit-il ?">

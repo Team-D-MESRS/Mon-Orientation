@@ -174,9 +174,20 @@ export interface ReponseConseiller {
 /** Langue des réponses du conseiller */
 export type LangueConseiller = 'fr' | 'fon';
 
+/** Note vocale (langues locales peu écrites) : à la place du message écrit, jamais les deux à vide. */
+export interface NoteVocale {
+  data: string;
+  mimeType: string;
+}
+
 export const conseillerApi = {
-  chat: (nip: string, message: string, conversationId?: string, langue: LangueConseiller = 'fr') =>
-    api.post<ReponseConseiller>(`/conseiller/${nip}/chat`, { message, langue, ...(conversationId ? { conversationId } : {}) }),
+  chat: (nip: string, message: string | undefined, conversationId: string | undefined, langue: LangueConseiller = 'fr', audio?: NoteVocale) =>
+    api.post<ReponseConseiller>(`/conseiller/${nip}/chat`, {
+      ...(message ? { message } : {}),
+      ...(audio ? { audio } : {}),
+      langue,
+      ...(conversationId ? { conversationId } : {}),
+    }),
   getHistorique: (nip: string) => api.get(`/conseiller/${nip}/historique`),
 };
 

@@ -10,10 +10,12 @@ import {
   Lightbulb,
   Lock,
   Search,
+  Sparkles,
   Users,
   type LucideIcon,
 } from 'lucide-react';
 import { ActionsHero } from '@/components/accueil/ActionsHero';
+import { CTADecouverte } from '@/components/accueil/CTADecouverte';
 import { ApresLeBac } from '@/components/accueil/ApresLeBac';
 import { Domaines } from '@/components/accueil/Domaines';
 import { Apparition } from '@/components/animation/Apparition';
@@ -36,16 +38,21 @@ const PROFILS: { Icone: LucideIcon; titre: string; texte: string; href: string; 
   {
     Icone: Users,
     titre: 'Parent ou tuteur',
-    texte: 'Suivez les résultats de votre enfant, validez ses vœux et posez vos questions au conseiller, en français ou en fongbé.',
+    texte: 'Suivez les résultats de votre enfant, validez ses vœux et posez vos questions à Guido, en français, en fongbé ou en note vocale.',
     href: '/guide#parent',
     action: 'Suivre mon enfant',
   },
 ];
 
 const ETAPES: { Icone: LucideIcon; titre: string; texte: string }[] = [
+  {
+    Icone: Sparkles,
+    titre: 'Réponds au questionnaire',
+    texte: "D'abord, dis-nous ce qui te plaît et tes ambitions : 5 étapes, quelques minutes. C'est ce qui rend tes pistes personnelles.",
+  },
   { Icone: Search, titre: 'Explore', texte: 'Parcours le catalogue, compare les formations et mets de côté celles qui te plaisent.' },
-  { Icone: Lightbulb, titre: 'Découvre tes pistes', texte: 'À partir de tes notes, la plateforme te propose des formations et t’explique pourquoi.' },
-  { Icone: ClipboardList, titre: 'Saisis tes vœux', texte: 'En 3e et en Terminale, choisis jusqu’à 3 formations, par ordre de préférence.' },
+  { Icone: Lightbulb, titre: 'Découvre tes pistes', texte: 'À partir de tes résultats et de tes réponses, la plateforme te propose des formations et t’explique pourquoi.' },
+  { Icone: ClipboardList, titre: 'Saisis tes vœux', texte: 'En 3e et en Terminale, indique tes préférences de formation, par ordre d’importance.' },
   { Icone: Users, titre: 'Décide en famille', texte: 'Ton parent valide tes vœux. La décision t’appartient, avec ta famille.' },
 ];
 
@@ -160,7 +167,7 @@ export default function Accueil() {
       <section className="py-12v bg-white border-y border-bj-gray-925">
         <div className="bj-container">
           <TitreSection titre="Comment ça marche ?" />
-          <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6v">
+          <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6v">
             {ETAPES.map(({ Icone, titre, texte }, i) => (
               <Apparition as="li" key={titre} delai={i * 150} className="relative pl-14">
                 <span
@@ -181,9 +188,7 @@ export default function Accueil() {
             ))}
           </ol>
           <Apparition delai={200}>
-            <Link href="/guide" className="inline-flex items-center gap-1v mt-8v text-sm font-medium text-bj-green hover:underline">
-              Lire le guide d&apos;utilisation <ArrowRight size={14} aria-hidden="true" />
-            </Link>
+            <CTADecouverte />
           </Apparition>
         </div>
       </section>
@@ -203,13 +208,14 @@ export default function Accueil() {
             <p className="inline-flex items-center gap-2v px-3v py-1v rounded-full bg-bj-blue/10 text-bj-blue text-sm font-semibold mb-4v">
               <Languages size={16} aria-hidden="true" /> Nouveau
             </p>
-            <h2 className="text-2xl md:text-3xl font-bold mb-3v">Le conseiller répond aussi en fongbé</h2>
+            <h2 className="text-2xl md:text-3xl font-bold mb-3v">Guido répond aussi en fongbé, et t&apos;écoute en note vocale</h2>
             <p className="text-bj-gray-500 mb-3v">
-              Pose tes questions sur les formations, les métiers et tes pistes. Choisis « Fɔ̀ngbè » : le conseiller te répond dans ta
-              langue, en s&apos;appuyant sur le catalogue et sur ton dossier.
+              Pose tes questions sur les formations, les métiers et tes pistes. Choisis « Fɔ̀ngbè » pour une réponse dans ta langue, ou
+              parle-lui directement en note vocale — en fon, en yoruba, en mina — s&apos;écrire n&apos;est pas toujours facile, dire les
+              choses l&apos;est davantage.
             </p>
             <p className="text-xs text-bj-gray-500 mb-6v">
-              Réponses rédigées automatiquement. Le conseiller explique, il ne décide pas à ta place.
+              Réponses rédigées automatiquement. Guido explique, il ne décide pas à ta place.
             </p>
             <Link href="/conseiller" className="bj-btn bj-btn-primary">
               Poser une question

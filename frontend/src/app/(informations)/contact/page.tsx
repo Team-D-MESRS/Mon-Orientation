@@ -28,7 +28,7 @@ export default function ContactPage() {
         <p>
           Le conseiller d&apos;orientation et les enseignants de ton établissement sont tes premiers interlocuteurs. Tu peux aussi
           consulter le <Link href="/guide">guide d&apos;utilisation</Link>, les <Link href="/faq">questions fréquentes</Link>, ou poser ta
-          question au conseiller IA depuis ton espace.
+          question à Guido depuis ton espace, par écrit ou en note vocale.
         </p>
       </Bloc>
 
