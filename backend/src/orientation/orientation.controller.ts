@@ -4,6 +4,15 @@ import { AccesApprenantGuard } from '../auth/acces-apprenant.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { OrientationService } from './orientation.service';
 
+/**
+ * Pas de DecouverteCompleteeGuard ici (décision du 18/09, revue après coup) : le moteur dégrade
+ * volontairement sans découverte plutôt que de refuser (critère « intérêt » neutre, invitation à
+ * remplir le questionnaire) — comportement déjà validé pour l'exploration en 4e et pour tester les
+ * autres critères indépendamment (ex. conditions d'admission par matière). Bloquer ces routes
+ * casserait ce comportement intentionnel ; le verrou serveur ne porte donc que sur la saisie des
+ * vœux (apprenant.controller.ts), qui est la seule action qui exige vraiment la découverte au
+ * préalable.
+ */
 @ApiTags('Orientation')
 @ApiBearerAuth()
 @UseGuards(AuthGuard('jwt'), AccesApprenantGuard)

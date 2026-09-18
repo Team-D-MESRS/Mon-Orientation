@@ -1,154 +1,91 @@
-import { Domaine, estDomaine } from '../filiere/domaines';
+import { Domaine } from '../filiere/domaines';
+import { BANQUE_RIASEC, domainesDepuisRiasec, estQuestionRiasec, ReponseRiasec, scoresRiasec } from './riasec';
 
 /**
- * Questionnaire de découverte : ce que l'élève aime, envisage, ses ambitions, les qualités qu'il se
- * trouve, ses contraintes pratiques — à remplir avant de voir ses pistes (décision du 16/09/2026).
- *
- * Le contenu (intitulés, options) est un choix de l'équipe, pas une donnée officielle : 5 volets,
- * 11 questions dont deux à choix multiples riches (intérêts sur les 16 domaines, qualités sur 12
- * traits) plutôt que d'égaler mécaniquement un nombre de questions au prix d'écrans plus creux.
+ * Questionnaire de découverte : ce que l'élève aime (test RIASEC), envisage, ses ambitions, ses
+ * contraintes pratiques — obligatoire avant de voir ses pistes, son catalogue personnalisé ou de
+ * saisir ses vœux (décision du 18/09/2026, qui remplace le calcul heuristique par domaine/qualité/
+ * matière du 16/09 par un vrai modèle RIASEC — voir riasec.ts et JOURNAL.md).
  */
 export interface ReponsesDecouverte {
-  /** Étape 1 — Ce qui te plaît */
-  interets: Domaine[];
-  matierePreferee: MatierePreferee | null;
-  /** Étape 2 — Ce que tu envisages */
+  /** Étapes 1-2 — Ce qui te plaît (test RIASEC, voir riasec.ts) */
+  riasec: ReponseRiasec[];
+  /** Étape 3 — Ce que tu envisages */
   metierEnvisage: string | null;
   apresCollege: 'GENERAL' | 'TECHNIQUE' | 'INDECIS';
   styleTravail: 'MANUEL' | 'INTELLECTUEL' | 'MIXTE';
-  /** Étape 3 — Tes ambitions */
+  /** Étape 4 — Tes ambitions */
   statut: 'SALARIE' | 'ENTREPRENEUR' | 'LES_DEUX' | 'INDECIS';
   dureeEtudes: 'COURTE' | 'LONGUE' | 'PEU_IMPORTE';
   priorites: Priorite[];
-  /** Étape 4 — Les qualités que tu te trouves */
-  qualites: Qualite[];
   /** Étape 5 — Tes contraintes pratiques */
   internat: 'OUI' | 'NON' | 'INDECIS';
   mobiliteDepartement: 'OUI' | 'NON' | 'INDECIS';
 }
 
-export type MatierePreferee = 'Mathématiques' | 'PCT' | 'SVT' | 'Français' | 'Histoire-Géographie' | 'Anglais' | 'EPS' | 'Arts' | 'Aucune';
 export type Priorite = 'REVENU' | 'UTILITE' | 'CREATIVITE' | 'SECURITE' | 'MOBILITE' | 'PROXIMITE_FAMILLE';
-export type Qualite =
-  | 'MANUEL'
-  | 'SCIENTIFIQUE'
-  | 'CREATIF'
-  | 'ORGANISE'
-  | 'RELATIONNEL'
-  | 'MINUTIEUX'
-  | 'SPORTIF'
-  | 'LOGIQUE'
-  | 'BIENVEILLANT'
-  | 'NATURE'
-  | 'MENEUR'
-  | 'PEDAGOGUE';
-
-export const MATIERES_PREFEREES: MatierePreferee[] = ['Mathématiques', 'PCT', 'SVT', 'Français', 'Histoire-Géographie', 'Anglais', 'EPS', 'Arts', 'Aucune'];
 export const PRIORITES: Priorite[] = ['REVENU', 'UTILITE', 'CREATIVITE', 'SECURITE', 'MOBILITE', 'PROXIMITE_FAMILLE'];
-export const QUALITES: Qualite[] = [
-  'MANUEL',
-  'SCIENTIFIQUE',
-  'CREATIF',
-  'ORGANISE',
-  'RELATIONNEL',
-  'MINUTIEUX',
-  'SPORTIF',
-  'LOGIQUE',
-  'BIENVEILLANT',
-  'NATURE',
-  'MENEUR',
-  'PEDAGOGUE',
-]; // ordre d'affichage
 
-const MAX_INTERETS = 5;
 const MAX_PRIORITES = 3;
-const MAX_QUALITES = 5;
-
-/** Domaines évoqués par chaque qualité auto-perçue ; une qualité peut en toucher plusieurs. */
-const DOMAINES_QUALITE: Record<Qualite, Domaine[]> = {
-  MANUEL: ['INDUSTRIE', 'ELECTRICITE', 'BTP'],
-  SCIENTIFIQUE: ['SCIENCES'],
-  CREATIF: ['ARTS', 'ARTISANAT'],
-  ORGANISE: ['GESTION'],
-  RELATIONNEL: ['DROIT', 'TOURISME'],
-  MINUTIEUX: ['ARTISANAT', 'SANTE'],
-  SPORTIF: ['SPORT'],
-  LOGIQUE: ['SCIENCES', 'GESTION'],
-  BIENVEILLANT: ['SANTE'],
-  NATURE: ['AGRICULTURE', 'ENVIRONNEMENT'],
-  MENEUR: ['GESTION', 'DROIT'],
-  PEDAGOGUE: ['ENSEIGNEMENT'],
-};
-
-/** Domaines évoqués par la matière scolaire préférée, quand elle en évoque un. */
-const DOMAINES_MATIERE: Partial<Record<MatierePreferee, Domaine[]>> = {
-  Mathématiques: ['SCIENCES'],
-  PCT: ['SCIENCES', 'INDUSTRIE'],
-  SVT: ['SANTE', 'AGRICULTURE'],
-  'Histoire-Géographie': ['DROIT', 'LETTRES'],
-  Anglais: ['LETTRES', 'TOURISME'],
-  EPS: ['SPORT'],
-  Arts: ['ARTS'],
-};
-
-// Poids relatif de chaque source dans le décompte des affinités, avant normalisation
-const POIDS_INTERETS = 2;
-const POIDS_QUALITE = 1;
-const POIDS_MATIERE = 1;
 
 /**
- * Réduit les réponses brutes à une affinité par domaine, normalisée entre 0 (aucun signal) et 1
- * (domaine le plus évoqué). Les intérêts choisis directement comptent double par rapport aux
- * qualités et à la matière préférée, qui ne font qu'évoquer un domaine sans le nommer.
+ * Réduit les réponses au test RIASEC à une affinité par domaine, normalisée entre 0 (aucun signal)
+ * et 1 (domaine le plus évoqué) — même signature et même contrat de sortie que l'ancien calcul
+ * heuristique qu'elle remplace : tous les appelants (moteur d'orientation, seed de démo) continuent
+ * de fonctionner sans modification.
  */
 export function affinitesDomaines(reponses: ReponsesDecouverte): Partial<Record<Domaine, number>> {
-  const comptes = new Map<Domaine, number>();
-  const ajouter = (domaines: Domaine[], poids: number) => {
-    for (const d of domaines) comptes.set(d, (comptes.get(d) ?? 0) + poids);
-  };
-  ajouter(reponses.interets, POIDS_INTERETS);
-  for (const q of reponses.qualites) ajouter(DOMAINES_QUALITE[q] ?? [], POIDS_QUALITE);
-  if (reponses.matierePreferee) ajouter(DOMAINES_MATIERE[reponses.matierePreferee] ?? [], POIDS_MATIERE);
-
-  const max = Math.max(0, ...comptes.values());
-  if (max === 0) return {};
-  return Object.fromEntries(Array.from(comptes.entries()).map(([d, n]) => [d, Math.round((n / max) * 100) / 100]));
+  return domainesDepuisRiasec(scoresRiasec(reponses.riasec));
 }
 
-/** Valide et normalise les réponses envoyées par le client ; rejette toute valeur hors énumération. */
+/**
+ * Valide et normalise les réponses envoyées par le client ; rejette toute valeur hors énumération.
+ * Le test RIASEC est obligatoire dans son intégralité (principe directeur : test bloquant) — une
+ * question de la banque sans réponse fait échouer la validation plutôt que de produire un profil
+ * incomplet silencieux.
+ */
 export function validerReponses(brut: unknown): ReponsesDecouverte {
   if (typeof brut !== 'object' || brut === null) throw new Error('Réponses invalides');
   const r = brut as Record<string, unknown>;
 
-  const interets = tableauDe(r.interets, estDomaine, 'intérêts', MAX_INTERETS);
-  const qualites = tableauDe(r.qualites, (v): v is Qualite => QUALITES.includes(v as Qualite), 'qualités', MAX_QUALITES);
+  const riasec = reponsesRiasecDe(r.riasec);
   const priorites = tableauDe(r.priorites, (v): v is Priorite => PRIORITES.includes(v as Priorite), 'priorités', MAX_PRIORITES);
-  const matierePreferee = optionParmi(r.matierePreferee, MATIERES_PREFEREES, 'matière préférée');
   const metierEnvisage = texteCourt(r.metierEnvisage, 'métier envisagé');
 
   return {
-    interets,
-    matierePreferee,
+    riasec,
     metierEnvisage,
     apresCollege: valeurParmi(r.apresCollege, ['GENERAL', 'TECHNIQUE', 'INDECIS'], 'après le collège'),
     styleTravail: valeurParmi(r.styleTravail, ['MANUEL', 'INTELLECTUEL', 'MIXTE'], 'style de travail'),
     statut: valeurParmi(r.statut, ['SALARIE', 'ENTREPRENEUR', 'LES_DEUX', 'INDECIS'], 'statut envisagé'),
     dureeEtudes: valeurParmi(r.dureeEtudes, ['COURTE', 'LONGUE', 'PEU_IMPORTE'], "durée d'études"),
     priorites,
-    qualites,
     internat: valeurParmi(r.internat, ['OUI', 'NON', 'INDECIS'], 'internat'),
     mobiliteDepartement: valeurParmi(r.mobiliteDepartement, ['OUI', 'NON', 'INDECIS'], 'mobilité'),
   };
 }
 
+function reponsesRiasecDe(v: unknown): ReponseRiasec[] {
+  if (!Array.isArray(v)) throw new Error('Réponse invalide pour « test de découverte »');
+  const parId = new Map<string, ReponseRiasec>();
+  for (const item of v) {
+    if (typeof item !== 'object' || item === null) throw new Error('Réponse invalide pour « test de découverte »');
+    const { id, valeur } = item as Record<string, unknown>;
+    if (typeof id !== 'string' || !estQuestionRiasec(id)) throw new Error('Question inconnue dans le test de découverte');
+    if (typeof valeur !== 'number' || !Number.isInteger(valeur) || valeur < 1 || valeur > 5) {
+      throw new Error('Réponse invalide pour « test de découverte » : la valeur doit être entre 1 et 5');
+    }
+    parId.set(id, { id, valeur: valeur as ReponseRiasec['valeur'] });
+  }
+  if (parId.size < BANQUE_RIASEC.length) {
+    throw new Error('Le test de découverte doit être complété en entier');
+  }
+  return Array.from(parId.values());
+}
+
 function valeurParmi<T extends string>(v: unknown, valeurs: readonly T[], champ: string): T {
   if (typeof v !== 'string' || !(valeurs as readonly string[]).includes(v)) throw new Error(`Réponse invalide pour « ${champ} »`);
   return v as T;
-}
-
-function optionParmi<T extends string>(v: unknown, valeurs: readonly T[], champ: string): T | null {
-  if (v === null || v === undefined) return null;
-  return valeurParmi(v, valeurs, champ);
 }
 
 function tableauDe<T>(v: unknown, estT: (x: unknown) => x is T, champ: string, max: number): T[] {

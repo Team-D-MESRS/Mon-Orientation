@@ -1,4 +1,5 @@
 import { DOMAINE_LABELS, type Domaine, type EtablissementPourVoeu, type Filiere, type NiveauAcces } from './filiere';
+import { codesDominants, LABELS_RIASEC, type ReponseRiasec, scoresRiasec } from './riasec';
 
 export type Palier = 'QUATRIEME' | 'TROISIEME' | 'PREMIERE' | 'TERMINALE';
 
@@ -82,39 +83,23 @@ export interface Recommandation {
 }
 
 /**
- * Questionnaire de découverte : ce que l'élève aime, envisage, ses ambitions, les qualités qu'il se
- * trouve, ses contraintes pratiques — à remplir avant de voir ses pistes. Miroir du type backend
- * (backend/src/apprenant/decouverte.ts).
+ * Questionnaire de découverte : test RIASEC (ce qui plaît à l'élève), ce qu'il envisage, ses
+ * ambitions, ses contraintes pratiques — obligatoire avant de voir ses pistes. Miroir du type
+ * backend (backend/src/apprenant/decouverte.ts).
  */
 export interface ReponsesDecouverte {
-  interets: Domaine[];
-  matierePreferee: MatierePreferee | null;
+  riasec: ReponseRiasec[];
   metierEnvisage: string | null;
   apresCollege: 'GENERAL' | 'TECHNIQUE' | 'INDECIS';
   styleTravail: 'MANUEL' | 'INTELLECTUEL' | 'MIXTE';
   statut: 'SALARIE' | 'ENTREPRENEUR' | 'LES_DEUX' | 'INDECIS';
   dureeEtudes: 'COURTE' | 'LONGUE' | 'PEU_IMPORTE';
   priorites: Priorite[];
-  qualites: Qualite[];
   internat: 'OUI' | 'NON' | 'INDECIS';
   mobiliteDepartement: 'OUI' | 'NON' | 'INDECIS';
 }
 
-export type MatierePreferee = 'Mathématiques' | 'PCT' | 'SVT' | 'Français' | 'Histoire-Géographie' | 'Anglais' | 'EPS' | 'Arts' | 'Aucune';
 export type Priorite = 'REVENU' | 'UTILITE' | 'CREATIVITE' | 'SECURITE' | 'MOBILITE' | 'PROXIMITE_FAMILLE';
-export type Qualite =
-  | 'MANUEL'
-  | 'SCIENTIFIQUE'
-  | 'CREATIF'
-  | 'ORGANISE'
-  | 'RELATIONNEL'
-  | 'MINUTIEUX'
-  | 'SPORTIF'
-  | 'LOGIQUE'
-  | 'BIENVEILLANT'
-  | 'NATURE'
-  | 'MENEUR'
-  | 'PEDAGOGUE';
 
 export interface Decouverte {
   apprenantNip: string;
@@ -151,16 +136,18 @@ const ADJECTIF_ORIENTATION: Record<ReponsesDecouverte['apresCollege'], string | 
 };
 
 /**
- * Étiquette de profil lisible, dérivée du questionnaire déjà rempli : combine les axes manuel/
- * intellectuel et technique/général des réponses avec le(s) domaine(s) dominant(s) des affinités.
- * Purement présentationnel — ne change ni le calcul des affinités ni le moteur d'orientation.
+ * Étiquette de profil lisible, dérivée du questionnaire déjà rempli : combine les codes RIASEC
+ * dominants et les axes manuel/intellectuel et technique/général des réponses avec le(s) domaine(s)
+ * dominant(s) des affinités. Purement présentationnel — ne change ni le calcul des affinités ni le
+ * moteur d'orientation.
  */
 export function etiquetteProfil(decouverte: Decouverte): string {
+  const codes = codesDominants(scoresRiasec(decouverte.reponses.riasec)).map((c) => LABELS_RIASEC[c]);
   const adjectifs = [ADJECTIF_STYLE[decouverte.reponses.styleTravail], ADJECTIF_ORIENTATION[decouverte.reponses.apresCollege]].filter(
     (a): a is string => !!a,
   );
   const domaines = domainesDominants(decouverte.affinites).map((d) => DOMAINE_LABELS[d]);
-  const profil = adjectifs.length > 0 ? `Profil ${adjectifs.join(' et ')}` : 'Profil';
+  const profil = codes.length > 0 ? `Profil ${codes.join(' et ')}` : adjectifs.length > 0 ? `Profil ${adjectifs.join(' et ')}` : 'Profil';
   if (domaines.length === 0) return `${profil}, intérêts encore à préciser.`;
   return `${profil}, avec un intérêt marqué pour ${domaines.join(' et ')}.`;
 }

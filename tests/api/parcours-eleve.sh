@@ -8,6 +8,15 @@ id_filiere() { curl -s "$A/filiere?search=$1" | node -e 'let s="";process.stdin.
 id_serie() { curl -s "$A/filiere/filtres" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).series.find(x=>x.serie===process.argv[1]).filiereId))' "$1"; }
 # Établissement dispensant la (ou les deux) filière(s) donnée(s), résolu par code (fiche unique d'inscription)
 id_etablissement() { curl -s "$A/filiere/etablissements?filiere1=$2${3:+&filiere2=$3}" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const j=JSON.parse(s);console.log((j.find(e=>e.code===process.argv[1])||{}).id)})' "$1"; }
+# 36 réponses au test RIASEC (6 par dimension R/I/A/S/E/C) : $1 = dimensions à valoriser (ex. "R,E"), séparées par virgule.
+riasec_json() { node -e '
+const dims = { R: 6, I: 6, A: 6, S: 6, E: 6, C: 6 };
+const prefixes = { R: "r", I: "i", A: "a", S: "s", E: "e", C: "c" };
+const hautes = new Set((process.argv[1] || "").split(",").filter(Boolean));
+const items = [];
+for (const [code, n] of Object.entries(dims)) for (let i = 1; i <= n; i++) items.push({ id: prefixes[code] + i, valeur: hautes.has(code) ? 5 : 2 });
+console.log(JSON.stringify(items));
+' "$1"; }
 reinitialiser() { $PSQL <<SQL
 delete from preferences where apprenant_nip like 'DEMO-%';
 delete from recommandations where apprenant_nip like 'DEMO-%';
@@ -50,7 +59,7 @@ check "  toutes admettent la série D (séries officielles du guide du MESRS)" t
 check "  au plus 2 par établissement" true "$(js 'const c={};j.forEach(r=>c[r.filiere.etablissementId]=(c[r.filiere.etablissementId]||0)+1);return Object.values(c).every(n=>n<=2)')"
 echo "  → $(js 'return j.map(r=>r.filiere.code+" "+r.score).join(" | ")')"
 
-echo "── Questionnaire de découverte (lot 5)"
+echo "── Questionnaire de découverte : test RIASEC (lot 5, refondu le 18/09)"
 $PSQL <<SQL
 delete from recommandations where apprenant_nip like 'TEST-LOT5-%';
 delete from decouvertes where apprenant_nip like 'TEST-LOT5-%';
@@ -62,12 +71,21 @@ insert into apprenants (nip, nom, prenom, date_naissance, sexe, departement, com
 SQL
 TA=$(jeton TEST-LOT5-A 2011-06-01)
 check "avant remplissage : rien" 200 $(req GET /apprenant/TEST-LOT5-A/decouverte "$TA"); check "  corps vide (rien à lire)" true "$([ -s "$BODY" ] && echo false || echo true)"
-check "réponse hors énumération → 400" 400 $(req POST /apprenant/TEST-LOT5-A/decouverte "$TA" '{"reponses":{"interets":[],"matierePreferee":null,"metierEnvisage":null,"apresCollege":"BOF","styleTravail":"MIXTE","statut":"INDECIS","dureeEtudes":"PEU_IMPORTE","priorites":[],"qualites":[],"internat":"INDECIS","mobiliteDepartement":"INDECIS"}}')
-check "plus de 5 intérêts → 400" 400 $(req POST /apprenant/TEST-LOT5-A/decouverte "$TA" '{"reponses":{"interets":["AGRICULTURE","ARTISANAT","ARTS","BTP","DROIT","ELECTRICITE"],"matierePreferee":null,"metierEnvisage":null,"apresCollege":"INDECIS","styleTravail":"MIXTE","statut":"INDECIS","dureeEtudes":"PEU_IMPORTE","priorites":[],"qualites":[],"internat":"INDECIS","mobiliteDepartement":"INDECIS"}}')
-check "parent (accès à Fatou) ne remplit pas pour elle → 403" 403 $(req POST /apprenant/DEMO-3E-0001/decouverte "$TP" '{"reponses":{"interets":[],"matierePreferee":null,"metierEnvisage":null,"apresCollege":"INDECIS","styleTravail":"MIXTE","statut":"INDECIS","dureeEtudes":"PEU_IMPORTE","priorites":[],"qualites":[],"internat":"INDECIS","mobiliteDepartement":"INDECIS"}}')
-REPONSES='{"interets":["AGRICULTURE"],"matierePreferee":"SVT","metierEnvisage":"Technicienne agricole","apresCollege":"TECHNIQUE","styleTravail":"MANUEL","statut":"SALARIE","dureeEtudes":"COURTE","priorites":["REVENU"],"qualites":["NATURE"],"internat":"NON","mobiliteDepartement":"OUI"}'
-check "élève remplit son questionnaire → 201" 201 $(req POST /apprenant/TEST-LOT5-A/decouverte "$TA" "{\"reponses\":$REPONSES}")
-check "  affinité agriculture au maximum (3 signaux convergents)" 1 "$(js 'return j.affinites.AGRICULTURE')"
+
+echo "── Verrou backend (défense en profondeur, décision du 18/09) : vœux refusés sans découverte"
+# Pas de verrou sur les recommandations/calcul : le moteur dégrade volontairement sans découverte
+# (critère intérêt neutre) plutôt que de refuser — comportement déjà testé plus bas (4e, lot 4).
+check "vœux refusés → 403" 403 $(req POST /apprenant/TEST-LOT5-A/preferences "$TA" '{}')
+
+echo "── Validation du test RIASEC"
+check "réponse hors énumération (apresCollege) → 400" 400 $(req POST /apprenant/TEST-LOT5-A/decouverte "$TA" "{\"reponses\":{\"riasec\":$(riasec_json ''),\"metierEnvisage\":null,\"apresCollege\":\"BOF\",\"styleTravail\":\"MIXTE\",\"statut\":\"INDECIS\",\"dureeEtudes\":\"PEU_IMPORTE\",\"priorites\":[],\"internat\":\"INDECIS\",\"mobiliteDepartement\":\"INDECIS\"}}")
+check "id de question RIASEC inconnu → 400" 400 $(req POST /apprenant/TEST-LOT5-A/decouverte "$TA" '{"reponses":{"riasec":[{"id":"z99","valeur":3}],"metierEnvisage":null,"apresCollege":"INDECIS","styleTravail":"MIXTE","statut":"INDECIS","dureeEtudes":"PEU_IMPORTE","priorites":[],"internat":"INDECIS","mobiliteDepartement":"INDECIS"}}')
+check "valeur RIASEC hors 1-5 → 400" 400 $(req POST /apprenant/TEST-LOT5-A/decouverte "$TA" '{"reponses":{"riasec":[{"id":"r1","valeur":9}],"metierEnvisage":null,"apresCollege":"INDECIS","styleTravail":"MIXTE","statut":"INDECIS","dureeEtudes":"PEU_IMPORTE","priorites":[],"internat":"INDECIS","mobiliteDepartement":"INDECIS"}}')
+check "test RIASEC incomplet → 400" 400 $(req POST /apprenant/TEST-LOT5-A/decouverte "$TA" '{"reponses":{"riasec":[{"id":"r1","valeur":5}],"metierEnvisage":null,"apresCollege":"INDECIS","styleTravail":"MIXTE","statut":"INDECIS","dureeEtudes":"PEU_IMPORTE","priorites":[],"internat":"INDECIS","mobiliteDepartement":"INDECIS"}}')
+check "parent (accès à Fatou) ne remplit pas pour elle → 403" 403 $(req POST /apprenant/DEMO-3E-0001/decouverte "$TP" "{\"reponses\":{\"riasec\":$(riasec_json ''),\"metierEnvisage\":null,\"apresCollege\":\"INDECIS\",\"styleTravail\":\"MIXTE\",\"statut\":\"INDECIS\",\"dureeEtudes\":\"PEU_IMPORTE\",\"priorites\":[],\"internat\":\"INDECIS\",\"mobiliteDepartement\":\"INDECIS\"}}")
+REPONSES="{\"riasec\":$(riasec_json 'R'),\"metierEnvisage\":\"Technicienne agricole\",\"apresCollege\":\"TECHNIQUE\",\"styleTravail\":\"MANUEL\",\"statut\":\"SALARIE\",\"dureeEtudes\":\"COURTE\",\"priorites\":[\"REVENU\"],\"internat\":\"NON\",\"mobiliteDepartement\":\"OUI\"}"
+check "élève remplit son questionnaire (dominante Réaliste) → 201" 201 $(req POST /apprenant/TEST-LOT5-A/decouverte "$TA" "{\"reponses\":$REPONSES}")
+check "  affinité agriculture au maximum (domaine associé à Réaliste)" 1 "$(js 'return j.affinites.AGRICULTURE')"
 check "après remplissage : réponses relues à l'identique" Technicienne\ agricole "$(req GET /apprenant/TEST-LOT5-A/decouverte "$TA" >/dev/null; js 'return j.reponses.metierEnvisage')"
 check "calcul → pistes" 201 $(req POST /orientation/TEST-LOT5-A/calcul "$TA")
 check "  chaque piste porte un critère intérêt" true "$(js 'return j.every(r=>r.criteres.some(c=>c.critere==="interet"))')"
@@ -140,7 +158,8 @@ TA=$(js 'return j.accessToken')
 check "Adama → pistes (4e)" 201 $(req POST /orientation/DEMO-4E-0001/calcul "$TA")
 check "  aucune piste « vœu » en 4e" true "$(js 'return j.every(r=>!r.criteres.some(c=>c.critere==="preference"))')"
 check "  critère intérêt en invitation, sans points (pas de questionnaire rempli)" true "$(js 'return j.every(r=>r.criteres.find(c=>c.critere==="interet").points===0)')"
-check "Adama → vœux en 4e → 400" 400 $(req POST /apprenant/DEMO-4E-0001/preferences "$TA" "{\"filiereId1\":\"$F3\"}")
+# 403 (pas 400) : le verrou découverte s'applique avant la validation du palier — Adama n'a ni l'un ni l'autre.
+check "Adama → vœux en 4e → 403 (verrou découverte, avant même la validation du palier)" 403 $(req POST /apprenant/DEMO-4E-0001/preferences "$TA" "{\"filiereId1\":\"$F3\"}")
 
 echo "── DGES"
 check "DGES → dossier individuel → 403" 403 $(req GET /apprenant/DEMO-3E-0001 "$TD")

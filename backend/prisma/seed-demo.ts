@@ -5,6 +5,15 @@
 import { Palier, Prisma, PrismaClient, Role } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { ReponsesDecouverte, affinitesDomaines } from '../src/apprenant/decouverte';
+import { ReponseRiasec } from '../src/apprenant/riasec';
+
+/** Construit les 36 réponses du test RIASEC à partir d'une valeur par dimension (1 à 5). */
+function reponsesRiasec(valeurs: Record<'R' | 'I' | 'A' | 'S' | 'E' | 'C', [number, number, number, number, number, number]>): ReponseRiasec[] {
+  const prefixes = { R: 'r', I: 'i', A: 'a', S: 's', E: 'e', C: 'c' } as const;
+  return (Object.keys(valeurs) as (keyof typeof valeurs)[]).flatMap((code) =>
+    valeurs[code].map((valeur, i) => ({ id: `${prefixes[code]}${i + 1}`, valeur: valeur as ReponseRiasec['valeur'] })),
+  );
+}
 
 const prisma = new PrismaClient();
 
@@ -61,15 +70,21 @@ const ELEVES: EleveDemo[] = [
       EPS: [15, 14, 15],
     },
     decouverte: {
-      interets: ['ELECTRICITE', 'NUMERIQUE'],
-      matierePreferee: 'PCT',
+      // Dominante Réaliste/Investigateur : cohérent avec l'électricité, le numérique et le style manuel.
+      riasec: reponsesRiasec({
+        R: [5, 5, 5, 4, 5, 5],
+        I: [4, 5, 4, 4, 4, 5],
+        A: [2, 2, 3, 2, 2, 3],
+        S: [3, 3, 2, 3, 3, 3],
+        E: [2, 3, 2, 2, 3, 2],
+        C: [4, 3, 4, 3, 3, 3],
+      }),
       metierEnvisage: "Technicienne en électricité ou en énergies renouvelables",
       apresCollege: 'TECHNIQUE',
       styleTravail: 'MANUEL',
       statut: 'SALARIE',
       dureeEtudes: 'COURTE',
       priorites: ['REVENU', 'SECURITE'],
-      qualites: ['MANUEL', 'SCIENTIFIQUE', 'ORGANISE'],
       internat: 'NON',
       mobiliteDepartement: 'NON',
     },
@@ -97,15 +112,23 @@ const ELEVES: EleveDemo[] = [
       EPS: [14, 15, 14],
     },
     decouverte: {
-      interets: ['SANTE', 'SCIENCES'],
-      matierePreferee: 'SVT',
+      // Dominante Social (santé), avec un Investigateur (sciences) marqué juste derrière : cohérent
+      // avec le métier envisagé (infirmier) et le style intellectuel. Santé doit rester le domaine
+      // dominant unique — Social légèrement au-dessus d'Investigateur, pas à égalité.
+      riasec: reponsesRiasec({
+        S: [5, 5, 5, 4, 5, 4],
+        I: [4, 4, 5, 4, 4, 4],
+        R: [2, 2, 2, 3, 2, 2],
+        A: [2, 3, 2, 2, 2, 3],
+        E: [2, 2, 3, 2, 2, 2],
+        C: [4, 3, 4, 4, 3, 3],
+      }),
       metierEnvisage: 'Infirmier ou technicien de laboratoire médical',
       apresCollege: 'GENERAL',
       styleTravail: 'INTELLECTUEL',
       statut: 'SALARIE',
       dureeEtudes: 'LONGUE',
       priorites: ['UTILITE', 'SECURITE'],
-      qualites: ['SCIENTIFIQUE', 'BIENVEILLANT', 'MINUTIEUX'],
       internat: 'OUI',
       mobiliteDepartement: 'OUI',
     },

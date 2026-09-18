@@ -2,95 +2,44 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, ChevronDown } from 'lucide-react';
 import { apprenantApi } from '@/lib/api';
+import { type Decouverte, type Priorite, type ReponsesDecouverte, dateLisible, etiquetteProfil } from '@/lib/apprenant';
 import {
-  type Decouverte,
-  type MatierePreferee,
-  type Priorite,
-  type Qualite,
-  type ReponsesDecouverte,
-  dateLisible,
-  etiquetteProfil,
-} from '@/lib/apprenant';
-import { DOMAINE_LABELS, type Domaine } from '@/lib/filiere';
+  BANQUE_RIASEC,
+  CODES_RIASEC,
+  LABELS_LIKERT,
+  LABELS_RIASEC,
+  PHRASES_RIASEC,
+  codesDominants,
+  scoresRiasec,
+  type QuestionRiasec,
+  type ReponseRiasec,
+  type ValeurLikert,
+} from '@/lib/riasec';
 import { messageErreur } from '@/lib/erreurs';
 import { useEspace, useProfil } from '@/components/espace/EspaceContext';
 import { Alerte, Chargement } from '@/components/espace/ui';
 import { useDecouverteStore } from '@/stores/decouverteStore';
 
 const NB_ETAPES = 5;
-const MAX_INTERETS = 5;
 const MAX_PRIORITES = 3;
-const MAX_QUALITES = 5;
+
+// Deux étapes de 18 questions chacune, plutôt qu'un seul écran de 36 questions à faire défiler.
+const BANQUE_ETAPE_1 = BANQUE_RIASEC.slice(0, 18);
+const BANQUE_ETAPE_2 = BANQUE_RIASEC.slice(18);
 
 const VIDE: ReponsesDecouverte = {
-  interets: [],
-  matierePreferee: 'Aucune',
+  riasec: [],
   metierEnvisage: null,
   apresCollege: 'INDECIS',
   styleTravail: 'MIXTE',
   statut: 'INDECIS',
   dureeEtudes: 'PEU_IMPORTE',
   priorites: [],
-  qualites: [],
   internat: 'INDECIS',
   mobiliteDepartement: 'INDECIS',
 };
-
-const DOMAINES_16 = Object.keys(DOMAINE_LABELS) as Domaine[];
-
-const LABEL_MATIERE: Record<MatierePreferee, string> = {
-  Mathématiques: 'Mathématiques',
-  PCT: 'Physique-Chimie-Technologie',
-  SVT: 'Sciences de la Vie et de la Terre',
-  Français: 'Français',
-  'Histoire-Géographie': 'Histoire-Géographie',
-  Anglais: 'Anglais',
-  EPS: 'Éducation physique et sportive',
-  Arts: 'Arts (musique, dessin…)',
-  Aucune: 'Aucune en particulier',
-};
-const MATIERES: MatierePreferee[] = [
-  'Mathématiques',
-  'PCT',
-  'SVT',
-  'Français',
-  'Histoire-Géographie',
-  'Anglais',
-  'EPS',
-  'Arts',
-  'Aucune',
-];
-
-const LABEL_QUALITE: Record<Qualite, string> = {
-  MANUEL: 'Bricoleur(se), manuel(le)',
-  SCIENTIFIQUE: "Curieux(se), j'aime comprendre comment ça marche",
-  CREATIF: "Créatif(ve), j'aime imaginer ou dessiner",
-  ORGANISE: 'Organisé(e), rigoureux(se)',
-  RELATIONNEL: "À l'aise pour parler aux gens",
-  MINUTIEUX: 'Patient(e), minutieux(se)',
-  SPORTIF: "Sportif(ve), j'aime bouger",
-  LOGIQUE: 'Bon(ne) en calcul, en logique',
-  BIENVEILLANT: "J'aime prendre soin des autres",
-  NATURE: "J'aime les plantes, les animaux",
-  MENEUR: "Meneur(se), j'aime organiser un groupe",
-  PEDAGOGUE: "J'aime expliquer, transmettre ce que je sais",
-};
-const QUALITES: Qualite[] = [
-  'MANUEL',
-  'SCIENTIFIQUE',
-  'CREATIF',
-  'ORGANISE',
-  'RELATIONNEL',
-  'MINUTIEUX',
-  'SPORTIF',
-  'LOGIQUE',
-  'BIENVEILLANT',
-  'NATURE',
-  'MENEUR',
-  'PEDAGOGUE',
-];
 
 const LABEL_PRIORITE: Record<Priorite, string> = {
   REVENU: 'Gagner ma vie rapidement',
@@ -127,7 +76,7 @@ export default function DecouvertePage() {
   if (erreur) return <Alerte ton="erreur">{erreur}</Alerte>;
   if (decouverte === undefined) return <Chargement />;
   if (!estEleve) return <DecouverteEnLecture prenom={profil.prenom} decouverte={decouverte} />;
-  return <Questionnaire reponsesActuelles={decouverte?.reponses ?? null} onEnregistre={setDecouverte} />;
+  return <Questionnaire decouverteActuelle={decouverte} onEnregistre={setDecouverte} />;
 }
 
 function DecouverteEnLecture({ prenom, decouverte }: { prenom: string; decouverte: Decouverte | null }) {
@@ -138,54 +87,73 @@ function DecouverteEnLecture({ prenom, decouverte }: { prenom: string; decouvert
   return (
     <section className="bg-white rounded-bj-md border border-bj-gray-925 p-6v space-y-4v">
       <h2 className="text-xl font-bold">Ce que {prenom} a dit de lui-même</h2>
-      <p className="text-sm text-bj-gray-500">{etiquetteProfil(decouverte)}</p>
+      <ResultatProfil decouverte={decouverte} />
       {r.metierEnvisage && (
         <p>
           <span className="text-bj-gray-500">Métier envisagé : </span>« {r.metierEnvisage} »
         </p>
-      )}
-      {r.interets.length > 0 && (
-        <div>
-          <p className="text-sm text-bj-gray-500 mb-2v">Ce qui lui plaît</p>
-          <Puces elements={r.interets.map((d) => DOMAINE_LABELS[d])} />
-        </div>
-      )}
-      {r.qualites.length > 0 && (
-        <div>
-          <p className="text-sm text-bj-gray-500 mb-2v">Les qualités qu&apos;il/elle se trouve</p>
-          <Puces elements={r.qualites.map((q) => LABEL_QUALITE[q])} />
-        </div>
       )}
       <p className="text-xs text-bj-gray-500">Rempli le {dateLisible(decouverte.dateSaisie)}.</p>
     </section>
   );
 }
 
-function Puces({ elements }: { elements: string[] }) {
+/** Résultat du test : barres par dimension RIASEC, phrase du/des code(s) dominant(s), actions rapides. */
+function ResultatProfil({ decouverte }: { decouverte: Decouverte }) {
+  const scores = scoresRiasec(decouverte.reponses.riasec);
+  const dominants = codesDominants(scores);
   return (
-    <ul className="flex flex-wrap gap-2v">
-      {elements.map((e) => (
-        <li key={e} className="px-3v py-1v rounded-full bg-bj-green/10 text-bj-green text-sm font-medium">
-          {e}
-        </li>
-      ))}
-    </ul>
+    <div className="bg-bj-green/5 border border-bj-green/30 rounded-bj-md p-4v space-y-4v">
+      <div>
+        <p className="text-xs font-medium text-bj-green uppercase tracking-wide mb-1v">Ton profil</p>
+        <p className="text-sm">{etiquetteProfil(decouverte)}</p>
+      </div>
+      <div className="space-y-2v">
+        {CODES_RIASEC.map((code) => (
+          <div key={code} className="flex items-center gap-3v">
+            <span className="w-32 text-xs text-bj-gray-500 shrink-0">{LABELS_RIASEC[code]}</span>
+            <div className="flex-1 h-2 rounded-full bg-bj-gray-925 overflow-hidden">
+              <div className="h-full bg-bj-green" style={{ width: `${Math.round(scores[code] * 100)}%` }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      {dominants.length > 0 && (
+        <p className="text-sm text-bj-gray-500">
+          {dominants.map((c) => PHRASES_RIASEC[c]).join(' ; ')}.
+        </p>
+      )}
+      <div className="flex flex-wrap gap-3v pt-1v">
+        <Link href="/catalogue" className="bj-btn bj-btn-secondary text-sm">
+          Explorer le catalogue
+        </Link>
+        <Link href="/espace-apprenant/recommandations" className="bj-btn bj-btn-secondary text-sm">
+          Voir mes pistes
+        </Link>
+        <Link href="/espace-apprenant/conseiller" className="bj-btn bj-btn-secondary text-sm">
+          Parler à Guido
+        </Link>
+      </div>
+    </div>
   );
 }
 
 function Etiquette({
   selectionne,
   onClick,
+  ariaLabel,
   children,
 }: {
   selectionne: boolean;
   onClick: () => void;
+  ariaLabel?: string;
   children: ReactNode;
 }) {
   return (
     <button
       type="button"
       aria-pressed={selectionne}
+      aria-label={ariaLabel}
       onClick={onClick}
       className={`px-4v py-2v rounded-full border text-sm font-medium text-left transition-colors ${
         selectionne ? 'border-bj-green bg-bj-green/10 text-bj-green ring-1 ring-bj-green' : 'border-bj-gray-850 text-bj-gray-200 hover:border-bj-green'
@@ -251,6 +219,39 @@ function ChoixMultiple<T extends string>({
   );
 }
 
+const VALEURS_LIKERT: ValeurLikert[] = [1, 2, 3, 4, 5];
+
+/** Une question RIASEC avec son échelle 1 (pas du tout) à 5 (beaucoup). */
+function EchelleLikert({ question, valeur, onChange }: { question: QuestionRiasec; valeur: ValeurLikert | undefined; onChange: (v: ValeurLikert) => void }) {
+  return (
+    <div className="py-3v border-b border-bj-gray-950 last:border-0" data-id-question={question.id}>
+      <p className="text-sm mb-2v">{question.texte}</p>
+      <div className="flex flex-wrap gap-2v" role="radiogroup" aria-label={question.texte}>
+        {VALEURS_LIKERT.map((v) => (
+          <Etiquette key={v} selectionne={valeur === v} onClick={() => onChange(v)} ariaLabel={`${v} - ${LABELS_LIKERT[v]}`}>
+            {v}
+          </Etiquette>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EtapeRiasec({ banque, reponses, onChange }: { banque: QuestionRiasec[]; reponses: ReponseRiasec[]; onChange: (id: string, valeur: ValeurLikert) => void }) {
+  const valeurDe = (id: string) => reponses.find((x) => x.id === id)?.valeur;
+  const repondues = banque.filter((q) => valeurDe(q.id) !== undefined).length;
+  return (
+    <div>
+      {banque.map((q) => (
+        <EchelleLikert key={q.id} question={q} valeur={valeurDe(q.id)} onChange={(v) => onChange(q.id, v)} />
+      ))}
+      <p className="text-xs text-bj-gray-500 mt-3v">
+        {repondues}/{banque.length} question{banque.length > 1 ? 's' : ''} répondue{repondues > 1 ? 's' : ''}.
+      </p>
+    </div>
+  );
+}
+
 function Question({ titre, children }: { titre: string; children: ReactNode }) {
   return (
     <div className="mb-6v">
@@ -261,22 +262,31 @@ function Question({ titre, children }: { titre: string; children: ReactNode }) {
 }
 
 function Questionnaire({
-  reponsesActuelles,
+  decouverteActuelle,
   onEnregistre,
 }: {
-  reponsesActuelles: ReponsesDecouverte | null;
+  decouverteActuelle: Decouverte | null;
   onEnregistre: (decouverte: Decouverte) => void;
 }) {
   const profil = useProfil();
+  const reponsesActuelles = decouverteActuelle?.reponses ?? null;
   const [r, setR] = useState<ReponsesDecouverte>(reponsesActuelles ?? VIDE);
   const [etape, setEtape] = useState(1);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [enregistre, setEnregistre] = useState(false);
-  const [decouverteEnregistree, setDecouverteEnregistree] = useState<Decouverte | null>(null);
+  const [decouverteEnregistree, setDecouverteEnregistree] = useState<Decouverte | null>(decouverteActuelle);
+  const [modifier, setModifier] = useState(!reponsesActuelles);
 
   const maj = <K extends keyof ReponsesDecouverte>(champ: K, valeur: ReponsesDecouverte[K]) =>
     setR((actuel) => ({ ...actuel, [champ]: valeur }));
+
+  // Mutateur fonctionnel (pas juste `maj('riasec', [...r.riasec, ...])`) : plusieurs réponses
+  // peuvent être enregistrées dans la même rafale d'évènements (ex. remplissage automatisé des
+  // tests) sans attendre un nouveau rendu entre chaque clic — une fermeture sur `r.riasec` figée au
+  // rendu précédent ferait perdre toutes les réponses sauf la dernière.
+  const definirRiasec = (id: string, valeur: ValeurLikert) =>
+    setR((actuel) => ({ ...actuel, riasec: [...actuel.riasec.filter((x) => x.id !== id), { id, valeur }] }));
 
   const enregistrer = async () => {
     setEnvoi(true);
@@ -289,6 +299,7 @@ function Questionnaire({
       useDecouverteStore.getState().definir(data);
       setDecouverteEnregistree(data);
       setEnregistre(true);
+      setModifier(false);
     } catch (err) {
       setErreur(messageErreur(err));
     } finally {
@@ -296,173 +307,169 @@ function Questionnaire({
     }
   };
 
-  const TITRES = [
-    'Ce qui te plaît',
-    'Ce que tu envisages',
-    'Tes ambitions',
-    'Les qualités que tu te trouves',
-    'Tes contraintes pratiques',
-  ];
+  const TITRES = ['Ce qui te plaît (1/2)', 'Ce qui te plaît (2/2)', 'Ce que tu envisages', 'Tes ambitions', 'Tes contraintes pratiques'];
 
   return (
-    <section className="bg-white rounded-bj-md border border-bj-gray-925 p-6v">
-      {!reponsesActuelles && (
-        <Alerte ton="info">
-          Réponds du mieux que tu peux : il n&apos;y a pas de bonne ou de mauvaise réponse. Ça sert à mieux te connaître avant de te proposer des
-          pistes — tu pourras revenir modifier tes réponses plus tard.
-        </Alerte>
+    <div className="space-y-6v">
+      {decouverteEnregistree && !modifier && (
+        <section className="bg-white rounded-bj-md border border-bj-gray-925 p-6v">
+          <div className="flex items-center justify-between mb-4v">
+            <h2 className="text-xl font-bold">Ton profil d&apos;intérêts</h2>
+            <button
+              type="button"
+              onClick={() => {
+                setEnregistre(false);
+                setModifier(true);
+              }}
+              className="text-sm font-medium text-bj-green hover:underline inline-flex items-center gap-1v"
+            >
+              Modifier mes réponses <ChevronDown size={16} aria-hidden="true" />
+            </button>
+          </div>
+          {enregistre && <Alerte ton="succes">Réponses enregistrées.</Alerte>}
+          <ResultatProfil decouverte={decouverteEnregistree} />
+        </section>
       )}
 
-      <div className="mb-6v">
-        <p className="text-sm font-medium text-bj-green mb-2v">
-          Étape {etape} sur {NB_ETAPES}
-        </p>
-        <div
-          className="h-2 rounded-full bg-bj-gray-925 overflow-hidden"
-          role="progressbar"
-          aria-label="Progression du questionnaire de découverte"
-          aria-valuemin={0}
-          aria-valuemax={NB_ETAPES}
-          aria-valuenow={etape}
-        >
-          <div className="h-full bg-bj-green transition-all" style={{ width: `${(etape / NB_ETAPES) * 100}%` }} />
-        </div>
-      </div>
+      {(modifier || !decouverteEnregistree) && (
+        <section className="bg-white rounded-bj-md border border-bj-gray-925 p-6v">
+          {!reponsesActuelles && (
+            <Alerte ton="info">
+              Réponds du mieux que tu peux : il n&apos;y a pas de bonne ou de mauvaise réponse. Ça sert à mieux te connaître avant de te proposer des
+              pistes — tu pourras revenir modifier tes réponses plus tard.
+            </Alerte>
+          )}
 
-      <h2 className="text-xl font-bold mb-4v">{TITRES[etape - 1]}</h2>
+          <div className="mb-6v">
+            <p className="text-sm font-medium text-bj-green mb-2v">
+              Étape {etape} sur {NB_ETAPES}
+            </p>
+            <div
+              className="h-2 rounded-full bg-bj-gray-925 overflow-hidden"
+              role="progressbar"
+              aria-label="Progression du questionnaire de découverte"
+              aria-valuemin={0}
+              aria-valuemax={NB_ETAPES}
+              aria-valuenow={etape}
+            >
+              <div className="h-full bg-bj-green transition-all" style={{ width: `${(etape / NB_ETAPES) * 100}%` }} />
+            </div>
+          </div>
 
-      {etape === 1 && (
-        <>
-          <Question titre="Qu'est-ce qui te plaît de faire ?">
-            <ChoixMultiple options={DOMAINES_16} labels={DOMAINE_LABELS} valeurs={r.interets} onChange={(v) => maj('interets', v)} max={MAX_INTERETS} />
-          </Question>
-          <Question titre="Ta matière préférée à l'école, si tu devais en choisir une seule ?">
-            <ChoixUnique options={MATIERES} labels={LABEL_MATIERE} valeur={r.matierePreferee ?? 'Aucune'} onChange={(v) => maj('matierePreferee', v)} />
-          </Question>
-        </>
-      )}
+          <h2 className="text-xl font-bold mb-4v">{TITRES[etape - 1]}</h2>
 
-      {etape === 2 && (
-        <>
-          <Question titre="As-tu une idée du métier que tu voudrais faire plus tard ?">
-            <label htmlFor="metier-envisage" className="sr-only">
-              Métier envisagé
-            </label>
-            <input
-              id="metier-envisage"
-              type="text"
-              maxLength={200}
-              value={r.metierEnvisage ?? ''}
-              onChange={(e) => maj('metierEnvisage', e.target.value || null)}
-              placeholder="Facultatif : le métier auquel tu penses, même si ce n'est pas encore sûr"
-              className="w-full px-4v py-3v border border-bj-gray-850 rounded-bj-sm text-sm bg-white focus:outline-none focus:ring-2 focus:ring-bj-green"
-            />
-          </Question>
-          <Question titre="Tu te sens plutôt attiré(e) par…">
-            <ChoixUnique
-              options={['TECHNIQUE', 'GENERAL', 'INDECIS'] as const}
-              labels={{ TECHNIQUE: 'Les formations techniques (concrètes, pratiques)', GENERAL: 'Les études générales', INDECIS: 'Je ne sais pas encore' }}
-              valeur={r.apresCollege}
-              onChange={(v) => maj('apresCollege', v)}
-            />
-          </Question>
-          <Question titre="Tu préférerais plutôt…">
-            <ChoixUnique
-              options={['MANUEL', 'INTELLECTUEL', 'MIXTE'] as const}
-              labels={{ MANUEL: 'Travailler avec tes mains, sur le terrain', INTELLECTUEL: 'Travailler avec des idées, des chiffres ou des mots', MIXTE: 'Un peu des deux' }}
-              valeur={r.styleTravail}
-              onChange={(v) => maj('styleTravail', v)}
-            />
-          </Question>
-        </>
-      )}
+          {etape === 1 && <EtapeRiasec banque={BANQUE_ETAPE_1} reponses={r.riasec} onChange={definirRiasec} />}
+          {etape === 2 && <EtapeRiasec banque={BANQUE_ETAPE_2} reponses={r.riasec} onChange={definirRiasec} />}
 
-      {etape === 3 && (
-        <>
-          <Question titre="Plus tard, tu aimerais plutôt…">
-            <ChoixUnique
-              options={['SALARIE', 'ENTREPRENEUR', 'LES_DEUX', 'INDECIS'] as const}
-              labels={{ SALARIE: 'Être salarié(e) dans une entreprise ou une administration', ENTREPRENEUR: 'Créer ta propre activité', LES_DEUX: 'Les deux, ça dépendra', INDECIS: 'Je ne sais pas encore' }}
-              valeur={r.statut}
-              onChange={(v) => maj('statut', v)}
-            />
-          </Question>
-          <Question titre="Tu préférerais…">
-            <ChoixUnique
-              options={['COURTE', 'LONGUE', 'PEU_IMPORTE'] as const}
-              labels={{ COURTE: 'Une formation courte pour travailler vite', LONGUE: 'Des études plus longues', PEU_IMPORTE: 'Peu importe, si le métier me plaît' }}
-              valeur={r.dureeEtudes}
-              onChange={(v) => maj('dureeEtudes', v)}
-            />
-          </Question>
-          <Question titre="Ce qui compte le plus pour toi dans un métier">
-            <ChoixMultiple options={PRIORITES} labels={LABEL_PRIORITE} valeurs={r.priorites} onChange={(v) => maj('priorites', v)} max={MAX_PRIORITES} />
-          </Question>
-        </>
-      )}
+          {etape === 3 && (
+            <>
+              <Question titre="As-tu une idée du métier que tu voudrais faire plus tard ?">
+                <label htmlFor="metier-envisage" className="sr-only">
+                  Métier envisagé
+                </label>
+                <input
+                  id="metier-envisage"
+                  type="text"
+                  maxLength={200}
+                  value={r.metierEnvisage ?? ''}
+                  onChange={(e) => maj('metierEnvisage', e.target.value || null)}
+                  placeholder="Facultatif : le métier auquel tu penses, même si ce n'est pas encore sûr"
+                  className="w-full px-4v py-3v border border-bj-gray-850 rounded-bj-sm text-sm bg-white focus:outline-none focus:ring-2 focus:ring-bj-green"
+                />
+              </Question>
+              <Question titre="Tu te sens plutôt attiré(e) par…">
+                <ChoixUnique
+                  options={['TECHNIQUE', 'GENERAL', 'INDECIS'] as const}
+                  labels={{ TECHNIQUE: 'Les formations techniques (concrètes, pratiques)', GENERAL: 'Les études générales', INDECIS: 'Je ne sais pas encore' }}
+                  valeur={r.apresCollege}
+                  onChange={(v) => maj('apresCollege', v)}
+                />
+              </Question>
+              <Question titre="Tu préférerais plutôt…">
+                <ChoixUnique
+                  options={['MANUEL', 'INTELLECTUEL', 'MIXTE'] as const}
+                  labels={{ MANUEL: 'Travailler avec tes mains, sur le terrain', INTELLECTUEL: 'Travailler avec des idées, des chiffres ou des mots', MIXTE: 'Un peu des deux' }}
+                  valeur={r.styleTravail}
+                  onChange={(v) => maj('styleTravail', v)}
+                />
+              </Question>
+            </>
+          )}
 
-      {etape === 4 && (
-        <Question titre="Coche ce qui te ressemble le plus">
-          <ChoixMultiple options={QUALITES} labels={LABEL_QUALITE} valeurs={r.qualites} onChange={(v) => maj('qualites', v)} max={MAX_QUALITES} />
-        </Question>
-      )}
+          {etape === 4 && (
+            <>
+              <Question titre="Plus tard, tu aimerais plutôt…">
+                <ChoixUnique
+                  options={['SALARIE', 'ENTREPRENEUR', 'LES_DEUX', 'INDECIS'] as const}
+                  labels={{ SALARIE: 'Être salarié(e) dans une entreprise ou une administration', ENTREPRENEUR: 'Créer ta propre activité', LES_DEUX: 'Les deux, ça dépendra', INDECIS: 'Je ne sais pas encore' }}
+                  valeur={r.statut}
+                  onChange={(v) => maj('statut', v)}
+                />
+              </Question>
+              <Question titre="Tu préférerais…">
+                <ChoixUnique
+                  options={['COURTE', 'LONGUE', 'PEU_IMPORTE'] as const}
+                  labels={{ COURTE: 'Une formation courte pour travailler vite', LONGUE: 'Des études plus longues', PEU_IMPORTE: 'Peu importe, si le métier me plaît' }}
+                  valeur={r.dureeEtudes}
+                  onChange={(v) => maj('dureeEtudes', v)}
+                />
+              </Question>
+              <Question titre="Ce qui compte le plus pour toi dans un métier">
+                <ChoixMultiple options={PRIORITES} labels={LABEL_PRIORITE} valeurs={r.priorites} onChange={(v) => maj('priorites', v)} max={MAX_PRIORITES} />
+              </Question>
+            </>
+          )}
 
-      {etape === 5 && (
-        <>
-          <Question titre="Partir en internat, loin de chez toi, ça te conviendrait ?">
-            <ChoixUnique
-              options={['OUI', 'NON', 'INDECIS'] as const}
-              labels={{ OUI: 'Oui', NON: 'Non', INDECIS: 'Je ne sais pas encore' }}
-              valeur={r.internat}
-              onChange={(v) => maj('internat', v)}
-            />
-          </Question>
-          <Question titre="Es-tu prêt(e) à te former dans un autre département si la formation qui te plaît n'existe pas près de chez toi ?">
-            <ChoixUnique
-              options={['OUI', 'NON', 'INDECIS'] as const}
-              labels={{ OUI: 'Oui', NON: 'Non', INDECIS: 'Je ne sais pas encore' }}
-              valeur={r.mobiliteDepartement}
-              onChange={(v) => maj('mobiliteDepartement', v)}
-            />
-          </Question>
-        </>
-      )}
+          {etape === 5 && (
+            <>
+              <Question titre="Partir en internat, loin de chez toi, ça te conviendrait ?">
+                <ChoixUnique
+                  options={['OUI', 'NON', 'INDECIS'] as const}
+                  labels={{ OUI: 'Oui', NON: 'Non', INDECIS: 'Je ne sais pas encore' }}
+                  valeur={r.internat}
+                  onChange={(v) => maj('internat', v)}
+                />
+              </Question>
+              <Question titre="Es-tu prêt(e) à te former dans un autre département si la formation qui te plaît n'existe pas près de chez toi ?">
+                <ChoixUnique
+                  options={['OUI', 'NON', 'INDECIS'] as const}
+                  labels={{ OUI: 'Oui', NON: 'Non', INDECIS: 'Je ne sais pas encore' }}
+                  valeur={r.mobiliteDepartement}
+                  onChange={(v) => maj('mobiliteDepartement', v)}
+                />
+              </Question>
+            </>
+          )}
 
-      {erreur && <Alerte ton="erreur">{erreur}</Alerte>}
-      {enregistre && decouverteEnregistree && (
-        <Alerte ton="succes">
-          Réponses enregistrées. {etiquetteProfil(decouverteEnregistree)}{' '}
-          <Link href="/espace-apprenant/recommandations" className="font-medium underline">
-            Voir mes pistes
-          </Link>
-        </Alerte>
-      )}
+          {erreur && <Alerte ton="erreur">{erreur}</Alerte>}
 
-      <div className="flex flex-wrap gap-3v justify-between mt-6v">
-        <button
-          type="button"
-          onClick={() => setEtape(Math.max(1, etape - 1))}
-          disabled={etape === 1}
-          className="bj-btn bj-btn-secondary disabled:opacity-40"
-        >
-          ← Retour
-        </button>
-        {etape < NB_ETAPES ? (
-          <button type="button" onClick={() => setEtape(etape + 1)} className="bj-btn bj-btn-primary">
-            Suivant →
-          </button>
-        ) : (
-          <button type="button" onClick={enregistrer} disabled={envoi} className="bj-btn bj-btn-primary disabled:opacity-60 inline-flex items-center gap-2v">
-            {envoi ? (
-              'Enregistrement…'
+          <div className="flex flex-wrap gap-3v justify-between mt-6v">
+            <button
+              type="button"
+              onClick={() => setEtape(Math.max(1, etape - 1))}
+              disabled={etape === 1}
+              className="bj-btn bj-btn-secondary disabled:opacity-40"
+            >
+              ← Retour
+            </button>
+            {etape < NB_ETAPES ? (
+              <button type="button" onClick={() => setEtape(etape + 1)} className="bj-btn bj-btn-primary">
+                Suivant →
+              </button>
             ) : (
-              <>
-                <CheckCircle2 size={16} aria-hidden="true" /> Enregistrer mes réponses
-              </>
+              <button type="button" onClick={enregistrer} disabled={envoi} className="bj-btn bj-btn-primary disabled:opacity-60 inline-flex items-center gap-2v">
+                {envoi ? (
+                  'Enregistrement…'
+                ) : (
+                  <>
+                    <CheckCircle2 size={16} aria-hidden="true" /> Enregistrer mes réponses
+                  </>
+                )}
+              </button>
             )}
-          </button>
-        )}
-      </div>
-    </section>
+          </div>
+        </section>
+      )}
+    </div>
   );
 }

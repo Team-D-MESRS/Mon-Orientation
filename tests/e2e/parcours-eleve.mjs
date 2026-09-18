@@ -39,6 +39,17 @@ async function choisirEtablissement(libelle) {
   await nav.cliquerTexte(libelle, 'fieldset label');
   await nav.cliquerTexte('Enregistrer et continuer', 'button');
 }
+// Test RIASEC (18 questions par étape) : répond à la même valeur (1 à 5) pour toutes les questions
+// visibles sur l'étape courante, pour ne pas dépendre du texte exact de chaque question.
+async function repondreQuestionsVisibles(valeur) {
+  await nav.evaluer(`(() => {
+    document.querySelectorAll('[data-id-question]').forEach((groupe) => {
+      const bouton = [...groupe.querySelectorAll('button[aria-label]')].find((b) => b.getAttribute('aria-label').startsWith(${JSON.stringify(String(valeur))}));
+      if (bouton) bouton.click();
+    });
+    return true;
+  })()`);
+}
 
 try {
   await nav.taille(1280, 900);
@@ -135,22 +146,19 @@ try {
   await nav.attendre(contient('Étape 1 sur 5'));
   await nav.capture(`${OUT}/b2-decouverte-etape1.png`, false);
 
-  // Étape 1 : ce qui lui plaît
-  await nav.cliquerTexte('Mécanique, industrie et automobile', 'button');
-  await nav.cliquerTexte('Physique-Chimie-Technologie', 'button');
+  // Étapes 1 et 2 : test RIASEC (18 questions chacune), répondu à « 4 - Assez » partout
+  await repondreQuestionsVisibles(4);
   await nav.cliquerTexte('Suivant', 'button');
   await nav.attendre(contient('Étape 2 sur 5'));
-
-  // Étape 2 : métier envisagé, le reste aux valeurs par défaut
-  await nav.saisir('#metier-envisage', 'Mécanicien automobile');
+  await repondreQuestionsVisibles(4);
   await nav.cliquerTexte('Suivant', 'button');
   await nav.attendre(contient('Étape 3 sur 5'));
 
+  // Étape 3 : métier envisagé, le reste aux valeurs par défaut
+  await nav.saisir('#metier-envisage', 'Mécanicien automobile');
   await nav.cliquerTexte('Suivant', 'button');
   await nav.attendre(contient('Étape 4 sur 5'));
 
-  // Étape 4 : une qualité, cohérente avec l'intérêt choisi à l'étape 1
-  await nav.cliquerTexte('Bricoleur(se), manuel(le)', 'button');
   await nav.cliquerTexte('Suivant', 'button');
   await nav.attendre(contient('Étape 5 sur 5'));
 

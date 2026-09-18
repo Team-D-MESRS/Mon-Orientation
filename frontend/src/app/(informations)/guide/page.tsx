@@ -60,8 +60,8 @@ export default function GuidePage() {
       <Bloc id="decouverte" titre="2. Répondre au questionnaire de découverte">
         <p>
           <strong>C&apos;est la première chose à faire après t&apos;être identifié.</strong> Dans <Link href="/espace-apprenant">Mon
-          espace</Link>, l&apos;onglet Découverte te pose quelques questions sur ce qui te plaît, ce que tu envisages et tes ambitions —
-          5 étapes, quelques minutes.
+          espace</Link>, l&apos;onglet Découverte te propose un test d&apos;intérêts (modèle RIASEC), puis quelques questions sur ce que
+          tu envisages et tes ambitions — 5 étapes, quelques minutes.
         </p>
         <p>
           Tant que tu n&apos;y as pas répondu, tu ne peux accéder à rien d&apos;autre sur la plateforme — ni ton espace, ni le catalogue :

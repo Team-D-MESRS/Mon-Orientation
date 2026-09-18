@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { FiliereService } from '../filiere/filiere.service';
 import { OrientationService } from '../orientation/orientation.service';
 import { bilanNotes } from '../apprenant/bilan-notes';
+import { codesDominants, LABELS_RIASEC, ReponseRiasec, scoresRiasec } from '../apprenant/riasec';
 
 /** Erreur attendue d'un outil : son message est renvoyé au modèle (tool_result en erreur). */
 export class ErreurOutil extends Error {}
@@ -177,7 +178,7 @@ export class OutilsConseillerService {
     });
     if (!apprenant) throw new ErreurOutil('Dossier introuvable.');
     const reponses = apprenant.decouverte?.reponses as
-      | { metierEnvisage: string | null; interets: string[]; qualites: string[]; apresCollege: string; dureeEtudes: string }
+      | { metierEnvisage: string | null; riasec: ReponseRiasec[]; apresCollege: string; dureeEtudes: string }
       | undefined;
 
     const bilan = bilanNotes(apprenant.notes);
@@ -207,8 +208,9 @@ export class OutilsConseillerService {
       decouverte: reponses
         ? {
             metierEnvisage: reponses.metierEnvisage,
-            centresDInteret: reponses.interets,
-            qualitesQuIlSeTrouve: reponses.qualites,
+            profilRiasec: codesDominants(scoresRiasec(reponses.riasec))
+              .map((c) => LABELS_RIASEC[c])
+              .join(', '),
             apresLeCollege: reponses.apresCollege,
             dureeDEtudesSouhaitee: reponses.dureeEtudes,
           }
