@@ -141,7 +141,6 @@ export default function TableauDeBordPage() {
         <EtapeOrientation profil={profil} preference={preference} estParent={estParent} />
       </Carte>
 
-      {decouverte && <PlanAction profil={profil} preference={preference} recommandations={recommandations ?? []} />}
       {estParent && <ParentPilotage profil={profil} preference={preference} recommandations={recommandations ?? []} />}
 
       <section className="md:col-span-2">
@@ -264,54 +263,6 @@ function VueEnsemble({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2v md:gap-3v mt-5v">
         {etapes.map((etape) => <Link key={etape.label} href={etape.href} className="flex items-center gap-2v rounded-bj-sm border border-bj-gray-925 bg-white/80 p-3v text-sm transition hover:border-bj-green/40 hover:bg-white"><span className={etape.fait ? 'text-bj-green' : 'text-bj-gray-500'}>{etape.fait ? <CheckCircle2 size={17} aria-hidden="true" /> : <Clock size={17} aria-hidden="true" />}</span><span className={etape.fait ? 'font-medium' : 'text-bj-gray-500'}>{etape.label}</span></Link>)}
       </div>
-    </section>
-  );
-}
-
-function PlanAction({
-  profil,
-  preference,
-  recommandations,
-}: {
-  profil: ProfilApprenant;
-  preference: Preference | null | undefined;
-  recommandations: Recommandation[];
-}) {
-  const cle = `mon-orientation:plan-action:${profil.nip}`;
-  const [faites, setFaites] = useState<string[]>([]);
-  useEffect(() => {
-    try { setFaites(JSON.parse(localStorage.getItem(cle) ?? '[]') as string[]); } catch { setFaites([]); }
-  }, [cle]);
-  const actions = [
-    { id: 'profil', label: 'Relire et confirmer mon profil d’intérêts', href: '/espace-apprenant/decouverte', actif: true },
-    { id: 'pistes', label: 'Explorer trois formations de ma famille de métiers', href: '/espace-apprenant/recommandations', actif: recommandations.length > 0 },
-    { id: 'comparer', label: 'Comparer deux formations et noter leurs conditions d’accès', href: '/catalogue/comparer', actif: true },
-    { id: 'voeux', label: preference ? 'Relire mes vœux avec mon parent' : 'Préparer mes premiers vœux', href: '/espace-apprenant/preferences', actif: ['TROISIEME', 'TERMINALE'].includes(profil.palier ?? '') },
-    { id: 'conseiller', label: 'Poser une question à Guido ou à mon conseiller', href: '/espace-apprenant/conseiller', actif: true },
-  ].filter((action) => action.actif);
-  const basculer = (id: string) => {
-    const suivantes = faites.includes(id) ? faites.filter((x) => x !== id) : [...faites, id];
-    setFaites(suivantes);
-    localStorage.setItem(cle, JSON.stringify(suivantes));
-  };
-  const progression = actions.length ? Math.round((actions.filter((a) => faites.includes(a.id)).length / actions.length) * 100) : 0;
-  return (
-    <section className="md:col-span-2 bj-card p-4v md:p-6v" aria-labelledby="plan-action">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3v mb-4v">
-        <div><p className="text-xs font-semibold uppercase tracking-wide text-bj-green">Prochaines étapes</p><h2 id="plan-action" className="text-xl font-bold">Mon plan d’action</h2></div>
-        <span className="text-sm font-medium text-bj-green">{progression}% réalisé</span>
-      </div>
-      <div className="h-2 rounded-full bg-bj-gray-925 mb-5v"><div className="h-full rounded-full bg-bj-green transition-all" style={{ width: `${progression}%` }} /></div>
-      <ol className="grid gap-2v md:grid-cols-2">
-        {actions.map((action, index) => {
-          const faite = faites.includes(action.id);
-          return <li key={action.id} className={`flex items-start gap-3v rounded-bj-sm border p-3v ${faite ? 'border-bj-green/30 bg-bj-green/5' : 'border-bj-gray-925'}`}>
-            <button type="button" onClick={() => basculer(action.id)} aria-label={`${faite ? 'Marquer comme non terminée' : 'Marquer comme terminée'} : ${action.label}`} aria-pressed={faite} className={`mt-0.5 h-5 w-5 rounded-full border-2 shrink-0 ${faite ? 'border-bj-green bg-bj-green' : 'border-bj-gray-850'}`} />
-            <Link href={action.href} className={`text-sm hover:text-bj-green hover:underline ${faite ? 'line-through text-bj-gray-500' : 'font-medium'}`}><span className="text-xs text-bj-gray-500 mr-2v">{index + 1}.</span>{action.label}</Link>
-          </li>;
-        })}
-      </ol>
-      <p className="mt-4v text-xs text-bj-gray-500">Ce suivi est enregistré sur cet appareil et sert de repère pour avancer avec un parent ou un conseiller.</p>
     </section>
   );
 }

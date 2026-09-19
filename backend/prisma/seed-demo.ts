@@ -270,6 +270,17 @@ const COMPTES: { email: string; nom: string; prenom: string; role: Role; enfants
       { nip: 'DEMO-1RE-0001', relation: 'Père' },
     ],
   },
+  {
+    email: 'parent2.demo@monorientation.bj',
+    nom: 'Agossou',
+    prenom: 'Rosine',
+    role: 'PARENT',
+    // Un seul enfant, déjà en Terminale et questionnaire rempli : donne un 2e compte parent
+    // indépendant (isolement des dossiers d'un parent à l'autre) et couvre la vue parent côté
+    // vœux/recommandations du supérieur, absente du 1er compte parent (Fatou et Chimène n'ont
+    // pas encore de vœux enregistrés après la réinitialisation de démo).
+    enfants: [{ nip: 'DEMO-TLE-0001', relation: 'Mère' }],
+  },
   { email: 'dges.demo@monorientation.bj', nom: 'Direction', prenom: 'DGES', role: 'DGES' },
 ];
 
