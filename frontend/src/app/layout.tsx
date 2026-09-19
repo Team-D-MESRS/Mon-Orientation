@@ -3,7 +3,6 @@ import './globals.css';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { AuthInitialiser } from '@/components/auth/AuthInitialiser';
-import { MurDecouverte } from '@/components/auth/MurDecouverte';
 
 export const metadata: Metadata = {
   title: 'Mon Orientation — Plateforme nationale d\'orientation scolaire',
@@ -37,7 +36,7 @@ export default function RootLayout({
         </a>
         <Header />
         <main id="main" role="main" className="flex-1">
-          <MurDecouverte>{children}</MurDecouverte>
+          {children}
         </main>
         <Footer />
       </body>

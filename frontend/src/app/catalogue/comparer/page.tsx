@@ -209,6 +209,10 @@ function Comparateur() {
                 </tbody>
               </table>
             </div>
+            <div className="mt-4v rounded-bj-sm border-l-4 border-bj-green bg-bj-green/5 p-4v text-sm">
+              <p className="font-semibold text-bj-green mb-1v">Comment choisir ?</p>
+              <p className="text-bj-gray-500">Commence par vérifier l’accès, le lieu de formation et les métiers visés. Les conditions officielles et les sources priment toujours sur le taux d’insertion ou le score de compatibilité.</p>
+            </div>
           </>
         )}
       </div>

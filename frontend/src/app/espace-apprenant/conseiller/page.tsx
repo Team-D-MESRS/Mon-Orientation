@@ -218,6 +218,9 @@ export default function ConseillerPage() {
   };
 
   const suggestions = estParent ? SUGGESTIONS_PARENT : SUGGESTIONS_ELEVE;
+  const raccourcis = estParent
+    ? ['Expliquez plus simplement', 'Comparez les deux meilleures pistes', 'Que devons-nous faire maintenant ?']
+    : ['Explique plus simplement', 'Compare avec une autre formation', 'Que dois-je améliorer maintenant ?'];
 
   return (
     <section className="bg-white rounded-bj-md border border-bj-gray-925 flex flex-col h-[70vh] min-h-[28rem]">
@@ -377,6 +380,9 @@ export default function ConseillerPage() {
           </button>
         </form>
       )}
+      <div className="px-4v md:px-6v pb-2v flex flex-wrap gap-2v" aria-label="Raccourcis de question">
+        {raccourcis.map((question) => <button key={question} type="button" onClick={() => envoyer(question)} disabled={envoi} className="px-3v py-1v rounded-full border border-bj-gray-850 text-xs text-bj-gray-200 hover:border-bj-green hover:text-bj-green disabled:opacity-50">{question}</button>)}
+      </div>
       <p className="px-4v md:px-6v pb-3v text-xs text-bj-gray-500">
         {estParent
           ? "Vérifiez les informations importantes auprès de l'établissement. La décision d'orientation revient à votre enfant et à votre famille."

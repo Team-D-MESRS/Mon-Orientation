@@ -56,7 +56,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
 /** Page d'arrivée après connexion selon le rôle. */
 export function accueilDuRole(role: Role): string {
-  if (role === 'APPRENANT' || role === 'PARENT') return '/espace-apprenant';
+  if (role === 'APPRENANT' || role === 'PARENT') return '/espace-apprenant/decouverte';
   if (role === 'DGES' || role === 'ADMIN') return '/stats';
   return '/';
 }

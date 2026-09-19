@@ -3,23 +3,19 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { HelpCircle, LogOut, Menu, X } from 'lucide-react';
+import { LogOut, Menu, X } from 'lucide-react';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
-import { useVisiteGuideeStore } from '@/stores/visiteGuideeStore';
 import { liensVisibles } from './navigation';
 
 export function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
-  const demanderRelanceVisite = useVisiteGuideeStore((s) => s.demanderRelance);
   const [menuOpen, setMenuOpen] = useState(false);
   const [deconnexionEnCours, setDeconnexionEnCours] = useState(false);
 
   const liens = liensVisibles(user);
-  // Uniquement dans l'espace apprenant : ailleurs, VisiteGuidee n'est pas montée, la relance serait sans effet.
-  const surEspaceApprenant = pathname.startsWith('/espace-apprenant') && (user?.role === 'APPRENANT' || user?.role === 'PARENT');
 
   const deconnecter = async () => {
     await authApi.logout().catch(() => undefined);
@@ -54,21 +50,12 @@ export function Header() {
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-6v">
             {liens.map((l) => (
-              <Link key={l.href} href={l.href} className="text-sm font-medium hover:text-bj-green transition-colors">
+              <Link key={l.href} href={l.href} aria-current={pathname === l.href ? 'page' : undefined} className="nav-link text-sm font-medium hover:text-bj-green">
                 {l.label}
               </Link>
             ))}
             {user ? (
               <div className="flex items-center gap-3v">
-                {surEspaceApprenant && (
-                  <button
-                    type="button"
-                    onClick={demanderRelanceVisite}
-                    className="text-sm text-bj-gray-500 hover:text-bj-green inline-flex items-center gap-1v"
-                  >
-                    <HelpCircle size={15} aria-hidden="true" /> Revoir la visite guidée
-                  </button>
-                )}
                 <span className="text-sm text-bj-gray-500">{user.prenom}</span>
                 <button type="button" onClick={deconnecter} className="bj-btn bj-btn-secondary text-sm inline-flex items-center gap-2v">
                   <LogOut size={16} aria-hidden="true" /> Déconnexion
@@ -97,24 +84,12 @@ export function Header() {
           <nav className="md:hidden pb-4v border-t border-bj-gray-925">
             <div className="flex flex-col gap-2v pt-4v">
               {liens.map((l) => (
-                <Link key={l.href} href={l.href} className="text-sm font-medium py-2v hover:text-bj-green" onClick={() => setMenuOpen(false)}>
+                <Link key={l.href} href={l.href} aria-current={pathname === l.href ? 'page' : undefined} className="nav-link text-sm font-medium py-2v hover:text-bj-green" onClick={() => setMenuOpen(false)}>
                   {l.label}
                 </Link>
               ))}
               {user ? (
                 <>
-                  {surEspaceApprenant && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        demanderRelanceVisite();
-                        setMenuOpen(false);
-                      }}
-                      className="text-sm text-bj-gray-500 py-2v inline-flex items-center gap-1v"
-                    >
-                      <HelpCircle size={15} aria-hidden="true" /> Revoir la visite guidée
-                    </button>
-                  )}
                   <button type="button" onClick={deconnecter} className="bj-btn bj-btn-secondary text-sm mt-2v inline-flex items-center justify-center gap-2v">
                     <LogOut size={16} aria-hidden="true" /> Déconnexion ({user.prenom})
                   </button>

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Clock, GraduationCap, TrendingUp } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowRight, CheckCircle2, Clock, GraduationCap, ListChecks, TrendingUp } from 'lucide-react';
 import { apprenantApi, orientationApi } from '@/lib/api';
 import {
   dateLisible,
@@ -21,6 +22,7 @@ import { BadgeType, Carte, Chargement } from '@/components/espace/ui';
 const LIEN = 'text-sm font-medium text-bj-green hover:underline';
 
 export default function TableauDeBordPage() {
+  const router = useRouter();
   const profil = useProfil();
   const { estParent, estEleve } = useEspace();
   // undefined tant que les vœux ne sont pas chargés : évite d'afficher « pas encore saisi » à tort
@@ -44,6 +46,10 @@ export default function TableauDeBordPage() {
       annule = true;
     };
   }, [profil.nip]);
+
+  useEffect(() => {
+    if (decouverte === null) router.replace('/espace-apprenant/decouverte');
+  }, [decouverte, router]);
 
   useEffect(() => {
     let annule = false;
@@ -87,11 +93,22 @@ export default function TableauDeBordPage() {
     // Identité, classe, département et NIP figurent déjà dans l'en-tête de l'espace (CadreEspace)
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6v">
       {decouverte && (
-        <div className="md:col-span-2 bg-bj-green/5 border border-bj-green/30 rounded-bj-md p-4v">
-          <p className="text-xs font-medium text-bj-green uppercase tracking-wide mb-1v">Ton profil</p>
-          <p className="text-sm">{etiquetteProfil(decouverte)}</p>
+        <div className="md:col-span-2 bg-bj-green/5 border border-bj-green/30 rounded-bj-md p-4v md:p-5v">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4v">
+            <div>
+              <p className="text-xs font-medium text-bj-green uppercase tracking-wide mb-1v">{estParent ? `Synthèse de ${profil.prenom}` : 'Ta synthèse d’orientation'}</p>
+              <p className="font-semibold">{etiquetteProfil(decouverte)}</p>
+              <p className="text-sm text-bj-gray-500 mt-1v">
+                {decouverte.reponses.metierEnvisage ? `Métier envisagé : ${decouverte.reponses.metierEnvisage}.` : 'Aucun métier précis n’est encore défini, ce qui est normal à cette étape.'}
+                {' '}{decouverte.reponses.internat === 'OUI' ? 'L’internat est envisageable.' : decouverte.reponses.internat === 'NON' ? 'Une formation proche du domicile est à privilégier.' : ''}
+              </p>
+            </div>
+            <Link href="/espace-apprenant/decouverte" className={`${LIEN} shrink-0`}>Voir ou modifier le profil →</Link>
+          </div>
         </div>
       )}
+
+      <VueEnsemble profil={profil} decouverte={decouverte} recommandations={recommandations} favoris={favoris} preference={preference} estParent={estParent} />
 
       <Carte titre={`Résultats ${bilan.anneeScolaire ?? ''}`} icone={<TrendingUp size={18} />}>
         {bilan.moyenneGenerale === null ? (
@@ -123,6 +140,9 @@ export default function TableauDeBordPage() {
       <Carte titre="Orientation" icone={<GraduationCap size={18} />}>
         <EtapeOrientation profil={profil} preference={preference} estParent={estParent} />
       </Carte>
+
+      {decouverte && <PlanAction profil={profil} preference={preference} recommandations={recommandations ?? []} />}
+      {estParent && <ParentPilotage profil={profil} preference={preference} recommandations={recommandations ?? []} />}
 
       <section className="md:col-span-2">
         <div className="flex items-center justify-between mb-4v">
@@ -189,6 +209,123 @@ export default function TableauDeBordPage() {
         )}
       </section>
     </div>
+  );
+}
+
+function VueEnsemble({
+  profil,
+  decouverte,
+  recommandations,
+  favoris,
+  preference,
+  estParent,
+}: {
+  profil: ProfilApprenant;
+  decouverte: Decouverte | null | undefined;
+  recommandations: Recommandation[] | null;
+  favoris: Favori[] | null;
+  preference: Preference | null | undefined;
+  estParent: boolean;
+}) {
+  const etapes = [
+    { fait: !!decouverte, label: 'Profil d’intérêts', href: '/espace-apprenant/decouverte' },
+    { fait: recommandations !== null && recommandations.length > 0, label: 'Pistes recommandées', href: '/espace-apprenant/recommandations' },
+    { fait: favoris !== null && favoris.length > 0, label: 'Formations mises de côté', href: '/catalogue' },
+    { fait: preference !== undefined && preference !== null, label: 'Vœux préparés', href: '/espace-apprenant/preferences' },
+  ];
+  const totalFait = etapes.filter((etape) => etape.fait).length;
+  const progression = Math.round((totalFait / etapes.length) * 100);
+  const prochaine = !decouverte
+    ? { titre: 'Commencer mon profil', detail: 'Quelques réponses pour personnaliser tes pistes.', href: '/espace-apprenant/decouverte' }
+    : recommandations === null
+      ? { titre: 'Préparer tes pistes', detail: 'Les recommandations sont en cours de chargement.', href: '/espace-apprenant/recommandations' }
+      : recommandations.length === 0
+        ? { titre: 'Explorer le catalogue', detail: 'Découvre les formations techniques disponibles.', href: '/catalogue' }
+        : favoris !== null && favoris.length === 0
+          ? { titre: 'Garder une formation de côté', detail: 'Enregistre les pistes qui t’intéressent pour les comparer.', href: '/catalogue' }
+          : preference === null && palierDeSaisie(profil.palier)
+            ? { titre: 'Préparer mes vœux', detail: 'Organise tes choix avec ta famille.', href: '/espace-apprenant/preferences' }
+            : { titre: 'Comparer mes pistes', detail: 'Mets deux formations côte à côte avant de décider.', href: '/catalogue/comparer' };
+
+  return (
+    <section className="md:col-span-2 rounded-bj-md border border-bj-green/25 bg-gradient-to-br from-white to-bj-green/5 p-4v md:p-6v" aria-labelledby="vue-ensemble">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5v">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2v text-bj-green mb-2v"><ListChecks size={18} aria-hidden="true" /><p className="text-xs font-semibold uppercase tracking-[0.14em]">Vue d’ensemble</p></div>
+          <h2 id="vue-ensemble" className="text-2xl font-bold">{estParent ? `Le parcours de ${profil.prenom}` : 'Ton parcours d’orientation'}</h2>
+          <p className="text-sm text-bj-gray-500 mt-1v">{totalFait} étape{totalFait > 1 ? 's' : ''} sur {etapes.length} avancée{totalFait > 1 ? 's' : ''} · {progression}% du parcours repéré</p>
+          <div className="h-2 max-w-xl rounded-full bg-bj-gray-925 mt-4v" role="progressbar" aria-valuenow={progression} aria-valuemin={0} aria-valuemax={100} aria-label="Progression du parcours d’orientation"><div className="h-full rounded-full bg-bj-green transition-[width] duration-500" style={{ width: `${progression}%` }} /></div>
+        </div>
+        <Link href={prochaine.href} className="group inline-flex shrink-0 items-center justify-between gap-4v rounded-bj-sm bg-bj-green px-4v py-3v text-white shadow-sm transition hover:bg-bj-green/90 hover:shadow-md focus-visible:outline-white">
+          <span><span className="block text-xs text-white/75">Prochaine étape</span><span className="block font-semibold">{prochaine.titre}</span><span className="block text-xs text-white/80 mt-1v max-w-[16rem]">{prochaine.detail}</span></span>
+          <ArrowRight size={19} className="transition-transform group-hover:translate-x-1" aria-hidden="true" />
+        </Link>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2v md:gap-3v mt-5v">
+        {etapes.map((etape) => <Link key={etape.label} href={etape.href} className="flex items-center gap-2v rounded-bj-sm border border-bj-gray-925 bg-white/80 p-3v text-sm transition hover:border-bj-green/40 hover:bg-white"><span className={etape.fait ? 'text-bj-green' : 'text-bj-gray-500'}>{etape.fait ? <CheckCircle2 size={17} aria-hidden="true" /> : <Clock size={17} aria-hidden="true" />}</span><span className={etape.fait ? 'font-medium' : 'text-bj-gray-500'}>{etape.label}</span></Link>)}
+      </div>
+    </section>
+  );
+}
+
+function PlanAction({
+  profil,
+  preference,
+  recommandations,
+}: {
+  profil: ProfilApprenant;
+  preference: Preference | null | undefined;
+  recommandations: Recommandation[];
+}) {
+  const cle = `mon-orientation:plan-action:${profil.nip}`;
+  const [faites, setFaites] = useState<string[]>([]);
+  useEffect(() => {
+    try { setFaites(JSON.parse(localStorage.getItem(cle) ?? '[]') as string[]); } catch { setFaites([]); }
+  }, [cle]);
+  const actions = [
+    { id: 'profil', label: 'Relire et confirmer mon profil d’intérêts', href: '/espace-apprenant/decouverte', actif: true },
+    { id: 'pistes', label: 'Explorer trois formations de ma famille de métiers', href: '/espace-apprenant/recommandations', actif: recommandations.length > 0 },
+    { id: 'comparer', label: 'Comparer deux formations et noter leurs conditions d’accès', href: '/catalogue/comparer', actif: true },
+    { id: 'voeux', label: preference ? 'Relire mes vœux avec mon parent' : 'Préparer mes premiers vœux', href: '/espace-apprenant/preferences', actif: ['TROISIEME', 'TERMINALE'].includes(profil.palier ?? '') },
+    { id: 'conseiller', label: 'Poser une question à Guido ou à mon conseiller', href: '/espace-apprenant/conseiller', actif: true },
+  ].filter((action) => action.actif);
+  const basculer = (id: string) => {
+    const suivantes = faites.includes(id) ? faites.filter((x) => x !== id) : [...faites, id];
+    setFaites(suivantes);
+    localStorage.setItem(cle, JSON.stringify(suivantes));
+  };
+  const progression = actions.length ? Math.round((actions.filter((a) => faites.includes(a.id)).length / actions.length) * 100) : 0;
+  return (
+    <section className="md:col-span-2 bj-card p-4v md:p-6v" aria-labelledby="plan-action">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3v mb-4v">
+        <div><p className="text-xs font-semibold uppercase tracking-wide text-bj-green">Prochaines étapes</p><h2 id="plan-action" className="text-xl font-bold">Mon plan d’action</h2></div>
+        <span className="text-sm font-medium text-bj-green">{progression}% réalisé</span>
+      </div>
+      <div className="h-2 rounded-full bg-bj-gray-925 mb-5v"><div className="h-full rounded-full bg-bj-green transition-all" style={{ width: `${progression}%` }} /></div>
+      <ol className="grid gap-2v md:grid-cols-2">
+        {actions.map((action, index) => {
+          const faite = faites.includes(action.id);
+          return <li key={action.id} className={`flex items-start gap-3v rounded-bj-sm border p-3v ${faite ? 'border-bj-green/30 bg-bj-green/5' : 'border-bj-gray-925'}`}>
+            <button type="button" onClick={() => basculer(action.id)} aria-label={`${faite ? 'Marquer comme non terminée' : 'Marquer comme terminée'} : ${action.label}`} aria-pressed={faite} className={`mt-0.5 h-5 w-5 rounded-full border-2 shrink-0 ${faite ? 'border-bj-green bg-bj-green' : 'border-bj-gray-850'}`} />
+            <Link href={action.href} className={`text-sm hover:text-bj-green hover:underline ${faite ? 'line-through text-bj-gray-500' : 'font-medium'}`}><span className="text-xs text-bj-gray-500 mr-2v">{index + 1}.</span>{action.label}</Link>
+          </li>;
+        })}
+      </ol>
+      <p className="mt-4v text-xs text-bj-gray-500">Ce suivi est enregistré sur cet appareil et sert de repère pour avancer avec un parent ou un conseiller.</p>
+    </section>
+  );
+}
+
+function ParentPilotage({ profil, preference, recommandations }: { profil: ProfilApprenant; preference: Preference | null | undefined; recommandations: Recommandation[] }) {
+  return (
+    <section className="md:col-span-2 rounded-bj-md border border-bj-blue/30 bg-bj-blue/5 p-4v md:p-5v" aria-labelledby="pilotage-parent">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3v mb-4v"><div><p className="text-xs font-semibold uppercase tracking-wide text-bj-blue">Pour accompagner {profil.prenom}</p><h2 id="pilotage-parent" className="text-xl font-bold">Les points à regarder ensemble</h2></div><Link href="/espace-apprenant/conseiller" className="text-sm font-medium text-bj-green hover:underline">Demander une explication à Guido →</Link></div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3v">
+        <div className="bg-white rounded-bj-sm p-3v"><p className="text-xs text-bj-gray-500 mb-1v">Pistes à examiner</p><p className="text-xl font-bold">{recommandations.length}</p><p className="text-xs text-bj-gray-500 mt-1v">recommandation{recommandations.length > 1 ? 's' : ''} disponible{recommandations.length > 1 ? 's' : ''}</p></div>
+        <div className="bg-white rounded-bj-sm p-3v"><p className="text-xs text-bj-gray-500 mb-1v">Vœux</p><p className="text-xl font-bold">{preference ? (preference.valideParent ? 'Validés' : 'À relire') : 'À préparer'}</p><Link href="/espace-apprenant/preferences" className="text-xs text-bj-green hover:underline">Accéder aux vœux →</Link></div>
+        <div className="bg-white rounded-bj-sm p-3v"><p className="text-xs text-bj-gray-500 mb-1v">Échange conseillé</p><p className="text-sm font-medium">Parler des envies et des contraintes de trajet, d’internat et de durée.</p></div>
+      </div>
+    </section>
   );
 }
 

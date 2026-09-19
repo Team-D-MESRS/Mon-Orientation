@@ -19,7 +19,10 @@ export default function IdentificationPage() {
   const [envoi, setEnvoi] = useState(false);
 
   useEffect(() => {
-    if (pret && user) router.replace(cheminDeRetour() ?? accueilDuRole(user.role));
+    if (pret && user) {
+      const destination = user.role === 'APPRENANT' || user.role === 'PARENT' ? '/espace-apprenant' : cheminDeRetour() ?? accueilDuRole(user.role);
+      router.replace(destination);
+    }
   }, [pret, user, router]);
 
   const handleSubmit = async (e: FormEvent) => {

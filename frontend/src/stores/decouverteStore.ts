@@ -5,7 +5,7 @@ import type { Decouverte } from '@/lib/apprenant';
 /**
  * État du mur de découverte : le dossier de référence est celui de l'élève connecté, ou du premier
  * enfant pour un parent (même règle par défaut qu'EspaceContext, pour rester cohérent). Utilisé à la
- * fois par le garde-fou de routage (MurDecouverte) et par le filtre par défaut du catalogue.
+ * fois par le parcours apprenant et par le filtre par défaut du catalogue.
  */
 interface DecouverteMurState {
   statut: 'inactif' | 'chargement' | 'pret';

@@ -390,6 +390,21 @@ export default function FicheFilierePage() {
             </div>
             <h1 className="text-3xl font-bold mb-4v">{filiere.nom}</h1>
 
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3v mb-6v" aria-label="À retenir">
+              <div className="rounded-bj-sm border border-bj-green/30 bg-bj-green/5 p-3v">
+                <p className="text-xs font-semibold uppercase tracking-wide text-bj-green mb-1v">Métiers visés</p>
+                <p className="text-sm font-medium">{filiere.metiersVises?.slice(0, 2).join(' · ') ?? 'À découvrir dans la fiche'}</p>
+              </div>
+              <div className="rounded-bj-sm border border-bj-blue/30 bg-bj-blue/5 p-3v">
+                <p className="text-xs font-semibold uppercase tracking-wide text-bj-blue mb-1v">Accès</p>
+                <p className="text-sm font-medium">{filiere.niveauAcces ? NIVEAU_LABELS[filiere.niveauAcces] : 'Conditions à vérifier'}</p>
+              </div>
+              <div className="rounded-bj-sm border border-bj-yellow/50 bg-bj-yellow/10 p-3v">
+                <p className="text-xs font-semibold uppercase tracking-wide text-bj-ochre-fonce mb-1v">Où se former</p>
+                <p className="text-sm font-medium">{filiere.offres?.length ? `${filiere.offres.length} établissement${filiere.offres.length > 1 ? 's' : ''}` : 'Voir les lieux disponibles'}</p>
+              </div>
+            </div>
+
             {filiere.domaines.length > 0 && (
               <ul className="flex flex-wrap gap-2v mb-4v" aria-label="Domaines">
                 {filiere.domaines.map((d) => (

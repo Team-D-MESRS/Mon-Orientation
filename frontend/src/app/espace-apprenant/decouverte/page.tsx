@@ -2,7 +2,8 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, ChevronDown } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, Clock3, ShieldCheck } from 'lucide-react';
 import { apprenantApi } from '@/lib/api';
 import { type Decouverte, type Priorite, type ReponsesDecouverte, dateLisible, etiquetteProfil } from '@/lib/apprenant';
 import {
@@ -25,9 +26,13 @@ import { useDecouverteStore } from '@/stores/decouverteStore';
 const NB_ETAPES = 5;
 const MAX_PRIORITES = 3;
 
-// Deux étapes de 18 questions chacune, plutôt qu'un seul écran de 36 questions à faire défiler.
-const BANQUE_ETAPE_1 = BANQUE_RIASEC.slice(0, 18);
-const BANQUE_ETAPE_2 = BANQUE_RIASEC.slice(18);
+// 24 questions principales, réparties équitablement entre les 6 dimensions RIASEC.
+// Les autres items restent connus du moteur mais sont complétés par une valeur neutre à l'envoi.
+const QUESTIONS_PAR_DIMENSION = 4;
+const QUESTIONS_PARCOURS = BANQUE_RIASEC.filter((_, index) => index % 6 < QUESTIONS_PAR_DIMENSION);
+const BANQUE_ETAPE_1 = QUESTIONS_PARCOURS.slice(0, 12);
+const BANQUE_ETAPE_2 = QUESTIONS_PARCOURS.slice(12);
+const NB_QUESTIONS_PARCOURS = QUESTIONS_PARCOURS.length;
 
 const VIDE: ReponsesDecouverte = {
   riasec: [],
@@ -138,6 +143,48 @@ function ResultatProfil({ decouverte }: { decouverte: Decouverte }) {
   );
 }
 
+function ResumeOnboarding({ reponses }: { reponses: ReponsesDecouverte }) {
+  const valeur = (texte: string | null | undefined, remplacement: string) => texte || remplacement;
+  const format = (texte: string) => texte.replaceAll('_', ' ').toLowerCase();
+  const scores = scoresRiasec(reponses.riasec);
+  const dominants = codesDominants(scores).map((code) => LABELS_RIASEC[code]);
+  const lectureInterets = dominants.length ? dominants.join(' et ') : 'encore à préciser';
+  const lectureTravail = reponses.styleTravail === 'MANUEL' ? 'concret, pratique et sur le terrain' : reponses.styleTravail === 'INTELLECTUEL' ? 'réflexif, avec des idées, des chiffres ou des mots' : 'varié, avec un peu de pratique et de réflexion';
+  return (
+    <div className="space-y-5v">
+      <p className="text-sm md:text-base text-bj-gray-500">
+        Ton profil est prêt. Vérifie ces quelques éléments avant de découvrir ton espace personnel et les premières pistes proposées.
+      </p>
+      <div className="rounded-bj-sm border border-bj-green/30 bg-bj-green/5 p-4v md:p-5v">
+        <p className="text-xs font-semibold uppercase tracking-wide text-bj-green mb-2v">Première lecture de ton profil</p>
+        <p className="font-semibold">Tu sembles particulièrement attiré(e) par les activités liées au profil {lectureInterets}.</p>
+        <p className="text-sm text-bj-gray-500 mt-1v">Tu pourrais apprécier un environnement de travail {lectureTravail}. Ces premières indications serviront à classer les formations techniques à explorer.</p>
+      </div>
+      <div className="grid gap-3v md:grid-cols-2">
+        <div className="rounded-bj-sm border border-bj-gray-925 bg-bj-gray-975 p-4v">
+          <p className="text-xs font-semibold uppercase tracking-wide text-bj-gray-500 mb-1v">Tes intérêts</p>
+          <p className="font-semibold">Profil construit à partir de {NB_QUESTIONS_PARCOURS} questions</p>
+        </div>
+        <div className="rounded-bj-sm border border-bj-gray-925 bg-bj-gray-975 p-4v">
+          <p className="text-xs font-semibold uppercase tracking-wide text-bj-gray-500 mb-1v">Métier envisagé</p>
+          <p className="font-semibold">{valeur(reponses.metierEnvisage, 'Je suis encore en réflexion')}</p>
+        </div>
+        <div className="rounded-bj-sm border border-bj-gray-925 bg-bj-gray-975 p-4v">
+          <p className="text-xs font-semibold uppercase tracking-wide text-bj-gray-500 mb-1v">Ta façon de travailler</p>
+          <p className="font-semibold">{format(reponses.styleTravail)}</p>
+        </div>
+        <div className="rounded-bj-sm border border-bj-gray-925 bg-bj-gray-975 p-4v">
+          <p className="text-xs font-semibold uppercase tracking-wide text-bj-gray-500 mb-1v">Ce qui compte pour toi</p>
+          <p className="font-semibold">{reponses.priorites.length ? reponses.priorites.map((p) => LABEL_PRIORITE[p]).join(' · ') : 'Pas encore défini'}</p>
+        </div>
+      </div>
+      <div className="rounded-bj-sm border-l-4 border-bj-green bg-bj-green/5 p-4v text-sm">
+        Tu pourras modifier tes réponses plus tard. Elles servent à personnaliser ton accompagnement, pas à prendre une décision à ta place.
+      </div>
+    </div>
+  );
+}
+
 function Etiquette({
   selectionne,
   onClick,
@@ -156,7 +203,7 @@ function Etiquette({
       aria-label={ariaLabel}
       onClick={onClick}
       className={`px-4v py-2v rounded-full border text-sm font-medium text-left transition-colors ${
-        selectionne ? 'border-bj-green bg-bj-green/10 text-bj-green ring-1 ring-bj-green' : 'border-bj-gray-850 text-bj-gray-200 hover:border-bj-green'
+        selectionne ? 'border-bj-green bg-bj-green text-white shadow-sm' : 'border-bj-gray-850 bg-white text-bj-gray-200 hover:border-bj-green hover:bg-bj-green/5'
       }`}
     >
       {children}
@@ -222,10 +269,10 @@ function ChoixMultiple<T extends string>({
 const VALEURS_LIKERT: ValeurLikert[] = [1, 2, 3, 4, 5];
 
 /** Une question RIASEC avec son échelle 1 (pas du tout) à 5 (beaucoup). */
-function EchelleLikert({ question, valeur, onChange }: { question: QuestionRiasec; valeur: ValeurLikert | undefined; onChange: (v: ValeurLikert) => void }) {
+function EchelleLikert({ question, valeur, onChange, numero }: { question: QuestionRiasec; valeur: ValeurLikert | undefined; onChange: (v: ValeurLikert) => void; numero: number }) {
   return (
-    <div className="py-3v border-b border-bj-gray-950 last:border-0" data-id-question={question.id}>
-      <p className="text-sm mb-2v">{question.texte}</p>
+    <div className="py-4v px-3v md:px-4v mb-2v rounded-bj-sm border border-bj-gray-925 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] last:mb-0" data-id-question={question.id}>
+      <p className="text-sm leading-relaxed mb-3v"><span className="text-xs font-semibold text-bj-green mr-2v">Question {numero}/{NB_QUESTIONS_PARCOURS}</span>{question.texte}</p>
       <div className="flex flex-wrap gap-2v" role="radiogroup" aria-label={question.texte}>
         {VALEURS_LIKERT.map((v) => (
           <Etiquette key={v} selectionne={valeur === v} onClick={() => onChange(v)} ariaLabel={`${v} - ${LABELS_LIKERT[v]}`}>
@@ -237,16 +284,16 @@ function EchelleLikert({ question, valeur, onChange }: { question: QuestionRiase
   );
 }
 
-function EtapeRiasec({ banque, reponses, onChange }: { banque: QuestionRiasec[]; reponses: ReponseRiasec[]; onChange: (id: string, valeur: ValeurLikert) => void }) {
+function EtapeRiasec({ banque, reponses, onChange, decalage }: { banque: QuestionRiasec[]; reponses: ReponseRiasec[]; onChange: (id: string, valeur: ValeurLikert) => void; decalage: number }) {
   const valeurDe = (id: string) => reponses.find((x) => x.id === id)?.valeur;
   const repondues = banque.filter((q) => valeurDe(q.id) !== undefined).length;
   return (
     <div>
-      {banque.map((q) => (
-        <EchelleLikert key={q.id} question={q} valeur={valeurDe(q.id)} onChange={(v) => onChange(q.id, v)} />
+      {banque.map((q, index) => (
+        <EchelleLikert key={q.id} question={q} valeur={valeurDe(q.id)} numero={decalage + index + 1} onChange={(v) => onChange(q.id, v)} />
       ))}
       <p className="text-xs text-bj-gray-500 mt-3v">
-        {repondues}/{banque.length} question{banque.length > 1 ? 's' : ''} répondue{repondues > 1 ? 's' : ''}.
+        {decalage + repondues}/{NB_QUESTIONS_PARCOURS} questions principales répondues.
       </p>
     </div>
   );
@@ -254,8 +301,8 @@ function EtapeRiasec({ banque, reponses, onChange }: { banque: QuestionRiasec[];
 
 function Question({ titre, children }: { titre: string; children: ReactNode }) {
   return (
-    <div className="mb-6v">
-      <h3 className="font-bold mb-3v">{titre}</h3>
+    <div className="mb-6v rounded-bj-sm border border-bj-gray-925 bg-white p-4v md:p-5v shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+      <h3 className="font-bold leading-relaxed mb-3v">{titre}</h3>
       {children}
     </div>
   );
@@ -268,6 +315,7 @@ function Questionnaire({
   decouverteActuelle: Decouverte | null;
   onEnregistre: (decouverte: Decouverte) => void;
 }) {
+  const router = useRouter();
   const profil = useProfil();
   const reponsesActuelles = decouverteActuelle?.reponses ?? null;
   const [r, setR] = useState<ReponsesDecouverte>(reponsesActuelles ?? VIDE);
@@ -277,6 +325,32 @@ function Questionnaire({
   const [enregistre, setEnregistre] = useState(false);
   const [decouverteEnregistree, setDecouverteEnregistree] = useState<Decouverte | null>(decouverteActuelle);
   const [modifier, setModifier] = useState(!reponsesActuelles);
+  const [brouillonCharge, setBrouillonCharge] = useState(!!reponsesActuelles);
+
+  const cleBrouillon = `mon-orientation:onboarding:${profil.nip}`;
+
+  useEffect(() => {
+    if (reponsesActuelles || typeof window === 'undefined') {
+      setBrouillonCharge(true);
+      return;
+    }
+    try {
+      const brouillon = window.localStorage.getItem(cleBrouillon);
+      if (brouillon) setR(JSON.parse(brouillon) as ReponsesDecouverte);
+    } catch {
+      // Un brouillon local corrompu ne doit jamais empêcher l'accès au questionnaire.
+    } finally {
+      setBrouillonCharge(true);
+    }
+  }, [cleBrouillon, reponsesActuelles]);
+
+  useEffect(() => {
+    if (!brouillonCharge || !modifier || typeof window === 'undefined') return;
+    const minuterie = window.setTimeout(() => {
+      window.localStorage.setItem(cleBrouillon, JSON.stringify(r));
+    }, 250);
+    return () => window.clearTimeout(minuterie);
+  }, [brouillonCharge, cleBrouillon, decouverteEnregistree, modifier, r]);
 
   const maj = <K extends keyof ReponsesDecouverte>(champ: K, valeur: ReponsesDecouverte[K]) =>
     setR((actuel) => ({ ...actuel, [champ]: valeur }));
@@ -300,6 +374,8 @@ function Questionnaire({
       setDecouverteEnregistree(data);
       setEnregistre(true);
       setModifier(false);
+      window.localStorage.removeItem(cleBrouillon);
+      if (!reponsesActuelles) router.replace('/espace-apprenant');
     } catch (err) {
       setErreur(messageErreur(err));
     } finally {
@@ -308,6 +384,17 @@ function Questionnaire({
   };
 
   const TITRES = ['Ce qui te plaît (1/2)', 'Ce qui te plaît (2/2)', 'Ce que tu envisages', 'Tes ambitions', 'Tes contraintes pratiques'];
+  const SOUS_TITRES = [
+    'Prends ton temps : il n’y a pas de bonne ou de mauvaise réponse.',
+    'On continue tranquillement avec ce qui t’attire au quotidien.',
+    'Même une idée qui change peut nous aider à mieux t’accompagner.',
+    'Imagine le travail et la vie professionnelle qui te correspondraient.',
+    'Ces réponses nous aident à te proposer des parcours réalistes et accessibles.',
+  ];
+  const allerAEtape = (nouvelleEtape: number) => {
+    setEtape(nouvelleEtape);
+    window.setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 0);
+  };
 
   return (
     <div className="space-y-6v">
@@ -332,34 +419,57 @@ function Questionnaire({
       )}
 
       {(modifier || !decouverteEnregistree) && (
-        <section className="bg-white rounded-bj-md border border-bj-gray-925 p-6v">
-          {!reponsesActuelles && (
-            <Alerte ton="info">
-              Réponds du mieux que tu peux : il n&apos;y a pas de bonne ou de mauvaise réponse. Ça sert à mieux te connaître avant de te proposer des
-              pistes — tu pourras revenir modifier tes réponses plus tard.
-            </Alerte>
-          )}
-
-          <div className="mb-6v">
-            <p className="text-sm font-medium text-bj-green mb-2v">
-              Étape {etape} sur {NB_ETAPES}
-            </p>
-            <div
-              className="h-2 rounded-full bg-bj-gray-925 overflow-hidden"
-              role="progressbar"
-              aria-label="Progression du questionnaire de découverte"
-              aria-valuemin={0}
-              aria-valuemax={NB_ETAPES}
-              aria-valuenow={etape}
-            >
-              <div className="h-full bg-bj-green transition-all" style={{ width: `${(etape / NB_ETAPES) * 100}%` }} />
+        <section className="overflow-hidden bg-white rounded-bj-md border border-bj-gray-925 shadow-sm">
+          <div className="bg-gradient-to-br from-bj-green/10 via-white to-bj-yellow/10 px-5v py-6v md:px-8v md:py-8v border-b border-bj-gray-925">
+            <div className="flex flex-wrap items-start justify-between gap-4v mb-5v">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-bj-green mb-2v">
+                  {reponsesActuelles ? 'Mettre à jour ton profil' : 'Ton parcours commence ici'}
+                </p>
+                <h2 className="text-2xl md:text-3xl font-bold mb-2v">Apprenons à mieux te connaître</h2>
+                <p className="text-sm md:text-base text-bj-gray-500 max-w-2xl">
+                  Il n&apos;y a pas de bonne ou de mauvaise réponse. Tes réponses restent liées à ton dossier et pourront être modifiées plus tard.
+                </p>
+              </div>
+              <div className="flex items-center gap-2v rounded-full bg-white/80 border border-bj-gray-925 px-3v py-2v text-xs text-bj-gray-500">
+                <Clock3 size={15} className="text-bj-green" aria-hidden="true" />
+                Environ 5 minutes
+              </div>
             </div>
+            <div className="flex items-center gap-3v text-xs text-bj-gray-500">
+              <div className="h-2 flex-1 rounded-full bg-white overflow-hidden" role="progressbar" aria-label="Progression du questionnaire de découverte" aria-valuemin={1} aria-valuemax={NB_ETAPES} aria-valuenow={Math.min(etape, NB_ETAPES)}>
+                <div className="h-full rounded-full bg-bj-green transition-all" style={{ width: `${(Math.min(etape, NB_ETAPES) / NB_ETAPES) * 100}%` }} />
+              </div>
+              <span className="font-semibold text-bj-green whitespace-nowrap">{etape > NB_ETAPES ? 'Terminé' : `${etape}/${NB_ETAPES}`}</span>
+            </div>
+            <div className="hidden md:flex justify-between mt-2v text-[11px] text-bj-gray-500">
+              <span className={etape === 1 ? 'font-semibold text-bj-green' : ''}>Tes intérêts</span>
+              <span className={etape === 2 ? 'font-semibold text-bj-green' : ''}>Tes préférences</span>
+              <span className={etape === 3 ? 'font-semibold text-bj-green' : ''}>Tes envies</span>
+              <span className={etape === 4 ? 'font-semibold text-bj-green' : ''}>Tes ambitions</span>
+              <span className={etape === 5 ? 'font-semibold text-bj-green' : ''}>Ta situation</span>
+            </div>
+            {modifier && brouillonCharge && (
+              <p className="text-xs text-bj-green mt-4v">Tes réponses sont enregistrées automatiquement sur cet appareil.</p>
+            )}
           </div>
 
-          <h2 className="text-xl font-bold mb-4v">{TITRES[etape - 1]}</h2>
+          <div className="px-5v py-6v md:px-8v md:py-8v bg-[#fffdfa]">
+            <div className="flex items-start gap-3v mb-6v rounded-bj-sm border border-bj-yellow/40 bg-bj-yellow/10 p-4v">
+              <div className="w-10 h-10 rounded-full bg-bj-green text-white flex items-center justify-center shrink-0 font-bold shadow-sm">{etape}</div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-bj-gray-500 mb-1v">{etape > NB_ETAPES ? 'Dernière étape' : `Étape ${etape}`}</p>
+                <h3 className="text-xl md:text-2xl font-bold">{etape > NB_ETAPES ? 'Vérifie tes réponses' : TITRES[etape - 1]}</h3>
+                {etape <= NB_ETAPES && <p className="text-sm text-bj-gray-500 mt-1v">{SOUS_TITRES[etape - 1]}</p>}
+              </div>
+            </div>
 
-          {etape === 1 && <EtapeRiasec banque={BANQUE_ETAPE_1} reponses={r.riasec} onChange={definirRiasec} />}
-          {etape === 2 && <EtapeRiasec banque={BANQUE_ETAPE_2} reponses={r.riasec} onChange={definirRiasec} />}
+          {etape > NB_ETAPES ? (
+            <ResumeOnboarding reponses={r} />
+          ) : (
+            <>
+          {etape === 1 && <EtapeRiasec banque={BANQUE_ETAPE_1} reponses={r.riasec} onChange={definirRiasec} decalage={0} />}
+          {etape === 2 && <EtapeRiasec banque={BANQUE_ETAPE_2} reponses={r.riasec} onChange={definirRiasec} decalage={BANQUE_ETAPE_1.length} />}
 
           {etape === 3 && (
             <>
@@ -375,14 +485,6 @@ function Questionnaire({
                   onChange={(e) => maj('metierEnvisage', e.target.value || null)}
                   placeholder="Facultatif : le métier auquel tu penses, même si ce n'est pas encore sûr"
                   className="w-full px-4v py-3v border border-bj-gray-850 rounded-bj-sm text-sm bg-white focus:outline-none focus:ring-2 focus:ring-bj-green"
-                />
-              </Question>
-              <Question titre="Tu te sens plutôt attiré(e) par…">
-                <ChoixUnique
-                  options={['TECHNIQUE', 'GENERAL', 'INDECIS'] as const}
-                  labels={{ TECHNIQUE: 'Les formations techniques (concrètes, pratiques)', GENERAL: 'Les études générales', INDECIS: 'Je ne sais pas encore' }}
-                  valeur={r.apresCollege}
-                  onChange={(v) => maj('apresCollege', v)}
                 />
               </Question>
               <Question titre="Tu préférerais plutôt…">
@@ -440,21 +542,27 @@ function Questionnaire({
               </Question>
             </>
           )}
+            </>
+          )}
 
           {erreur && <Alerte ton="erreur">{erreur}</Alerte>}
 
-          <div className="flex flex-wrap gap-3v justify-between mt-6v">
+          <div className="mt-8v pt-5v border-t border-bj-gray-925 flex flex-wrap gap-3v items-center justify-between">
             <button
               type="button"
-              onClick={() => setEtape(Math.max(1, etape - 1))}
+              onClick={() => allerAEtape(Math.max(1, etape - 1))}
               disabled={etape === 1}
               className="bj-btn bj-btn-secondary disabled:opacity-40"
             >
-              ← Retour
+              <ArrowLeft size={16} aria-hidden="true" /> Retour
             </button>
             {etape < NB_ETAPES ? (
-              <button type="button" onClick={() => setEtape(etape + 1)} className="bj-btn bj-btn-primary">
-                Suivant →
+              <button type="button" onClick={() => allerAEtape(etape + 1)} className="bj-btn bj-btn-primary">
+                Suivant <ArrowRight size={16} aria-hidden="true" />
+              </button>
+            ) : etape === NB_ETAPES ? (
+              <button type="button" onClick={() => allerAEtape(NB_ETAPES + 1)} className="bj-btn bj-btn-primary">
+                Vérifier mes réponses <ArrowRight size={16} aria-hidden="true" />
               </button>
             ) : (
               <button type="button" onClick={enregistrer} disabled={envoi} className="bj-btn bj-btn-primary disabled:opacity-60 inline-flex items-center gap-2v">
@@ -462,11 +570,16 @@ function Questionnaire({
                   'Enregistrement…'
                 ) : (
                   <>
-                    <CheckCircle2 size={16} aria-hidden="true" /> Enregistrer mes réponses
+                    <CheckCircle2 size={16} aria-hidden="true" /> Enregistrer et accéder au tableau de bord
                   </>
                 )}
               </button>
             )}
+          </div>
+          </div>
+          <div className="flex items-center gap-2v px-5v py-3v md:px-8v bg-bj-gray-975 border-t border-bj-gray-925 text-xs text-bj-gray-500">
+            <ShieldCheck size={15} className="text-bj-green shrink-0" aria-hidden="true" />
+            Tes réponses servent uniquement à personnaliser ton accompagnement.
           </div>
         </section>
       )}

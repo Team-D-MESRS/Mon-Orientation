@@ -7,10 +7,7 @@ import { BookOpen, Compass, FlaskConical, Heart, LayoutDashboard, Lightbulb, Mes
 import { classeLisible } from '@/lib/apprenant';
 import { useEspace } from './EspaceContext';
 import { Alerte, CHAMP, Chargement } from './ui';
-import { VisiteGuidee } from './VisiteGuidee';
 
-// « Découverte » juste après le tableau de bord : le questionnaire se remplit avant de voir ses
-// pistes (décision du 16/09) — le blocage se fait sur la page Recommandations, pas ici.
 const ONGLETS = [
   { href: '/espace-apprenant', label: 'Tableau de bord', Icone: LayoutDashboard },
   { href: '/espace-apprenant/decouverte', label: 'Découverte', Icone: Compass },
@@ -27,6 +24,7 @@ export function CadreEspace({ children }: { children: ReactNode }) {
   const estAdmin = moi.role === 'ADMIN';
 
   const titre = estParent && profil ? `Suivi de ${profil.prenom}` : estAdmin ? 'Dossier élève' : 'Mon espace';
+  const surDecouverte = pathname === '/espace-apprenant/decouverte';
 
   const ouvrirDossier = (e: FormEvent) => {
     e.preventDefault();
@@ -47,14 +45,22 @@ export function CadreEspace({ children }: { children: ReactNode }) {
   else contenu = <Alerte ton="attention">Ton compte n&apos;est rattaché à aucun dossier élève.</Alerte>;
 
   return (
-    <div className="py-8v">
+    <div className={surDecouverte ? 'py-6v md:py-10v' : 'py-8v'}>
       <div className="bj-container">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4v mb-6v">
+        <div className={`flex flex-col md:flex-row md:items-end md:justify-between gap-4v ${surDecouverte ? 'mb-8v' : 'mb-6v'}`}>
           <div>
-            <h1 className="text-3xl font-bold mb-1v">{titre}</h1>
-            {profil && (
+            <p className={`text-xs font-semibold uppercase tracking-[0.18em] mb-2v ${surDecouverte ? 'text-bj-green' : 'text-bj-gray-500'}`}>
+              {surDecouverte ? 'Mon Orientation · Première étape' : 'Mon Orientation'}
+            </p>
+            <h1 className={`${surDecouverte ? 'text-3xl md:text-4xl' : 'text-3xl'} font-bold mb-1v`}>{surDecouverte && profil ? `Bienvenue, ${profil.prenom}` : titre}</h1>
+            {profil && !surDecouverte && (
               <p className="text-bj-gray-500">
                 {profil.prenom} {profil.nom} · {classeLisible(profil)} · {profil.departement} ({profil.commune}) · NIP {profil.nip}
+              </p>
+            )}
+            {surDecouverte && profil && (
+              <p className="text-base text-bj-gray-500 max-w-2xl">
+                Quelques réponses nous aideront à te présenter des formations qui correspondent à tes envies, à ton profil et à ta situation.
               </p>
             )}
           </div>
@@ -98,7 +104,6 @@ export function CadreEspace({ children }: { children: ReactNode }) {
                 <Link
                   key={href}
                   href={href}
-                  data-tour={href}
                   aria-current={actif ? 'page' : undefined}
                   className={`flex items-center gap-2v px-4v py-2v rounded-bj-sm text-sm font-medium whitespace-nowrap transition-colors ${
                     actif ? 'bg-bj-green text-white' : 'bg-white border border-bj-gray-925 text-bj-gray-200 hover:border-bj-green'
@@ -113,7 +118,6 @@ export function CadreEspace({ children }: { children: ReactNode }) {
 
         {contenu}
       </div>
-      {profil && <VisiteGuidee />}
     </div>
   );
 }

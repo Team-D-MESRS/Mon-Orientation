@@ -2,36 +2,19 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, CheckCircle2, Compass, RefreshCw } from 'lucide-react';
-import { apprenantApi, orientationApi } from '@/lib/api';
-import { ORDINAUX, type Decouverte, type Recommandation } from '@/lib/apprenant';
+import { AlertTriangle, CheckCircle2, RefreshCw } from 'lucide-react';
+import { orientationApi } from '@/lib/api';
+import { DOMAINE_LABELS } from '@/lib/filiere';
+import { ORDINAUX, type Recommandation } from '@/lib/apprenant';
 import { messageErreur } from '@/lib/erreurs';
-import { useEspace, useProfil } from '@/components/espace/EspaceContext';
+import { useProfil } from '@/components/espace/EspaceContext';
 import { Alerte, BadgeType, Chargement } from '@/components/espace/ui';
 
 export default function RecommandationsPage() {
   const profil = useProfil();
-  const { estEleve } = useEspace();
-  const [decouverte, setDecouverte] = useState<Decouverte | null | undefined>(undefined);
   const [recommandations, setRecommandations] = useState<Recommandation[] | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [calcul, setCalcul] = useState(false);
-
-  useEffect(() => {
-    let annule = false;
-    setDecouverte(undefined);
-    apprenantApi
-      .getDecouverte(profil.nip)
-      .then(({ data }) => {
-        if (!annule) setDecouverte(data);
-      })
-      .catch(() => {
-        if (!annule) setDecouverte(null);
-      });
-    return () => {
-      annule = true;
-    };
-  }, [profil.nip]);
 
   const calculer = useCallback(async () => {
     setCalcul(true);
@@ -48,8 +31,6 @@ export default function RecommandationsPage() {
   }, [profil.nip]);
 
   useEffect(() => {
-    // Bloquant : pas de calcul tant que le questionnaire de découverte n'est pas rempli (décision du 16/09)
-    if (!decouverte) return;
     let annule = false;
     setRecommandations(null);
     orientationApi
@@ -68,29 +49,9 @@ export default function RecommandationsPage() {
     return () => {
       annule = true;
     };
-  }, [profil.nip, calculer, decouverte]);
+  }, [profil.nip, calculer]);
 
   const exploration = profil.palier === 'QUATRIEME';
-
-  if (decouverte === undefined) return <Chargement />;
-  if (!decouverte) {
-    return (
-      <section className="bg-white rounded-bj-md border border-bj-gray-925 p-8v text-center">
-        <Compass size={32} className="text-bj-green mx-auto mb-3v" aria-hidden="true" />
-        <h2 className="text-xl font-bold mb-2v">D&apos;abord, faisons connaissance</h2>
-        <p className="text-bj-gray-500 max-w-md mx-auto mb-6v">
-          {estEleve
-            ? 'Avant de te proposer des pistes, réponds au questionnaire de découverte : ce que tu aimes, ce que tu envisages, tes ambitions.'
-            : `${profil.prenom} n'a pas encore rempli le questionnaire de découverte, nécessaire avant de voir ses pistes.`}
-        </p>
-        {estEleve && (
-          <Link href="/espace-apprenant/decouverte" className="bj-btn bj-btn-primary">
-            Remplir le questionnaire
-          </Link>
-        )}
-      </section>
-    );
-  }
 
   return (
     <section>
@@ -120,11 +81,29 @@ export default function RecommandationsPage() {
       ) : recommandations.length === 0 ? (
         <p className="text-bj-gray-500">Aucune recommandation pour l&apos;instant.</p>
       ) : (
-        <ol className="space-y-4v mt-6v">
-          {recommandations.map((r, i) => (
-            <CarteRecommandation key={r.id} recommandation={r} rang={i + 1} />
+        <div className="space-y-8v mt-6v">
+          {Array.from(
+            recommandations.reduce((groupes, recommandation) => {
+              const domaine = recommandation.filiere.domaines[0] ?? 'AUTRES';
+              const groupe = groupes.get(domaine) ?? [];
+              groupes.set(domaine, [...groupe, recommandation]);
+              return groupes;
+            }, new Map<string, Recommandation[]>()).entries(),
+          ).map(([domaine, groupe]) => (
+            <section key={domaine} aria-labelledby={`famille-${domaine}`}>
+              <div className="flex items-end justify-between gap-3v mb-3v">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-bj-green">Famille de métiers</p>
+                  <h3 id={`famille-${domaine}`} className="text-lg font-bold">{DOMAINE_LABELS[domaine as keyof typeof DOMAINE_LABELS] ?? 'Autres pistes techniques'}</h3>
+                </div>
+                <span className="text-xs text-bj-gray-500">{groupe.length} piste{groupe.length > 1 ? 's' : ''}</span>
+              </div>
+              <ol className="space-y-4v">
+                {groupe.map((r) => <CarteRecommandation key={r.id} recommandation={r} rang={recommandations.indexOf(r) + 1} />)}
+              </ol>
+            </section>
           ))}
-        </ol>
+        </div>
       )}
     </section>
   );
@@ -155,6 +134,10 @@ function CarteRecommandation({ recommandation: r, rang }: { recommandation: Reco
               {r.filiere.nom}
             </Link>
           </h3>
+          <div className="mt-3v rounded-bj-sm border-l-4 border-bj-green bg-bj-green/5 px-3v py-2v text-sm">
+            <p className="font-semibold text-bj-green mb-1v">Pourquoi cette piste ?</p>
+            <p className="text-bj-gray-500">{r.explication || 'Cette formation a été rapprochée de tes intérêts, de ton parcours scolaire et de tes préférences.'}</p>
+          </div>
           <ul className="mt-3v space-y-1v text-sm">
             {criteres.map((c, i) => (
               <li key={i} className={`flex gap-2v ${c.alerte ? 'text-bj-ochre-fonce' : ''}`}>

@@ -6,6 +6,7 @@ const LIENS_PRINCIPAUX: { href: string; label: string; roles?: Role[] }[] = [
   { href: '/conseiller', label: 'Guido' },
   { href: '/espace-apprenant', label: 'Mon espace', roles: ['APPRENANT', 'PARENT', 'ADMIN'] },
   { href: '/stats', label: 'Statistiques', roles: ['DGES', 'ADMIN'] },
+  { href: '/admin', label: 'Administration', roles: ['ADMIN'] },
 ];
 
 /** Un visiteur voit « Mon espace », qui le mène à la connexion ; les statistiques restent réservées à la DGES et à l'admin. */

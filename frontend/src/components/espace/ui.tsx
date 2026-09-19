@@ -7,8 +7,8 @@ export const CHAMP =
 
 export function Chargement({ texte = 'Chargement…' }: { texte?: string }) {
   return (
-    <p className="py-8v text-center text-bj-gray-500" aria-busy="true">
-      {texte}
+    <p className="py-8v text-center text-bj-gray-500 loading-pulse" aria-busy="true" role="status">
+      <span className="inline-flex items-center gap-2v"><span className="w-2 h-2 rounded-full bg-bj-green" aria-hidden="true" />{texte}</span>
     </p>
   );
 }
@@ -23,7 +23,7 @@ const TONS = {
 export function Alerte({ ton, children }: { ton: keyof typeof TONS; children: ReactNode }) {
   const { role, classes, Icone, couleur } = TONS[ton];
   return (
-    <div role={role} className={`flex gap-3v items-start p-4v my-4v rounded-bj-sm border text-sm ${classes}`}>
+    <div role={role} className={`flex gap-3v items-start p-4v my-4v rounded-bj-sm border text-sm page-enter ${classes}`}>
       <Icone size={18} className={`shrink-0 mt-[2px] ${couleur}`} aria-hidden="true" />
       <div>{children}</div>
     </div>
@@ -40,7 +40,7 @@ export function BadgeType({ type }: { type: TypeFiliere }) {
 
 export function Carte({ titre, icone, children }: { titre: string; icone: ReactNode; children: ReactNode }) {
   return (
-    <section className="bg-white rounded-bj-md border border-bj-gray-925 p-6v">
+    <section className="bg-white rounded-bj-md border border-bj-gray-925 p-6v transition-shadow duration-200 hover:shadow-[0_6px_18px_rgba(0,0,0,0.06)]">
       <h2 className="flex items-center gap-2v text-sm font-bold uppercase tracking-wide text-bj-gray-500 mb-4v">
         <span className="text-bj-green" aria-hidden="true">{icone}</span>
         {titre}
