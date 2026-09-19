@@ -14,7 +14,6 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AccesApprenantGuard } from '../auth/acces-apprenant.guard';
-import { DecouverteCompleteeGuard } from '../auth/decouverte-completee.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -73,7 +72,7 @@ export class ApprenantController {
   }
 
   @Post(':nip/preferences')
-  @UseGuards(RolesGuard, DecouverteCompleteeGuard)
+  @UseGuards(RolesGuard)
   @Roles('APPRENANT')
   @ApiOperation({ summary: 'Enregistrer ses vœux (3e ou Terminale) ; recalcule les recommandations' })
   async enregistrerPreferences(@Param('nip') nip: string, @Body() dto: PreferencesDto) {

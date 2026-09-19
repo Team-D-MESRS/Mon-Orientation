@@ -1,5 +1,5 @@
 import { Domaine } from '../filiere/domaines';
-import { BANQUE_RIASEC, domainesDepuisRiasec, estQuestionRiasec, ReponseRiasec, scoresRiasec } from './riasec';
+import { BANQUE_RIASEC, CODES_RIASEC, domainesDepuisRiasec, estQuestionRiasec, ReponseRiasec, scoresRiasec } from './riasec';
 
 /**
  * Questionnaire de découverte : ce que l'élève aime (test RIASEC), envisage, ses ambitions, ses
@@ -40,9 +40,8 @@ export function affinitesDomaines(reponses: ReponsesDecouverte): Partial<Record<
 
 /**
  * Valide et normalise les réponses envoyées par le client ; rejette toute valeur hors énumération.
- * Le test RIASEC est obligatoire dans son intégralité (principe directeur : test bloquant) — une
- * question de la banque sans réponse fait échouer la validation plutôt que de produire un profil
- * incomplet silencieux.
+ * Le parcours principal demande 4 questions par dimension RIASEC (24 au total). Les anciennes
+ * réponses à 36 questions restent acceptées pour ne pas invalider les profils déjà enregistrés.
  */
 export function validerReponses(brut: unknown): ReponsesDecouverte {
   if (typeof brut !== 'object' || brut === null) throw new Error('Réponses invalides');
@@ -77,8 +76,13 @@ function reponsesRiasecDe(v: unknown): ReponseRiasec[] {
     }
     parId.set(id, { id, valeur: valeur as ReponseRiasec['valeur'] });
   }
-  if (parId.size < BANQUE_RIASEC.length) {
-    throw new Error('Le test de découverte doit être complété en entier');
+  const parDimension = new Map<string, number>();
+  for (const id of parId.keys()) {
+    const dimension = BANQUE_RIASEC.find((question) => question.id === id)?.dimension;
+    if (dimension) parDimension.set(dimension, (parDimension.get(dimension) ?? 0) + 1);
+  }
+  if (parId.size < 24 || CODES_RIASEC.some((code) => (parDimension.get(code) ?? 0) < 4)) {
+    throw new Error('Le test de découverte doit comporter au moins 4 réponses par dimension');
   }
   return Array.from(parId.values());
 }

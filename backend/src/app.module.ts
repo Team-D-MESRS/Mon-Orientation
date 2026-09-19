@@ -8,6 +8,7 @@ import { OrientationModule } from './orientation/orientation.module';
 import { ConseillerModule } from './conseiller/conseiller.module';
 import { StatsModule } from './stats/stats.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { PrismaModule } from './prisma/prisma.module';
     OrientationModule,
     ConseillerModule,
     StatsModule,
+    HealthModule,
   ],
 })
 export class AppModule {}

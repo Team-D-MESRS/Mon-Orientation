@@ -7,6 +7,10 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
+  const estProduction = process.env.NODE_ENV === 'production';
+  if (estProduction && (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32)) {
+    throw new Error('JWT_SECRET doit contenir au moins 32 caractères en production');
+  }
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Défaut Express (100kb) trop bas pour une note vocale encodée en base64 (conseiller) ; 6 Mo de marge
@@ -24,10 +28,16 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
+  const originesAutorisees = (process.env.CORS_ORIGIN || 'http://localhost:3000')
+    .split(',')
+    .map((origine) => origine.trim())
+    .filter(Boolean);
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: originesAutorisees,
     credentials: true,
   });
+
+  app.enableShutdownHooks();
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -44,8 +54,10 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  if (!estProduction || process.env.ENABLE_SWAGGER === 'true') {
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api/docs', app, document);
+  }
 
   const port = process.env.PORT || 8080;
   await app.listen(port);
