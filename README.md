@@ -23,6 +23,7 @@ Elle est conçue pour le Ministère des Enseignements Secondaire, Technique et d
 | [backend/README.md](backend/README.md) | API NestJS : installation, configuration, endpoints, moteur d'orientation |
 | [frontend/README.md](frontend/README.md) | Application web Next.js : pages, authentification, design system |
 | [tests/README.md](tests/README.md) | Tests de bout en bout (API et navigateur) |
+| [docs/ETAT-ACTUEL-2026-09-19.md](docs/ETAT-ACTUEL-2026-09-19.md) | État fonctionnel et technique livré le 19 septembre 2026 |
 
 ---
 
@@ -47,12 +48,12 @@ Elle est conçue pour le Ministère des Enseignements Secondaire, Technique et d
 |---|---|
 | 5.1 Catalogue national de l'offre de formation | ✅ 265 formations visibles (+ 5 bacs généraux masqués, gardés pour le filtre « Et après ce bac ? ») : les 225 du supérieur public viennent du guide officiel du MESRS 2026-2027 (quotas de bourses et d'aides, mode d'entrée, séries, matières du classement, 66 établissements) ; les 40 après le BEPC (lycées techniques, LTA, EFMS), sourcées sur le communiqué N°0902 et les répertoires officiels du MESRS/DESTFP, restent à faire valider par le MESTFP ; recherche sans accents (métiers et lieux compris), filtres par domaine, département, série de bac, bourses et source officielle, « Et après ce bac ? », comparateur, formations mises de côté par l'élève, partage WhatsApp et impression |
 | 5.3 Moteur d'orientation | ✅ Version 2, recommandations explicables critère par critère ; barème à valider par les conseillers d'orientation |
-| 5.5 Espace apprenant / parent | ✅ Tableau de bord, notes, questionnaire de découverte (test d'intérêts RIASEC, obligatoire dès la connexion, bloque tout le reste de la plateforme — y compris le catalogue — tant qu'il n'est pas rempli ; verrou supplémentaire côté serveur sur la saisie des vœux), vœux en 3 étapes — 2 choix de spécialité + établissement en 3e (fiche unique d'inscription), 3 choix libres en Terminale —, validation par le parent (données de démonstration) |
+| 5.5 Espace apprenant / parent | ✅ Tableau de bord, routage conditionnel après connexion, onboarding RIASEC avec reprise et récapitulatif, plan d'action, progression du parcours, notes, recommandations, favoris et vœux ; validation par le parent (données de démonstration) |
 | Authentification, rôles, droits d'accès | ✅ Élève, parent, DGES et admin ; rôle établissement à compléter |
 | 5.6 Intégration EducMaster & NIP | ⏳ En attente de l'accès à l'API EducMaster ; notes de démonstration en attendant |
 | 5.4 Conseiller pédagogique IA | 🚧 Prototype du niveau B : Gemini (offre gratuite, données de démonstration uniquement), avec des outils sur le catalogue, le dossier pseudonymisé et le moteur ; clé API à configurer, périmètre à confirmer par le client |
-| 5.7 Pilotage et statistiques | 🚧 API d'indicateurs de base ; tableau de bord web en maquette |
-| 5.2 Module d'information, 5.8 Séances, back-office | ⏳ À faire |
+| 5.7 Pilotage et statistiques | ✅ API d'indicateurs, statistiques web et première console d'administration en lecture seule |
+| 5.2 Module d'information, 5.8 Séances, back-office avancé | ⏳ À faire : édition, validation métier et publication du catalogue |
 
 Le détail des tâches se trouve dans [TASKS.md](TASKS.md), et la prochaine action recommandée dans [JOURNAL.md](JOURNAL.md).
 
