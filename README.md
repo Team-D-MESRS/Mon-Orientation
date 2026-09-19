@@ -150,10 +150,14 @@ Ils sont créés par `npm run prisma:seed:demo`. Ce script est interdit en produ
 
 | Profil | Identifiant | Mot de passe | Pour tester |
 |---|---|---|---|
-| Élève de 3e | `DEMO-3E-0001` (Fatou) | `Demo2026!` | Saisie des vœux, recommandations |
-| Élève de Terminale D | `DEMO-TLE-0001` (Koffi) | `Demo2026!` | Pistes du supérieur filtrées par série |
+| Élève de 3e | `DEMO-3E-0001` (Fatou) | `Demo2026!` | Test RIASEC déjà rempli, saisie des vœux, recommandations |
+| Élève de Terminale D | `DEMO-TLE-0001` (Koffi) | `Demo2026!` | Test RIASEC déjà rempli, pistes du supérieur filtrées par série |
+| Élève de 3e, sans test | `DEMO-3E-0002` (Rachidath) | `Demo2026!` | Mur dès la connexion, test RIASEC, fiche unique d'inscription |
+| Élève de Terminale E, sans test | `DEMO-TLE-0002` (Idrissa) | `Demo2026!` | Mur dès la connexion, test RIASEC, vœux du supérieur |
+| Élève de 1re, sans test | `DEMO-1RE-0001` (Chimène) | `Demo2026!` | Mur en 1re ; sœur de Fatou, 2e enfant du compte parent |
+| Élève de 4e, sans test | `DEMO-4E-0002` (Serge) | `Demo2026!` | Comme Adama, mais avec un compte déjà créé (pas besoin de la date de naissance) |
 | Élève de 4e | `DEMO-4E-0001` (Adama) | — | Sans compte : s'inscrire avec la date de naissance **2012-07-08** |
-| Parent | `parent.demo@monorientation.bj` (Moussa) | `Demo2026!` | Suivi et validation des vœux de Fatou |
+| Parent | `parent.demo@monorientation.bj` (Moussa) | `Demo2026!` | Suivi et validation des vœux de Fatou ; suit aussi Chimène (test non rempli) |
 | DGES | `dges.demo@monorientation.bj` | `Demo2026!` | Statistiques |
 | Administrateur | `admin@monorientation.bj` | `admin123` (dev) | Créé par le seed principal ; `SEED_ADMIN_PASSWORD` en production |
 

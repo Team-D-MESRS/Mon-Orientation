@@ -42,8 +42,10 @@ interface EleveDemo {
   /**
    * Questionnaire de découverte déjà rempli, pour Fatou et Koffi : depuis le 16/09, les pistes ne
    * sont visibles côté frontend qu'une fois le questionnaire rempli, et les suites existantes
-   * naviguent jusqu'aux recommandations de ces deux élèves. Absent pour Adama, qui exerce donc le
-   * chemin « pas encore rempli » (le moteur dégrade, la page invite à le remplir).
+   * naviguent jusqu'aux recommandations de ces deux élèves. Absent pour Adama (chemin « pas encore
+   * rempli », compte créé à la 1re identification) et pour Rachidath/Idrissa (18/09 : comptes dédiés
+   * à la démo du mur et du test RIASEC dès la connexion, un par niveau de vœux — 3e et Terminale —
+   * pour ne pas perturber Fatou/Koffi, dont les suites de tests dépendent d'un profil déjà rempli).
    */
   decouverte?: ReponsesDecouverte;
 }
@@ -134,6 +136,105 @@ const ELEVES: EleveDemo[] = [
     },
   },
   {
+    nip: 'DEMO-3E-0002',
+    numeroEducmaster: 'EM-2026-00058',
+    nom: 'Alao',
+    prenom: 'Rachidath',
+    dateNaissance: '2011-05-20',
+    sexe: 'F',
+    departement: 'Ouémé',
+    commune: 'Porto-Novo',
+    palier: 'TROISIEME',
+    avecCompte: true,
+    notes: {
+      Mathématiques: [13, 12.5, 13],
+      PCT: [12, 12, 12.5],
+      SVT: [14, 14.5, 14],
+      Français: [13, 13, 13.5],
+      Anglais: [12, 12.5, 12],
+      'Histoire-Géographie': [13, 12.5, 13],
+      EPS: [14, 14, 14.5],
+    },
+    // Pas de découverte : compte dédié à la démo du mur (redirection dès la connexion) et du test
+    // RIASEC pour un niveau 3e — voir le commentaire du champ decouverte ci-dessus.
+  },
+  {
+    nip: 'DEMO-TLE-0002',
+    numeroEducmaster: 'EM-2026-00061',
+    nom: 'Chitou',
+    prenom: 'Idrissa',
+    dateNaissance: '2008-11-02',
+    sexe: 'M',
+    departement: 'Atacora',
+    commune: 'Natitingou',
+    palier: 'TERMINALE',
+    serie: 'E',
+    avecCompte: true,
+    notes: {
+      Mathématiques: [15, 15.5, 16],
+      PCT: [14, 14, 15],
+      SVT: [12, 12.5, 12],
+      Français: [11, 11.5, 12],
+      Philosophie: [10, 10.5, 11],
+      Anglais: [12, 12, 12.5],
+      'Histoire-Géographie': [11, 11, 11.5],
+      EPS: [13, 14, 13.5],
+    },
+    // Pas de découverte : même rôle que Rachidath, pour un niveau Terminale (vœux du supérieur,
+    // 3 choix libres, plutôt que la fiche unique d'inscription de la 3e).
+  },
+  {
+    nip: 'DEMO-1RE-0001',
+    numeroEducmaster: 'EM-2026-00064',
+    nom: 'Dossou',
+    prenom: 'Chimène',
+    dateNaissance: '2010-02-14',
+    sexe: 'F',
+    departement: 'Littoral',
+    commune: 'Cotonou',
+    palier: 'PREMIERE',
+    serie: 'C',
+    avecCompte: true,
+    notes: {
+      Mathématiques: [14, 14.5, 15],
+      PCT: [13, 13, 13.5],
+      SVT: [12, 12.5, 12],
+      Français: [12, 12, 12.5],
+      Philosophie: [11, 11.5, 12],
+      Anglais: [13, 13, 13.5],
+      'Histoire-Géographie': [12, 12, 12.5],
+      EPS: [15, 15, 15.5],
+    },
+    // Pas de découverte : seul palier qui n'avait pas encore de compte de démo (4e, 3e et Terminale
+    // sont déjà couverts). Sœur de Fatou (même nom, même père) : rattachée au compte parent Moussa
+    // en 2e enfant, pour démontrer côté parent le contraste entre un enfant qui a déjà tout fait
+    // (Fatou : vœux validés) et un autre qui n'a pas encore répondu au questionnaire.
+  },
+  {
+    nip: 'DEMO-4E-0002',
+    numeroEducmaster: 'EM-2026-00067',
+    nom: 'Zannou',
+    prenom: 'Serge',
+    dateNaissance: '2012-04-03',
+    sexe: 'M',
+    departement: 'Plateau',
+    commune: 'Pobè',
+    palier: 'QUATRIEME',
+    avecCompte: true,
+    notes: {
+      Mathématiques: [12, 12.5, 12],
+      PCT: [11, 11, 11.5],
+      SVT: [13, 13.5, 13],
+      Français: [12, 12, 12.5],
+      Anglais: [11, 11.5, 11],
+      'Histoire-Géographie': [12, 12.5, 12],
+      EPS: [15, 14.5, 15],
+    },
+    // Pas de découverte : même rôle qu'Adama (démo du mur en 4e), mais avec un compte déjà créé —
+    // connexion directe au mot de passe de démo, sans passer par le chemin « 1re identification
+    // avec la date de naissance », plus rapide pour une démonstration en direct.
+  },
+  {
     nip: 'DEMO-4E-0001',
     numeroEducmaster: 'EM-2026-00052',
     nom: 'Hounkpatin',
@@ -157,7 +258,18 @@ const ELEVES: EleveDemo[] = [
 ];
 
 const COMPTES: { email: string; nom: string; prenom: string; role: Role; enfants?: { nip: string; relation: string }[] }[] = [
-  { email: 'parent.demo@monorientation.bj', nom: 'Dossou', prenom: 'Moussa', role: 'PARENT', enfants: [{ nip: 'DEMO-3E-0001', relation: 'Père' }] },
+  {
+    email: 'parent.demo@monorientation.bj',
+    nom: 'Dossou',
+    prenom: 'Moussa',
+    role: 'PARENT',
+    // Deux enfants : Fatou (vœux déjà validés) et Chimène (n'a pas encore répondu au questionnaire) —
+    // pour démontrer les deux côté parent sans créer un 2e compte parent.
+    enfants: [
+      { nip: 'DEMO-3E-0001', relation: 'Père' },
+      { nip: 'DEMO-1RE-0001', relation: 'Père' },
+    ],
+  },
   { email: 'dges.demo@monorientation.bj', nom: 'Direction', prenom: 'DGES', role: 'DGES' },
 ];
 

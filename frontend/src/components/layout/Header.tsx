@@ -3,19 +3,23 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { LogOut, Menu, X } from 'lucide-react';
+import { HelpCircle, LogOut, Menu, X } from 'lucide-react';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
+import { useVisiteGuideeStore } from '@/stores/visiteGuideeStore';
 import { liensVisibles } from './navigation';
 
 export function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
+  const demanderRelanceVisite = useVisiteGuideeStore((s) => s.demanderRelance);
   const [menuOpen, setMenuOpen] = useState(false);
   const [deconnexionEnCours, setDeconnexionEnCours] = useState(false);
 
   const liens = liensVisibles(user);
+  // Uniquement dans l'espace apprenant : ailleurs, VisiteGuidee n'est pas montée, la relance serait sans effet.
+  const surEspaceApprenant = pathname.startsWith('/espace-apprenant') && (user?.role === 'APPRENANT' || user?.role === 'PARENT');
 
   const deconnecter = async () => {
     await authApi.logout().catch(() => undefined);
@@ -56,6 +60,15 @@ export function Header() {
             ))}
             {user ? (
               <div className="flex items-center gap-3v">
+                {surEspaceApprenant && (
+                  <button
+                    type="button"
+                    onClick={demanderRelanceVisite}
+                    className="text-sm text-bj-gray-500 hover:text-bj-green inline-flex items-center gap-1v"
+                  >
+                    <HelpCircle size={15} aria-hidden="true" /> Revoir la visite guidée
+                  </button>
+                )}
                 <span className="text-sm text-bj-gray-500">{user.prenom}</span>
                 <button type="button" onClick={deconnecter} className="bj-btn bj-btn-secondary text-sm inline-flex items-center gap-2v">
                   <LogOut size={16} aria-hidden="true" /> Déconnexion
@@ -89,9 +102,23 @@ export function Header() {
                 </Link>
               ))}
               {user ? (
-                <button type="button" onClick={deconnecter} className="bj-btn bj-btn-secondary text-sm mt-2v inline-flex items-center justify-center gap-2v">
-                  <LogOut size={16} aria-hidden="true" /> Déconnexion ({user.prenom})
-                </button>
+                <>
+                  {surEspaceApprenant && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        demanderRelanceVisite();
+                        setMenuOpen(false);
+                      }}
+                      className="text-sm text-bj-gray-500 py-2v inline-flex items-center gap-1v"
+                    >
+                      <HelpCircle size={15} aria-hidden="true" /> Revoir la visite guidée
+                    </button>
+                  )}
+                  <button type="button" onClick={deconnecter} className="bj-btn bj-btn-secondary text-sm mt-2v inline-flex items-center justify-center gap-2v">
+                    <LogOut size={16} aria-hidden="true" /> Déconnexion ({user.prenom})
+                  </button>
+                </>
               ) : (
                 <Link href="/identification" className="bj-btn bj-btn-primary text-sm mt-2v" onClick={() => setMenuOpen(false)}>
                   S&apos;identifier

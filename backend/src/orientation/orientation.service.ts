@@ -203,8 +203,8 @@ export class OrientationService {
       criteres.push({ critere: 'resultats', points: 0, detail: "Aucune note disponible pour l'instant." });
     }
 
-    // Intérêts du questionnaire de découverte : la meilleure correspondance entre les domaines de la
-    // formation et ceux que l'élève a mentionnés (centres d'intérêt, qualités, matière préférée).
+    // Intérêts du questionnaire de découverte (test RIASEC, depuis le 18/09) : la meilleure
+    // correspondance entre les domaines de la formation et le profil déduit des réponses de l'élève.
     if (affinites) {
       const correspondances = filiere.domaines
         .map((d) => ({ domaine: d, poids: affinites[d] ?? 0 }))
@@ -216,8 +216,8 @@ export class OrientationService {
         points: Math.round(POIDS_INTERET * meilleure),
         detail:
           correspondances.length > 0
-            ? `Cette formation touche à ${DOMAINES[correspondances[0].domaine as keyof typeof DOMAINES] ?? correspondances[0].domaine}, que tu as mentionné dans le questionnaire de découverte.`
-            : 'Aucun domaine de cette formation ne recoupe ce que tu as coché dans le questionnaire de découverte.',
+            ? `Cette formation touche à ${DOMAINES[correspondances[0].domaine as keyof typeof DOMAINES] ?? correspondances[0].domaine}, cohérent avec ton profil du questionnaire de découverte.`
+            : 'Aucun domaine de cette formation ne recoupe ton profil du questionnaire de découverte.',
       });
     } else {
       criteres.push({

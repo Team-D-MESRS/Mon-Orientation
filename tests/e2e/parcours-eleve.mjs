@@ -132,17 +132,24 @@ try {
 
   // Adama (4e) : questionnaire de découverte, du blocage à sa levée. Sans compte après une
   // réinitialisation : sa 1re identification prend sa date de naissance comme mot de passe (comme
-  // dans tests/reinitialiser-demo.sh et le seed de démonstration). Le mur redirige dès la connexion,
-  // avant même le tableau de bord — et bloque aussi le catalogue, pas seulement les recommandations
-  // (décisions du 18/09 : le test devient le point d'entrée central du parcours).
-  await connecter('DEMO-4E-0001', '/espace-apprenant/decouverte', '2012-07-08');
-  await nav.attendre(contient('Étape 1 sur 5'));
-  r.verifier("Mur dès la connexion : arrivée directe sur le questionnaire, pas le tableau de bord", true);
+  // dans tests/reinitialiser-demo.sh et le seed de démonstration). Le mur affiche un message de
+  // blocage explicite (avec un bouton vers le questionnaire) au lieu de rediriger automatiquement —
+  // sur le tableau de bord comme sur le catalogue (décisions du 18/09 puis du 19/09).
+  await connecter('DEMO-4E-0001', '/espace-apprenant', '2012-07-08');
+  await nav.attendre(contient("Cette fonctionnalité n'est pas encore accessible"));
+  r.verifier('Mur dès la connexion : message de blocage sur le tableau de bord, pas de redirection automatique', true);
   await nav.capture(`${OUT}/b2-decouverte-bloque.png`, false);
 
   await nav.aller(`${BASE}/catalogue`);
+  await nav.attendre(contient("Cette fonctionnalité n'est pas encore accessible"));
+  r.verifier(
+    'Le mur bloque aussi le catalogue (message explicite, pas de redirection) tant que le questionnaire n’est pas rempli',
+    await nav.evaluer("location.pathname === '/catalogue'"),
+  );
+  await nav.capture(`${OUT}/b2-decouverte-catalogue-bloque.png`, false);
+
+  await nav.cliquerTexte('Aller au questionnaire de découverte', 'a');
   await nav.attendre("location.pathname === '/espace-apprenant/decouverte'");
-  r.verifier('Le mur bloque aussi le catalogue tant que le questionnaire n’est pas rempli', true);
   await nav.attendre(contient('Étape 1 sur 5'));
   await nav.capture(`${OUT}/b2-decouverte-etape1.png`, false);
 

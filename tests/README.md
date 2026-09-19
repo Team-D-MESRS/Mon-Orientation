@@ -35,8 +35,12 @@ Les scripts d'API créent leurs propres données de test (préfixe `TEST-B1-`) o
 
 | Profil | Identifiant | Remarque |
 |---|---|---|
-| Élève de 3e | `DEMO-3E-0001` (Fatou) | saisie des vœux |
-| Élève de Terminale D | `DEMO-TLE-0001` (Koffi) | pistes du supérieur |
+| Élève de 3e | `DEMO-3E-0001` (Fatou) | test de découverte déjà rempli, vœux déjà saisis |
+| Élève de Terminale D | `DEMO-TLE-0001` (Koffi) | test de découverte déjà rempli, pistes du supérieur |
+| Élève de 3e, sans test | `DEMO-3E-0002` (Rachidath) | démo du mur et du test RIASEC pour la fiche unique d'inscription (3e) |
+| Élève de Terminale E, sans test | `DEMO-TLE-0002` (Idrissa) | démo du mur et du test RIASEC pour les vœux du supérieur (Terminale) |
+| Élève de 1re, sans test | `DEMO-1RE-0001` (Chimène) | sœur de Fatou (même parent) ; démo du mur en 1re, et côté parent du contraste avec un enfant déjà rempli |
+| Élève de 4e, sans test | `DEMO-4E-0002` (Serge) | comme Adama, mais avec un compte déjà créé (connexion directe, sans le détour date de naissance) |
 | Élève de 4e | `DEMO-4E-0001` (Adama) | sans compte : s'inscrire avec la date de naissance 2012-07-08 |
-| Parent | `parent.demo@monorientation.bj` (Moussa) | valide les vœux de Fatou |
+| Parent | `parent.demo@monorientation.bj` (Moussa) | valide les vœux de Fatou ; suit aussi Chimène (2e enfant, découverte non remplie) |
 | DGES | `dges.demo@monorientation.bj` | statistiques |

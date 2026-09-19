@@ -7,6 +7,7 @@ import { BookOpen, Compass, FlaskConical, Heart, LayoutDashboard, Lightbulb, Mes
 import { classeLisible } from '@/lib/apprenant';
 import { useEspace } from './EspaceContext';
 import { Alerte, CHAMP, Chargement } from './ui';
+import { VisiteGuidee } from './VisiteGuidee';
 
 // « Découverte » juste après le tableau de bord : le questionnaire se remplit avant de voir ses
 // pistes (décision du 16/09) — le blocage se fait sur la page Recommandations, pas ici.
@@ -97,6 +98,7 @@ export function CadreEspace({ children }: { children: ReactNode }) {
                 <Link
                   key={href}
                   href={href}
+                  data-tour={href}
                   aria-current={actif ? 'page' : undefined}
                   className={`flex items-center gap-2v px-4v py-2v rounded-bj-sm text-sm font-medium whitespace-nowrap transition-colors ${
                     actif ? 'bg-bj-green text-white' : 'bg-white border border-bj-gray-925 text-bj-gray-200 hover:border-bj-green'
@@ -111,6 +113,7 @@ export function CadreEspace({ children }: { children: ReactNode }) {
 
         {contenu}
       </div>
+      {profil && <VisiteGuidee />}
     </div>
   );
 }
