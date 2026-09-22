@@ -11,8 +11,8 @@ interface NextActionCardProps {
 }
 
 /**
- * Carte dominante de la page : une seule action prioritaire, sa raison d'être, un bouton au verbe
- * précis. Distincte du bouton compact du DashboardHero (même destination, mais ici expliquée).
+ * Carte dominante de la page : une seule action prioritaire, sa raison d'être, un bouton au verbe précis —
+ * le seul endroit qui la propose (la salutation du bandeau ne duplique plus cette action).
  */
 export function NextActionCard({ titre, justification, actionLabel, href, parcoursComplet }: NextActionCardProps) {
   if (parcoursComplet) {

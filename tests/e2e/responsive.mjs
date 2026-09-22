@@ -158,7 +158,9 @@ try {
   await new Promise((res) => setTimeout(res, 400));
   const paysage = await nav.evaluer(`
     (() => {
-      const titre = [...document.querySelectorAll('h2, h1')].find((e) => e.textContent.includes('Bonjour'));
+      // « Ton avancement » (pas la salutation du bandeau, qui varie avec l'heure et la 1re visite) : le
+      // premier contenu de page stable, juste après le bandeau + les onglets.
+      const titre = [...document.querySelectorAll('h2, h1')].find((e) => e.textContent.includes('Ton avancement'));
       return { overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, titreVisible: !!titre && titre.getBoundingClientRect().top < innerHeight };
     })()
   `);

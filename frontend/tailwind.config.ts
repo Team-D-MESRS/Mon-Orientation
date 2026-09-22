@@ -86,9 +86,12 @@ const config: Config = {
         '2v': '8px',
         '3v': '12px',
         '4v': '16px',
+        '5v': '20px',
         '6v': '24px',
         '8v': '32px',
+        '10v': '40px',
         '12v': '48px',
+        '14v': '56px',
         '16v': '64px',
       },
       borderRadius: {

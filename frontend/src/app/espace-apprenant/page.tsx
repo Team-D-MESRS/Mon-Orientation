@@ -15,7 +15,7 @@ import {
 } from '@/lib/apprenant';
 import { useEspace, useProfil } from '@/components/espace/EspaceContext';
 import { Carte } from '@/components/espace/ui';
-import { DashboardHero, NextActionCard, ParentSummary, ProgressOverview, RecommendationPreview } from '@/components/espace/dashboard';
+import { NextActionCard, ParentSummary, ProgressOverview, RecommendationPreview } from '@/components/espace/dashboard';
 import { ActionCard } from '@/components/ui/ActionCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -24,7 +24,7 @@ const LIEN = 'text-sm font-medium text-primary hover:underline';
 
 export default function TableauDeBordPage() {
   const profil = useProfil();
-  const { moi, estParent, estEleve } = useEspace();
+  const { estParent, estEleve } = useEspace();
   // undefined tant que les vœux ne sont pas chargés : évite d'afficher « pas encore saisi » à tort
   const [preference, setPreference] = useState<Preference | null | undefined>(undefined);
   const [recommandations, setRecommandations] = useState<Recommandation[] | null>(null);
@@ -103,22 +103,10 @@ export default function TableauDeBordPage() {
 
   const prochaine = calculerProchaineEtape({ profil, estParent, decouverte, recommandations, favoris, preference });
 
-  const etatParcours = estParent
-    ? `${totalFait} étape${totalFait > 1 ? 's' : ''} sur ${etapes.length} avancée${totalFait > 1 ? 's' : ''} · ${progression}% du parcours de ${profil.prenom} repéré.`
-    : `${totalFait} étape${totalFait > 1 ? 's' : ''} sur ${etapes.length} avancée${totalFait > 1 ? 's' : ''} · ${progression}% de ton parcours repéré.`;
-
   if (!pret) return <SilhouetteTableauDeBord />;
 
   return (
     <div className="space-y-10v stagger-sections">
-      <DashboardHero
-        profil={profil}
-        prenomParent={estParent ? moi.prenom : undefined}
-        etatParcours={etatParcours}
-        profilMisAJourLe={decouverte?.updatedAt}
-        action={{ titre: prochaine.actionLabel, href: prochaine.href }}
-      />
-
       <ProgressOverview
         prenom={profil.prenom}
         decouverte={decouverte}

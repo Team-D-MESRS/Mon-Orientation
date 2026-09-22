@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { BookOpen, Compass, FlaskConical, Heart, LayoutDashboard, Lightbulb, MessageCircle, UserSearch, Users } from 'lucide-react';
 import { classeLisible } from '@/lib/apprenant';
 import { Button } from '@/components/ui/Button';
@@ -18,6 +18,30 @@ const ONGLETS = [
   { href: '/espace-apprenant/recommandations', label: 'Recommandations', Icone: Lightbulb },
   { href: '/espace-apprenant/conseiller', label: 'Guido', Icone: MessageCircle },
 ];
+
+const CLE_DEJA_VISITE = 'mon-orientation:espace-deja-visite';
+
+/** Salutation du bandeau : « Bienvenue » à la toute première visite de l'espace sur cet appareil (repérée
+ * via une marque locale, faute d'historique de connexion côté serveur), sinon selon le moment de la
+ * journée. Calculée une fois au montage, pas en continu : un intitulé qui changerait sous les yeux d'un
+ * onglet resté ouvert serait plus surprenant qu'utile. */
+function useSalutation(prenom: string): string {
+  const [dejaVisite] = useState(() => typeof window !== 'undefined' && !!localStorage.getItem(CLE_DEJA_VISITE));
+  useEffect(() => {
+    try {
+      localStorage.setItem(CLE_DEJA_VISITE, '1');
+    } catch {
+      // Stockage indisponible (navigation privée, quota…) : la salutation retombera simplement sur « Bienvenue »
+      // à chaque visite plutôt que de bloquer quoi que ce soit.
+    }
+  }, []);
+  if (!dejaVisite) return `Bienvenue, ${prenom}`;
+  const heure = new Date().getHours();
+  if (heure < 12) return `Bonjour, ${prenom}`;
+  if (heure < 18) return `Bon après-midi, ${prenom}`;
+  if (heure < 22) return `Bonsoir, ${prenom}`;
+  return `Bonne soirée, ${prenom}`;
+}
 
 /** Silhouette du cadre le temps du tout premier chargement (aucun dossier encore connu) : même gabarit que
  * le contenu réel (bandeau titre, rangée d'onglets, quelques blocs), pour ne pas faire sauter la mise en
@@ -50,12 +74,18 @@ export function CadreEspace({ children }: { children: ReactNode }) {
   const { moi, nip, choisirNip, profil, chargementProfil, erreurProfil, estParent } = useEspace();
   const [nipSaisi, setNipSaisi] = useState('');
   const estAdmin = moi.role === 'ADMIN';
+  // Toujours appelé (règle des hooks) : le résultat n'est utilisé que pour un élève avec un dossier chargé.
+  const salutation = useSalutation(profil?.prenom ?? '');
 
   // Premier chargement (aucun dossier encore vu) : silhouette pleine page plutôt qu'un « Chargement… »
   // isolé, pour ne pas faire apparaître d'un coup le bandeau titre et la rangée d'onglets qui suivent.
   if (chargementProfil && !profil) return <SilhouetteEspace />;
 
-  const titre = estParent && profil ? `Suivi de ${profil.prenom}` : estAdmin ? 'Dossier élève' : 'Mon espace';
+  const titre = estParent && profil ? `Suivi de ${profil.prenom}` : estAdmin ? 'Dossier élève' : salutation;
+  // « Mon espace » ne sert d'eyebrow que pour l'élève, là où le titre est devenu une salutation à sa place :
+  // pour le parent et l'admin, le titre (« Suivi de X », « Dossier élève ») reste la donnée structurelle, et
+  // l'eyebrow continue de nommer la plateforme.
+  const eyebrow = estParent || estAdmin ? 'Mon Orientation' : 'Mon espace';
   const surDecouverte = pathname === '/espace-apprenant/decouverte';
 
   const ouvrirDossier = (e: FormEvent) => {
@@ -98,7 +128,7 @@ export function CadreEspace({ children }: { children: ReactNode }) {
           <div className={`flex flex-col md:flex-row md:items-end md:justify-between gap-4v ${surDecouverte ? 'mb-2v' : ''}`}>
             <div>
               <p className={`text-xs font-semibold uppercase tracking-[0.18em] mb-2v ${surDecouverte ? 'text-primary' : 'text-text-secondary'}`}>
-                {surDecouverte ? 'Mon Orientation · Première étape' : 'Mon Orientation'}
+                {surDecouverte ? 'Mon Orientation · Première étape' : eyebrow}
               </p>
               <h1 className={`${surDecouverte ? 'text-3xl md:text-4xl font-serif' : 'text-2xl md:text-3xl'} font-bold mb-1v`}>
                 {surDecouverte && profil ? `Bienvenue, ${profil.prenom}` : titre}
