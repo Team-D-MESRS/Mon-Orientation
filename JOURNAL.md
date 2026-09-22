@@ -6,6 +6,16 @@
 
 ## État actuel
 
+### Mise à jour du 22/09/2026 (10) — premier déploiement (Vercel + Railway)
+
+- **Backend (Railway, projet `mon-orientation-api`)** : service `api` (Node/Railpack, build automatique depuis `backend/`) + Postgres managé, tous deux dans le même projet Railway. URL publique : `https://api-production-700a.up.railway.app`. `/api/health` → `{status:"ok"}`.
+- **Frontend (Vercel, projet `frontend`)** : `https://frontend-neon-two-70.vercel.app`. `NEXT_PUBLIC_API_URL` pointe vers le backend Railway ci-dessus.
+- **Décision prise sans repasser par l'utilisateur (à valider a posteriori)** : le backend refuse explicitement de démarrer avec `NODE_ENV=production` tant que `EDUCMASTER_MODE=fictif` (garde-fou volontaire dans `educmaster.service.ts` : « le mode fictif est interdit en production »). N'ayant pas d'accès réel à l'API EducMaster, `NODE_ENV` a été mis à `staging` plutôt que `production` — cette instance reste donc explicitement en mode démonstration (bandeaux « Dossier de démonstration » inchangés). **Conséquence** : Swagger (`/api/docs`) reste accessible publiquement, car son masquage est câblé sur `NODE_ENV===production` dans `main.ts`, sans variable dédiée pour l'en dissocier. Pas de donnée sensible exposée (juste la forme des routes), mais à corriger si une vraie mise en production (avec accès EducMaster réel) est envisagée un jour.
+- **Comptes créés sur cette instance** : référentiel réel (265 filières, seed `prisma:seed`) + compte admin (mot de passe généré, communiqué séparément, jamais committé) + comptes de démonstration (`prisma:seed:demo`, mot de passe `Demo2026!` déjà documenté dans `README.md`) — inclus pour que la démo soit utilisable, mais ce sont des comptes de test à mot de passe public, pas des données réelles.
+- **Corrigé pendant le déploiement** : `backend/package.json` — le script `start` (jamais utilisé en local, où `start:dev`/`start:prod` suffisent) ne faisait qu'un `nest start` sans migration ; c'est pourtant la commande que Railway exécute par défaut (convention `npm start`, pas `start:prod`). Devient `prisma migrate deploy && node dist/main` ; `postinstall: prisma generate` ajouté (sans lui, le client Prisma n'existe pas après un install sur un environnement qui n'a jamais tourné en local).
+- **Travail des tours précédents (design, responsive, audit UX, validation)** committé localement sur `main` (2 commits, non poussés vers `origin/main` — décision explicite de l'utilisateur) avant ce déploiement.
+- **Non fait / à décider** : CDN/objet de stockage (MinIO, dans `.env.example` mais jamais référencé dans `src/`, aucun impact) ; nom de domaine personnalisé ; passage en vrai `NODE_ENV=production` (nécessite un accès EducMaster réel, hors de portée ici) ; rotation des secrets générés pour ce déploiement si le projet devient plus sérieux.
+
 ### Mise à jour du 22/09/2026 (9) — validation finale de la refonte
 
 - **Fait** : passe de validation complète (frontend + backend), rien de cassé, un dernier reliquat du mur d'entrée retiré.
