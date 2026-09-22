@@ -1,20 +1,23 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { AlertTriangle, ArrowLeft, ShieldCheck, X } from 'lucide-react';
+import { AlertTriangle, ShieldCheck, SplitSquareHorizontal, X } from 'lucide-react';
 import { filiereApi } from '@/lib/api';
-import { DOMAINE_LABELS, MAX_COMPARAISON, NIVEAU_LABELS, aUneSourceOfficielle, type Filiere, resumeLieux } from '@/lib/filiere';
+import { DOMAINE_LABELS, MAX_COMPARAISON, NIVEAU_LABELS, TYPE_LABELS, TYPE_TONES, aUneSourceOfficielle, type Filiere, resumeLieux } from '@/lib/filiere';
 import { restaurerComparateur, useComparateur } from '@/stores/comparateurStore';
 import { BoutonFavori } from '@/components/catalogue/BoutonFavori';
 import { Partage } from '@/components/catalogue/Partage';
-import { Alerte, BadgeType, Chargement } from '@/components/espace/ui';
+import { Alerte, Chargement } from '@/components/espace/ui';
+import { Badge } from '@/components/ui/Badge';
+import { Breadcrumb } from '@/components/ui/Breadcrumb';
+import { IconButton } from '@/components/ui/IconButton';
 
 const ID_FILIERE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const LIEN = 'font-medium text-bj-green hover:underline';
+const LIEN = 'font-medium text-primary hover:underline';
 
-const nonRenseigne = (texte = 'Non renseigné') => <span className="text-bj-gray-500">{texte}</span>;
+const nonRenseigne = (texte = 'Non renseigné') => <span className="text-text-secondary italic">{texte}</span>;
 const liste = (valeurs: string[] | null) =>
   valeurs && valeurs.length > 0 ? (
     <ul className="list-disc pl-4v space-y-1v">
@@ -26,40 +29,97 @@ const liste = (valeurs: string[] | null) =>
     nonRenseigne()
   );
 
-const LIGNES: { titre: string; valeur: (f: Filiere) => ReactNode }[] = [
-  { titre: "Niveau d'accès", valeur: (f) => (f.niveauAcces ? NIVEAU_LABELS[f.niveauAcces] : nonRenseigne()) },
-  { titre: 'Domaines', valeur: (f) => (f.domaines.length > 0 ? f.domaines.map((d) => DOMAINE_LABELS[d]).join(', ') : nonRenseigne()) },
-  { titre: 'Diplômes délivrés', valeur: (f) => liste(f.diplomesDelivres) },
-  { titre: "Conditions d'accès", valeur: (f) => f.conditionsAcces ?? nonRenseigne() },
-  { titre: 'Mode d’entrée', valeur: (f) => f.modeEntree ?? nonRenseigne() },
+interface Ligne {
+  titre: string;
+  valeur: (f: Filiere) => ReactNode;
+  /**
+   * Valeur simple comparable, pour signaler quand les formations diffèrent sur ce critère précis.
+   * Absente volontairement sur les critères en texte libre (métiers visés, débouchés…) : ils diffèrent
+   * presque toujours d'une formation à l'autre, le signaler n'apporterait aucune information utile — la
+   * différence n'est « importante » à signaler que sur les critères qui pèsent vraiment dans un choix.
+   */
+  comparer?: (f: Filiere) => string;
+}
+
+interface Groupe {
+  titre: string;
+  lignes: Ligne[];
+}
+
+const GROUPES: Groupe[] = [
   {
-    titre: 'Séries de bac admises',
-    valeur: (f) =>
-      f.seriesRecommandees ??
-      (f.seriesAdmises?.length ? f.seriesAdmises.join(', ') : nonRenseigne(f.niveauAcces === 'APRES_BEPC' ? 'Sans objet (après le BEPC)' : undefined)),
+    titre: 'Accès et admission',
+    lignes: [
+      { titre: "Niveau d'accès", valeur: (f) => (f.niveauAcces ? NIVEAU_LABELS[f.niveauAcces] : nonRenseigne()), comparer: (f) => f.niveauAcces ?? '' },
+      { titre: "Conditions d'accès", valeur: (f) => f.conditionsAcces ?? nonRenseigne() },
+      { titre: 'Mode d’entrée', valeur: (f) => f.modeEntree ?? nonRenseigne() },
+      {
+        titre: 'Séries de bac admises',
+        valeur: (f) =>
+          f.seriesRecommandees ??
+          (f.seriesAdmises?.length ? f.seriesAdmises.join(', ') : nonRenseigne(f.niveauAcces === 'APRES_BEPC' ? 'Sans objet (après le BEPC)' : undefined)),
+      },
+      { titre: 'Matières du classement', valeur: (f) => f.matieresClassement ?? nonRenseigne() },
+    ],
   },
-  { titre: 'Matières du classement', valeur: (f) => f.matieresClassement ?? nonRenseigne() },
-  { titre: 'Places avec bourse', valeur: (f) => f.quotaBourses ?? nonRenseigne() },
-  { titre: 'Aides ou places partiellement payantes', valeur: (f) => f.quotaAides ?? nonRenseigne() },
-  { titre: 'Où se former', valeur: (f) => (f.offres?.length ? resumeLieux(f.offres) : (f.ouSeFormer ?? nonRenseigne())) },
-  { titre: 'Métiers visés', valeur: (f) => liste(f.metiersVises) },
-  { titre: 'Débouchés', valeur: (f) => f.debouches ?? nonRenseigne() },
-  { titre: "Taux d'insertion", valeur: (f) => (f.tauxInsertion === null ? nonRenseigne('Aucune donnée publique') : `${f.tauxInsertion} %`) },
-  { titre: 'Bourses', valeur: (f) => (f.bourses === null ? nonRenseigne() : f.bourses ? 'Oui, sur classement' : 'Non') },
   {
-    titre: 'Sources',
-    valeur: (f) =>
-      aUneSourceOfficielle(f) ? (
-        <span className="inline-flex items-center gap-1v text-bj-green">
-          <ShieldCheck size={14} aria-hidden="true" /> Source officielle
-        </span>
-      ) : (
-        <span className="inline-flex items-center gap-1v text-bj-ochre-fonce">
-          <AlertTriangle size={14} aria-hidden="true" /> À confirmer
-        </span>
-      ),
+    titre: 'Formation',
+    lignes: [
+      { titre: 'Diplômes délivrés', valeur: (f) => liste(f.diplomesDelivres) },
+      { titre: 'Où se former', valeur: (f) => (f.offres?.length ? resumeLieux(f.offres) : (f.ouSeFormer ?? nonRenseigne())) },
+    ],
+  },
+  {
+    titre: 'Débouchés',
+    lignes: [
+      { titre: 'Métiers visés', valeur: (f) => liste(f.metiersVises) },
+      { titre: 'Débouchés', valeur: (f) => f.debouches ?? nonRenseigne() },
+      {
+        titre: "Taux d'insertion",
+        valeur: (f) => (f.tauxInsertion === null ? nonRenseigne('Aucune donnée publique') : `${f.tauxInsertion} %`),
+        comparer: (f) => String(f.tauxInsertion ?? ''),
+      },
+    ],
+  },
+  {
+    titre: 'Coût et bourses',
+    lignes: [
+      { titre: 'Places avec bourse', valeur: (f) => f.quotaBourses ?? nonRenseigne() },
+      { titre: 'Aides ou places partiellement payantes', valeur: (f) => f.quotaAides ?? nonRenseigne() },
+      {
+        titre: 'Bourses',
+        valeur: (f) => (f.bourses === null ? nonRenseigne() : f.bourses ? 'Oui, sur classement' : 'Non'),
+        comparer: (f) => String(f.bourses),
+      },
+    ],
+  },
+  {
+    titre: 'Confiance dans la source',
+    lignes: [
+      {
+        titre: 'Sources',
+        valeur: (f) =>
+          aUneSourceOfficielle(f) ? (
+            <span className="inline-flex items-center gap-1v text-primary">
+              <ShieldCheck size={14} aria-hidden="true" /> Source officielle
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1v text-warning-strong">
+              <AlertTriangle size={14} aria-hidden="true" /> À confirmer
+            </span>
+          ),
+        comparer: (f) => String(aUneSourceOfficielle(f)),
+      },
+    ],
   },
 ];
+
+/** Vrai si au moins deux formations comparées ont une valeur différente sur ce critère. */
+function difference(ligne: Ligne, fiches: Filiere[]): boolean {
+  if (!ligne.comparer || fiches.length < 2) return false;
+  const valeurs = new Set(fiches.map(ligne.comparer));
+  return valeurs.size > 1;
+}
 
 export default function ComparerPage() {
   return (
@@ -122,13 +182,12 @@ function Comparateur() {
 
   return (
     <div className="py-8v">
-      <div className="bj-container">
-        <Link href="/catalogue" className="inline-flex items-center gap-2v text-sm font-medium text-bj-green mb-6v hover:underline print:hidden">
-          <ArrowLeft size={16} aria-hidden="true" /> Retour au catalogue
-        </Link>
+      <div className="bj-container stagger-sections">
+        <Breadcrumb className="mb-6v" items={[{ label: 'Catalogue', href: '/catalogue' }, { label: 'Comparer' }]} />
         <h1 className="text-3xl font-bold mb-2v">Comparer des formations</h1>
-        <p className="text-bj-gray-500 mb-6v">
-          Jusqu&apos;à {MAX_COMPARAISON} formations côte à côte. Les informations proviennent des fiches du catalogue et de leurs sources.
+        <p className="text-text-secondary mb-6v">
+          Jusqu&apos;à {MAX_COMPARAISON} formations côte à côte, regroupées par thème. Les informations proviennent des fiches du catalogue et
+          de leurs sources.
         </p>
 
         {erreur && <Alerte ton="erreur">Impossible de charger la comparaison pour le moment. Réessaie dans quelques instants.</Alerte>}
@@ -163,55 +222,94 @@ function Comparateur() {
             <div className="mb-4v">
               <Partage titre={`Comparaison : ${fiches.map((f) => f.nom).join(' / ')}`} />
             </div>
+
             {/* relative : les textes réservés aux lecteurs d'écran (sr-only, en position absolue) défilent avec le
-                tableau au lieu d'élargir la page sur mobile */}
-            <div className="relative overflow-x-auto rounded-bj-md border border-bj-gray-925 bg-white">
-              <table className="w-full min-w-[40rem] text-sm">
-                <caption className="sr-only">Comparaison de {fiches.length} formation(s)</caption>
+                tableau au lieu d'élargir la page sur mobile. Les noms de formations restent de vrais en-têtes
+                de colonne (scope="col") : indispensable pour qu'un lecteur d'écran annonce à quelle formation
+                appartient chaque valeur, même si l'essentiel de la comparaison se fait à l'œil. */}
+            <div className="relative overflow-x-auto rounded-bj-md border border-border bg-surface">
+              <table className="w-full min-w-[36rem] text-sm">
+                <caption className="sr-only">Comparaison de {fiches.length} formation(s), regroupée par thème</caption>
                 <thead>
-                  <tr className="border-b border-bj-gray-925">
-                    <th scope="col" className="sticky left-0 z-[1] bg-bj-gray-975 p-4v w-40 min-w-[8rem]">
+                  <tr className="border-b border-border">
+                    <th scope="col" className="sticky left-0 z-[1] bg-background p-4v w-40 min-w-[9rem]">
                       <span className="sr-only">Critère</span>
                     </th>
                     {fiches.map((f) => (
                       <th key={f.id} scope="col" className="p-4v text-left align-top font-normal min-w-[12rem]">
-                        <BadgeType type={f.type} />
-                        <Link href={`/catalogue/${f.id}`} className="block mt-2v text-base font-bold hover:text-bj-green">
+                        <div className="flex items-start justify-between gap-2v mb-2v">
+                          <Badge ton={TYPE_TONES[f.type]}>{TYPE_LABELS[f.type]}</Badge>
+                          <IconButton
+                            icon={<X size={15} aria-hidden="true" />}
+                            label={`Retirer ${f.nom} de la comparaison`}
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => retirer(f.id)}
+                            className="print:hidden shrink-0 -mr-2v -mt-1v"
+                          />
+                        </div>
+                        <Link href={`/catalogue/${f.id}`} className="block font-bold leading-snug hover:text-primary">
                           {f.nom}
                         </Link>
-                        <div className="mt-2v flex items-center gap-1v print:hidden">
+                        {f.domaines.length > 0 && (
+                          <p className="text-xs text-text-secondary mt-1v font-normal">{f.domaines.map((d) => DOMAINE_LABELS[d]).join(' · ')}</p>
+                        )}
+                        <div className="mt-2v print:hidden">
                           <BoutonFavori filiere={f} compact />
-                          <button
-                            type="button"
-                            onClick={() => retirer(f.id)}
-                            className="inline-flex items-center gap-1v p-2v text-xs text-bj-gray-500 hover:text-bj-red"
-                          >
-                            <X size={14} aria-hidden="true" /> Retirer<span className="sr-only"> {f.nom} de la comparaison</span>
-                          </button>
                         </div>
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {LIGNES.map(({ titre, valeur }) => (
-                    <tr key={titre} className="border-b border-bj-gray-925 last:border-b-0">
-                      <th scope="row" className="sticky left-0 z-[1] bg-bj-gray-975 p-4v text-left align-top font-medium text-bj-gray-500">
-                        {titre}
-                      </th>
-                      {fiches.map((f) => (
-                        <td key={f.id} className="p-4v align-top">
-                          {valeur(f)}
-                        </td>
-                      ))}
-                    </tr>
+                  {GROUPES.map((groupe) => (
+                    <Fragment key={groupe.titre}>
+                      <tr className="bg-background">
+                        <th
+                          colSpan={fiches.length + 1}
+                          scope="colgroup"
+                          className="sticky left-0 text-left px-4v py-2v text-xs font-bold uppercase tracking-wide text-primary border-y border-border"
+                        >
+                          {groupe.titre}
+                        </th>
+                      </tr>
+                      {groupe.lignes.map((ligne) => {
+                        const diff = difference(ligne, fiches);
+                        return (
+                          <tr key={ligne.titre} className="border-b border-border last:border-b-0">
+                            <th scope="row" className="sticky left-0 z-[1] bg-surface p-4v w-40 min-w-[9rem] text-left align-top font-medium text-text-secondary">
+                              <span className="flex items-start gap-1v">
+                                {ligne.titre}
+                                {diff && (
+                                  <span
+                                    className="inline-flex items-center gap-1v shrink-0 mt-[2px] px-2v py-[1px] rounded-full bg-accent-soft text-accent-strong text-[10px] font-bold uppercase tracking-wide"
+                                    title="Ce critère diffère selon la formation"
+                                  >
+                                    <SplitSquareHorizontal size={10} aria-hidden="true" /> Diffère
+                                  </span>
+                                )}
+                              </span>
+                            </th>
+                            {fiches.map((f) => (
+                              <td key={f.id} className={`p-4v align-top ${diff ? 'bg-accent-soft/40' : ''}`}>
+                                {ligne.valeur(f)}
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      })}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
             </div>
-            <div className="mt-4v rounded-bj-sm border-l-4 border-bj-green bg-bj-green/5 p-4v text-sm">
-              <p className="font-semibold text-bj-green mb-1v">Comment choisir ?</p>
-              <p className="text-bj-gray-500">Commence par vérifier l’accès, le lieu de formation et les métiers visés. Les conditions officielles et les sources priment toujours sur le taux d’insertion ou le score de compatibilité.</p>
+            <div className="mt-4v rounded-bj-sm border-l-4 border-primary bg-primary/5 p-4v text-sm">
+              <p className="font-semibold text-primary mb-1v">Comment choisir ?</p>
+              <p className="text-text-secondary">
+                Commence par vérifier l’accès, le lieu de formation et les métiers visés. Les conditions officielles et les sources priment
+                toujours sur le taux d’insertion. Les critères marqués « Diffère » méritent une attention particulière ; ceux marqués « Non
+                renseigné » restent à vérifier auprès de l’établissement — ce comparateur aide à y voir clair, il ne décide pas à ta place.
+              </p>
             </div>
           </>
         )}

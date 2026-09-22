@@ -1,58 +1,76 @@
 import type { ReactNode } from 'react';
-import { AlertTriangle, CheckCircle2, Info, XCircle } from 'lucide-react';
-import { TYPE_COLORS, TYPE_LABELS, type TypeFiliere } from '@/lib/filiere';
+import { AlertTriangle, CheckCircle2, Info, XCircle, type LucideIcon } from 'lucide-react';
+import { TYPE_LABELS, TYPE_TONES, type TypeFiliere } from '@/lib/filiere';
+import { Badge } from '@/components/ui/Badge';
+import { Card } from '@/components/ui/Card';
+import { LoadingState } from '@/components/ui/LoadingState';
+import { TONS } from '@/components/ui/tons';
+
+/**
+ * Composants partagés propres à l'espace apprenant/parent/admin. Les primitives génériques (Card, Badge,
+ * StatusPill, ProgressBar…) vivent dans components/ui/ ; celles-ci les habillent pour ce contexte métier
+ * précis, et restent exportées sous leur nom d'origine pour ne rien casser des imports existants.
+ */
 
 export const CHAMP =
-  'w-full px-4v py-3v border border-bj-gray-850 rounded-bj-sm text-sm bg-white focus:outline-none focus:ring-2 focus:ring-bj-green';
+  'w-full px-4v py-3v border border-border-strong rounded-bj-sm text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary';
 
-export function Chargement({ texte = 'Chargement…' }: { texte?: string }) {
-  return (
-    <p className="py-8v text-center text-bj-gray-500 loading-pulse" aria-busy="true" role="status">
-      <span className="inline-flex items-center gap-2v"><span className="w-2 h-2 rounded-full bg-bj-green" aria-hidden="true" />{texte}</span>
-    </p>
-  );
+/** Attente courte en ligne. Alias de LoadingState (components/ui/), conservé sous ce nom pour tous ses appelants existants. */
+export function Chargement({ texte }: { texte?: string }) {
+  return <LoadingState text={texte} />;
 }
 
-const TONS = {
-  info: { role: 'note', classes: 'border-bj-blue/30 bg-bj-blue/5', Icone: Info, couleur: 'text-bj-blue' },
-  succes: { role: 'status', classes: 'border-bj-green/30 bg-bj-green/5', Icone: CheckCircle2, couleur: 'text-bj-green' },
-  attention: { role: 'note', classes: 'border-bj-ochre/40 bg-bj-ochre/10', Icone: AlertTriangle, couleur: 'text-bj-ochre-fonce' },
-  erreur: { role: 'alert', classes: 'border-bj-red/40 bg-bj-red/5', Icone: XCircle, couleur: 'text-bj-red' },
-} as const;
+type TonAlerte = 'info' | 'succes' | 'attention' | 'erreur';
 
-export function Alerte({ ton, children }: { ton: keyof typeof TONS; children: ReactNode }) {
-  const { role, classes, Icone, couleur } = TONS[ton];
+const ROLE_PAR_TON: Record<TonAlerte, 'note' | 'status' | 'alert'> = {
+  info: 'note',
+  succes: 'status',
+  attention: 'note',
+  erreur: 'alert',
+};
+
+const ICONE_PAR_TON: Record<TonAlerte, LucideIcon> = {
+  info: Info,
+  succes: CheckCircle2,
+  attention: AlertTriangle,
+  erreur: XCircle,
+};
+
+/** Message contextuel (info / succès / attention / erreur), couleurs d'état DSBJ — voir components/ui/tons.ts. */
+export function Alerte({ ton, children }: { ton: TonAlerte; children: ReactNode }) {
+  const { fond, bordure, texte } = TONS[ton];
+  const Icone = ICONE_PAR_TON[ton];
   return (
-    <div role={role} className={`flex gap-3v items-start p-4v my-4v rounded-bj-sm border text-sm page-enter ${classes}`}>
-      <Icone size={18} className={`shrink-0 mt-[2px] ${couleur}`} aria-hidden="true" />
+    <div role={ROLE_PAR_TON[ton]} className={`flex gap-3v items-start p-4v my-4v rounded-bj-sm border text-sm alerte-entree ${fond} ${bordure}`}>
+      <Icone size={18} className={`shrink-0 mt-[2px] ${texte}`} aria-hidden="true" />
       <div>{children}</div>
     </div>
   );
 }
 
+/** Étiquette de type de formation (Général / Technique / Professionnel…). */
 export function BadgeType({ type }: { type: TypeFiliere }) {
-  return (
-    <span className={`inline-block px-3v py-1v rounded-full text-xs font-medium ${TYPE_COLORS[type]}`}>
-      {TYPE_LABELS[type]}
-    </span>
-  );
+  return <Badge ton={TYPE_TONES[type]}>{TYPE_LABELS[type]}</Badge>;
 }
 
-export function Carte({ titre, icone, children }: { titre: string; icone: ReactNode; children: ReactNode }) {
+/** Panneau de contenu avec titre en petites capitales et icône (sections du tableau de bord). */
+export function Carte({ titre, icone, children, className }: { titre: string; icone: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className="bg-white rounded-bj-md border border-bj-gray-925 p-6v transition-shadow duration-200 hover:shadow-[0_6px_18px_rgba(0,0,0,0.06)]">
-      <h2 className="flex items-center gap-2v text-sm font-bold uppercase tracking-wide text-bj-gray-500 mb-4v">
-        <span className="text-bj-green" aria-hidden="true">{icone}</span>
+    <Card className={className}>
+      <h2 className="flex items-center gap-2v text-sm font-bold uppercase tracking-wide text-text-secondary mb-4v">
+        <span className="text-primary" aria-hidden="true">
+          {icone}
+        </span>
         {titre}
       </h2>
       {children}
-    </section>
+    </Card>
   );
 }
 
 export function PastilleRang({ rang }: { rang: number }) {
   return (
-    <span className="w-8 h-8 rounded-full bg-bj-green text-white flex items-center justify-center font-bold shrink-0" aria-hidden="true">
+    <span className="w-8 h-8 rounded-full bg-primary text-text-on-primary flex items-center justify-center font-bold shrink-0" aria-hidden="true">
       {rang}
     </span>
   );

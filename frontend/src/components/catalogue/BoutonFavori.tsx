@@ -1,28 +1,66 @@
 'use client';
 
+import { useState } from 'react';
 import { Heart } from 'lucide-react';
 import type { Filiere } from '@/lib/filiere';
 import { useFavoris } from '@/stores/favorisStore';
+import { IconButton } from '@/components/ui/IconButton';
 
 /** Cœur « Mettre de côté » : réservé aux élèves connectés, retrouvé lors de la saisie des vœux. */
 export function BoutonFavori({ filiere, compact = false }: { filiere: Filiere; compact?: boolean }) {
   const { actif, pret, estFavori, basculer } = useFavoris();
+  // Rebond uniquement au moment où on VIENT de mettre de côté (pas à chaque rendu où favori=true, ce qui
+  // le rejouerait à chaque fois qu'on retrouve une formation déjà mise de côté sur une autre page).
+  const [rebond, setRebond] = useState(false);
   if (!actif) return null;
   const favori = estFavori(filiere.id);
+  const libelle = favori ? `Retirer ${filiere.nom} de mes formations mises de côté` : `Mettre ${filiere.nom} de côté pour mes vœux`;
+
+  const gererClic = () => {
+    if (!favori) setRebond(true);
+    basculer(filiere);
+  };
+
+  if (compact) {
+    return (
+      <IconButton
+        icon={
+          <Heart
+            size={18}
+            aria-hidden="true"
+            fill={favori ? 'currentColor' : 'none'}
+            className={rebond ? 'pop-feedback' : ''}
+            onAnimationEnd={() => setRebond(false)}
+          />
+        }
+        label={libelle}
+        variant="ghost"
+        disabled={!pret}
+        onClick={gererClic}
+        className={favori ? '!text-danger' : ''}
+      />
+    );
+  }
 
   return (
     <button
       type="button"
-      onClick={() => basculer(filiere)}
+      onClick={gererClic}
       disabled={!pret}
       aria-pressed={favori}
       title={favori ? 'Mise de côté : clique pour la retirer' : 'Mettre de côté pour mes vœux'}
-      className={`inline-flex items-center gap-1v rounded-bj-sm text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-bj-green disabled:opacity-50 ${
-        compact ? 'p-2v' : 'px-3v py-2v border'
-      } ${favori ? 'text-bj-red border-bj-red/40 bg-bj-red/5' : 'text-bj-gray-200 border-bj-gray-850 bg-white hover:text-bj-red'}`}
+      className={`inline-flex items-center gap-1v px-3v py-2v border rounded-bj-sm text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50 ${
+        favori ? 'text-danger border-danger/40 bg-danger-soft' : 'text-text border-border-strong bg-surface hover:text-danger'
+      }`}
     >
-      <Heart size={compact ? 18 : 16} aria-hidden="true" fill={favori ? 'currentColor' : 'none'} />
-      {compact ? <span className="sr-only">Mettre de côté : {filiere.nom}</span> : 'Mettre de côté'}
+      <Heart
+        size={16}
+        aria-hidden="true"
+        fill={favori ? 'currentColor' : 'none'}
+        className={rebond ? 'pop-feedback' : ''}
+        onAnimationEnd={() => setRebond(false)}
+      />
+      Mettre de côté
     </button>
   );
 }

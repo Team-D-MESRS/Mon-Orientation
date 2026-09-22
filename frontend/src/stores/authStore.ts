@@ -56,7 +56,12 @@ export const useAuthStore = create<AuthState>((set) => ({
 
 /** Page d'arrivée après connexion selon le rôle. */
 export function accueilDuRole(role: Role): string {
-  if (role === 'APPRENANT' || role === 'PARENT') return '/espace-apprenant/decouverte';
+  // Le tableau de bord, pas le questionnaire de découverte : depuis le retrait du mur d'entrée forcé, la
+  // découverte est une étape proposée *depuis* le tableau de bord, plus une destination de connexion en soi
+  // — sans quoi le bouton « Mon espace » de l'accueil (ActionsHero) renvoyait un élève déjà inscrit droit
+  // sur son questionnaire déjà rempli plutôt que sur son tableau de bord, contrairement à tous les autres
+  // liens « Mon espace » de l'application (en-tête, pied de page, /identification).
+  if (role === 'APPRENANT' || role === 'PARENT') return '/espace-apprenant';
   if (role === 'DGES' || role === 'ADMIN') return '/stats';
   return '/';
 }

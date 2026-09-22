@@ -10,6 +10,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Couleurs de marque DSBJ (drapeau + étendues) — identité, navigation, CTA principal.
         'bj-green': '#008751',
         'bj-yellow': '#FCD116',
         'bj-red': '#E8112D',
@@ -31,9 +32,53 @@ const config: Config = {
           975: '#F6F6F6',
           1000: '#FFFFFF',
         },
+
+        // Design tokens sémantiques — utilisés par les composants de frontend/src/components/ui/ et par
+        // components/espace/ui.tsx. Valeurs définies dans globals.css (:root), pas de couleur en dur ici :
+        // un seul endroit à changer pour faire évoluer le thème. Les couleurs bj-* ci-dessus restent
+        // disponibles pour un usage direct de marque (logo, tricolore) ; les tokens ci-dessous distinguent
+        // « couleur de marque » (primary/accent) et « couleur d'état » (success/warning/danger/info), que le
+        // DSBJ documente déjà comme deux palettes séparées (§4.1 « principales » vs « fonctionnelles »).
+        background: 'var(--color-background)',
+        surface: 'var(--color-surface)',
+        'surface-raised': 'var(--color-surface-raised)',
+        'surface-sunken': 'var(--color-surface-sunken)',
+
+        primary: 'var(--color-primary)',
+        'primary-strong': 'var(--color-primary-strong)',
+        'primary-soft': 'var(--color-primary-soft)',
+        accent: 'var(--color-accent)',
+        'accent-strong': 'var(--color-accent-strong)',
+        'accent-soft': 'var(--color-accent-soft)',
+        terre: 'var(--color-terre)',
+        'terre-strong': 'var(--color-terre-strong)',
+        'terre-soft': 'var(--color-terre-soft)',
+
+        success: 'var(--color-success)',
+        'success-strong': 'var(--color-success-strong)',
+        'success-soft': 'var(--color-success-soft)',
+        warning: 'var(--color-warning)',
+        'warning-strong': 'var(--color-warning-strong)',
+        'warning-soft': 'var(--color-warning-soft)',
+        danger: 'var(--color-danger)',
+        'danger-strong': 'var(--color-danger-strong)',
+        'danger-soft': 'var(--color-danger-soft)',
+        info: 'var(--color-info)',
+        'info-strong': 'var(--color-info-strong)',
+        'info-soft': 'var(--color-info-soft)',
+
+        text: 'var(--color-text)',
+        'text-secondary': 'var(--color-text-secondary)',
+        'text-muted': 'var(--color-text-muted)',
+        'text-on-primary': 'var(--color-text-on-primary)',
+
+        border: 'var(--color-border)',
+        'border-strong': 'var(--color-border-strong)',
       },
       fontFamily: {
         sans: ['Montserrat', 'system-ui', 'sans-serif'],
+        // Réservée aux grands titres (display / H1 de section) pour une touche éditoriale plus chaleureuse
+        // qu'un site tout-Montserrat ; jamais pour du texte courant, des boutons ou des libellés d'UI.
         serif: ['Spectral', 'Georgia', 'serif'],
       },
       spacing: {
@@ -47,9 +92,26 @@ const config: Config = {
         '16v': '64px',
       },
       borderRadius: {
-        'bj-sm': '4px',
-        'bj-md': '8px',
-        'bj-lg': '12px',
+        'bj-sm': 'var(--radius-sm)',
+        'bj-md': 'var(--radius-md)',
+        'bj-lg': 'var(--radius-lg)',
+        card: 'var(--radius-card)',
+      },
+      boxShadow: {
+        // Les 3 niveaux d'élévation DSBJ (§4.6), nommés par usage plutôt que par numéro.
+        card: 'var(--shadow-card)',
+        'card-hover': 'var(--shadow-card-hover)',
+        popover: 'var(--shadow-popover)',
+      },
+      height: {
+        control: 'var(--control-height-md)',
+      },
+      screens: {
+        // Alias explicite du seuil « petit smartphone » du DESIGN.md (§5.1, < 375px) : les autres paliers du
+        // DESIGN.md (sm/md/lg/xl) correspondent déjà à peu de choses près aux valeurs par défaut de Tailwind
+        // (640/768/1024/1280px), utilisées de façon cohérente dans tout le code existant — les remplacer
+        // décalerait le point de rupture de chaque `sm:`/`md:`/`lg:` déjà écrit, pour un gain non perceptible.
+        xs: '375px',
       },
     },
   },

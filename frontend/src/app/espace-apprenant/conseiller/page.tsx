@@ -8,6 +8,8 @@ import { messageErreur } from '@/lib/erreurs';
 import { useEspace, useProfil } from '@/components/espace/EspaceContext';
 import { Alerte, CHAMP } from '@/components/espace/ui';
 import { TexteConseiller } from '@/components/espace/TexteConseiller';
+import { Button } from '@/components/ui/Button';
+import { IconButton } from '@/components/ui/IconButton';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -223,17 +225,17 @@ export default function ConseillerPage() {
     : ['Explique plus simplement', 'Compare avec une autre formation', 'Que dois-je améliorer maintenant ?'];
 
   return (
-    <section className="bg-white rounded-bj-md border border-bj-gray-925 flex flex-col h-[70vh] min-h-[28rem]">
-      <div className="flex flex-wrap items-center justify-between gap-3v px-4v md:px-6v py-3v border-b border-bj-gray-925">
+    <section className="bg-surface rounded-bj-md border border-border flex flex-col h-[70vh] min-h-[28rem]">
+      <div className="flex flex-wrap items-center justify-between gap-3v px-4v md:px-6v py-3v border-b border-border">
         <div className="flex items-center gap-3v">
-          <Bot size={22} className="text-bj-green shrink-0" aria-hidden="true" />
+          <Bot size={22} className="text-primary shrink-0" aria-hidden="true" />
           <div>
             <h2 className="font-bold text-sm">Guido</h2>
-            <p className="text-xs text-bj-gray-500">Assistant automatique : il explique, il ne décide pas.</p>
+            <p className="text-xs text-text-secondary">Assistant automatique : il explique, il ne décide pas.</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-3v">
-          <div role="group" aria-label="Langue des réponses" className="inline-flex rounded-bj-sm border border-bj-gray-850 overflow-hidden text-sm">
+          <div role="group" aria-label="Langue des réponses" className="inline-flex rounded-bj-sm border border-border-strong overflow-hidden text-sm">
             {LANGUES.map(({ code, libelle }) => (
               <button
                 key={code}
@@ -243,7 +245,7 @@ export default function ConseillerPage() {
                 onClick={() => choisirLangue(code)}
                 disabled={envoi}
                 className={`px-3v py-1v font-medium transition-colors disabled:opacity-60 ${
-                  langue === code ? 'bg-bj-green text-white' : 'bg-white text-bj-gray-200 hover:text-bj-green'
+                  langue === code ? 'bg-primary text-text-on-primary' : 'bg-surface text-text hover:text-primary'
                 }`}
               >
                 {libelle}
@@ -251,14 +253,9 @@ export default function ConseillerPage() {
             ))}
           </div>
           {messages.length > 0 && (
-            <button
-              type="button"
-              onClick={nouvelleConversation}
-              disabled={envoi}
-              className="inline-flex items-center gap-1v text-sm font-medium text-bj-green hover:underline disabled:opacity-50"
-            >
-              <RotateCcw size={14} aria-hidden="true" /> Nouvelle conversation
-            </button>
+            <Button variant="ghost" size="sm" onClick={nouvelleConversation} disabled={envoi} icon={<RotateCcw size={14} aria-hidden="true" />} className="!px-0">
+              Nouvelle conversation
+            </Button>
           )}
         </div>
       </div>
@@ -269,7 +266,7 @@ export default function ConseillerPage() {
             <p className="font-medium mb-1v">
               {estParent ? `Posez vos questions sur l'orientation de ${profil.prenom}.` : 'Pose tes questions sur ton orientation.'}
             </p>
-            <p className="text-sm text-bj-gray-500 mb-4v">
+            <p className="text-sm text-text-secondary mb-4v">
               Formations, métiers, résultats, propositions du moteur : Guido s&apos;appuie sur le catalogue
               officiel et sur le dossier scolaire.
             </p>
@@ -279,7 +276,7 @@ export default function ConseillerPage() {
                   key={s}
                   type="button"
                   onClick={() => envoyer(s)}
-                  className="px-3v py-2v rounded-full border border-bj-gray-850 text-sm text-left hover:border-bj-green hover:text-bj-green"
+                  className="px-3v py-2v rounded-full border border-border-strong text-sm text-left hover:border-primary hover:text-primary"
                 >
                   {s}
                 </button>
@@ -304,7 +301,7 @@ export default function ConseillerPage() {
 
         {envoi && (
           <div className="flex justify-start">
-            <div className="bubble-assistant text-sm text-bj-gray-500" role="status">
+            <div className="bubble-assistant text-sm text-text-secondary" role="status">
               Guido réfléchit…
             </div>
           </div>
@@ -319,32 +316,21 @@ export default function ConseillerPage() {
       )}
 
       {enregistrement ? (
-        <div className="border-t border-bj-gray-925 p-3v md:p-4v flex items-center gap-3v" role="status">
+        <div className="border-t border-border p-3v md:p-4v flex items-center gap-3v" role="status">
           <span className="relative flex h-3 w-3 shrink-0">
-            <span className="absolute inline-flex h-full w-full rounded-full bg-bj-red opacity-75 animate-ping" />
-            <span className="relative inline-flex h-3 w-3 rounded-full bg-bj-red" />
+            <span className="absolute inline-flex h-full w-full rounded-full bg-danger opacity-75 animate-ping" />
+            <span className="relative inline-flex h-3 w-3 rounded-full bg-danger" />
           </span>
           <p className="flex-1 text-sm font-medium">Enregistrement… {formaterDuree(duree)}</p>
-          <button
-            type="button"
-            onClick={() => arreterEnregistrement(false)}
-            aria-label="Annuler la note vocale"
-            className="bj-btn bj-btn-secondary p-2v"
-          >
-            <Trash2 size={16} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            onClick={() => arreterEnregistrement(true)}
-            className="bj-btn bj-btn-primary inline-flex items-center gap-2v"
-          >
-            <Square size={14} aria-hidden="true" />
+          <IconButton variant="danger" icon={<Trash2 size={16} aria-hidden="true" />} label="Annuler la note vocale" onClick={() => arreterEnregistrement(false)} />
+          <Button icon={<Square size={14} aria-hidden="true" />} onClick={() => arreterEnregistrement(true)}>
             <span className="hidden sm:inline">Envoyer</span>
             <span className="sr-only sm:hidden">Envoyer</span>
-          </button>
+          </Button>
         </div>
       ) : (
-        <form onSubmit={soumettre} className="border-t border-bj-gray-925 p-3v md:p-4v flex gap-2v items-end">
+        <>
+        <form onSubmit={soumettre} className="border-t border-border p-3v md:p-4v flex gap-2v items-end">
           <label htmlFor="question" className="sr-only">
             {estParent ? 'Votre question' : 'Ta question'}
           </label>
@@ -356,34 +342,33 @@ export default function ConseillerPage() {
             onChange={(e) => setSaisie(e.target.value)}
             onKeyDown={toucheClavier}
             disabled={envoi}
-            placeholder={estParent ? 'Votre question… (Entrée pour envoyer)' : 'Ta question… (Entrée pour envoyer)'}
-            className={`${CHAMP} resize-none`}
+            placeholder={estParent ? 'Votre question…' : 'Ta question…'}
+            // min-w-0 : sans ça, un <textarea> dans une ligne flex refuse de descendre sous sa largeur de
+            // contenu naturelle et pousse les boutons voisins hors de leur taille prévue plutôt que de
+            // rétrécir lui-même — au clavier mobile, sur les plus petits écrans (320px), le bouton micro se
+            // retrouvait écrasé à 24px de large au lieu de 44.
+            className={`${CHAMP} resize-none flex-1 min-w-0`}
           />
-          <button
-            type="button"
-            onClick={demarrerEnregistrement}
+          <IconButton
+            variant="secondary"
+            icon={<Mic size={16} aria-hidden="true" />}
+            label="Note vocale (fon, yoruba, mina…) — enregistrer une note vocale"
             disabled={envoi}
-            aria-label="Enregistrer une note vocale, par exemple en fon ou en yoruba"
-            title="Note vocale (fon, yoruba, mina…)"
-            className="bj-btn bj-btn-secondary p-3v disabled:opacity-60"
-          >
-            <Mic size={16} aria-hidden="true" />
-          </button>
-          <button
-            type="submit"
-            disabled={envoi || !saisie.trim()}
-            className="bj-btn bj-btn-primary inline-flex items-center gap-2v disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            <Send size={16} aria-hidden="true" />
+            onClick={demarrerEnregistrement}
+            className="shrink-0"
+          />
+          <Button type="submit" icon={<Send size={16} aria-hidden="true" />} disabled={envoi || !saisie.trim()} className="shrink-0">
             <span className="hidden sm:inline">Envoyer</span>
             <span className="sr-only sm:hidden">Envoyer</span>
-          </button>
+          </Button>
         </form>
+        <p className="px-3v md:px-4v pb-1v text-xs text-text-secondary hidden sm:block">Entrée pour envoyer, Maj+Entrée pour revenir à la ligne.</p>
+        </>
       )}
       <div className="px-4v md:px-6v pb-2v flex flex-wrap gap-2v" aria-label="Raccourcis de question">
-        {raccourcis.map((question) => <button key={question} type="button" onClick={() => envoyer(question)} disabled={envoi} className="px-3v py-1v rounded-full border border-bj-gray-850 text-xs text-bj-gray-200 hover:border-bj-green hover:text-bj-green disabled:opacity-50">{question}</button>)}
+        {raccourcis.map((question) => <button key={question} type="button" onClick={() => envoyer(question)} disabled={envoi} className="px-3v py-1v rounded-full border border-border-strong text-xs text-text hover:border-primary hover:text-primary disabled:opacity-50">{question}</button>)}
       </div>
-      <p className="px-4v md:px-6v pb-3v text-xs text-bj-gray-500">
+      <p className="px-4v md:px-6v pb-3v text-xs text-text-secondary">
         {estParent
           ? "Vérifiez les informations importantes auprès de l'établissement. La décision d'orientation revient à votre enfant et à votre famille."
           : "Vérifie les informations importantes auprès de ton établissement. La décision d'orientation t'appartient, avec ta famille."}

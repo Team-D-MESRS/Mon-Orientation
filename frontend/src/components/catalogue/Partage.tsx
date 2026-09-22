@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Check, Link2, Printer, Send, Share2 } from 'lucide-react';
 
 const BOUTON =
-  'inline-flex items-center gap-1v px-3v py-2v rounded-bj-sm border border-bj-gray-850 bg-white text-sm font-medium text-bj-gray-200 hover:border-bj-green hover:text-bj-green focus:outline-none focus-visible:ring-2 focus-visible:ring-bj-green';
+  'inline-flex items-center gap-1v px-3v py-2v rounded-bj-sm border border-border-strong bg-surface text-sm font-medium text-text hover:border-primary hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary';
 
 /** Copie sans l'API Presse-papiers (indisponible hors HTTPS) */
 function copierAncienneMethode(texte: string) {
@@ -70,13 +70,13 @@ export function Partage({ titre }: { titre: string }) {
         </button>
       )}
       <button type="button" className={BOUTON} onClick={copier}>
-        {copie === 'ok' ? <Check size={16} aria-hidden="true" /> : <Link2 size={16} aria-hidden="true" />}
+        {copie === 'ok' ? <Check size={16} aria-hidden="true" className="pop-feedback text-primary" /> : <Link2 size={16} aria-hidden="true" />}
         {copie === 'ok' ? 'Lien copié' : 'Copier le lien'}
       </button>
       <button type="button" className={BOUTON} onClick={() => window.print()}>
         <Printer size={16} aria-hidden="true" /> Imprimer
       </button>
-      <span aria-live="polite" className={copie === 'echec' ? 'text-xs text-bj-red' : 'sr-only'}>
+      <span aria-live="polite" className={copie === 'echec' ? 'text-xs text-danger' : 'sr-only'}>
         {copie === 'ok' ? 'Lien copié.' : copie === 'echec' ? "Copie impossible : copie l'adresse depuis la barre du navigateur." : ''}
       </span>
     </div>

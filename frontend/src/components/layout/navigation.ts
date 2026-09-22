@@ -13,6 +13,24 @@ const LIENS_PRINCIPAUX: { href: string; label: string; roles?: Role[] }[] = [
 export const liensVisibles = (user: Utilisateur | null) =>
   LIENS_PRINCIPAUX.filter((l) => !l.roles || (user ? l.roles.includes(user.role) : l.href === '/espace-apprenant'));
 
+/**
+ * Un lien de navigation est actif sur sa page et sur toutes ses sous-pages (ex. `/catalogue` reste actif
+ * sur `/catalogue/abc-123` et `/catalogue/comparer`) — pas seulement en correspondance exacte, sans quoi
+ * l'en-tête perdrait la trace du rayon courant dès qu'on descend d'un niveau. `/` est un cas particulier
+ * (préfixe de tout) : seule une égalité stricte le rend actif.
+ */
+export const estLienActif = (pathname: string, href: string) =>
+  href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
+
+/** Libellé du rôle affiché dans l'accès profil de l'en-tête. */
+export const ROLE_LABELS: Record<Role, string> = {
+  APPRENANT: 'Élève',
+  PARENT: 'Parent',
+  ETABLISSEMENT: 'Établissement',
+  DGES: 'Conseiller DGES',
+  ADMIN: 'Administrateur',
+};
+
 export const PAGES_AIDE = [
   { href: '/guide', label: "Guide d'utilisation" },
   { href: '/faq', label: 'Questions fréquentes' },

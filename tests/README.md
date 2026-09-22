@@ -7,6 +7,7 @@ Scripts de vérification contre l'application **lancée en local** (`./start.sh`
 1. `./start.sh` en cours (API sur :8080, front sur :3000, PostgreSQL dans le conteneur `mo-postgres`)
 2. Données de démonstration : `cd backend && npm run prisma:seed:demo`
 3. Pour les tests navigateur : Google Chrome (variable `CHROME` pour un autre chemin) et Node 22
+4. `responsive.mjs` et `connexion.mjs` se connectent aussi en tant qu'administrateur (`admin@monorientation.bj` / `admin123` en dev) : si ce compte n'existe pas encore dans la base, lancer aussi `cd backend && npm run prisma:seed` (upsert, sans danger à rejouer — recrée aussi tout le référentiel de filières si absent)
 
 ## Lancer
 
@@ -22,6 +23,7 @@ bash tests/api/catalogue.sh         # recherche sans accents, filtres, séries d
 node tests/e2e/catalogue.mjs        # filtres, comparateur, « Et après ce bac ? », partage, impression, cœurs, mobile
 node tests/e2e/pied-de-page.mjs     # pages d'information, liens du pied de page (aucun lien mort), pied de page en bas, 404
 node tests/e2e/accueil.mjs          # accueil : contenus exacts, recherche, séries, domaines, animations au défilement (et réduites), boutons selon la connexion, mobile
+node tests/e2e/responsive.mjs       # débordement horizontal (320 → 1024px), cibles tactiles, en-tête (rôle à 5 liens), menu mobile, orientation paysage — nécessite le compte admin (prisma:seed, pas seulement seed:demo)
 bash tests/reinitialiser-demo.sh    # remet la démo à zéro : vœux, recommandations, conversations, formations mises de côté
 ```
 

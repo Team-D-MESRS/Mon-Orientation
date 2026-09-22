@@ -31,7 +31,7 @@ export default function RootLayout({
       {/* Colonne pleine hauteur : sur une page courte, le pied de page reste en bas de l'écran */}
       <body className="min-h-screen flex flex-col">
         <AuthInitialiser />
-        <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-white">
+        <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-surface focus:text-text focus:shadow-popover">
           Aller au contenu principal
         </a>
         <Header />

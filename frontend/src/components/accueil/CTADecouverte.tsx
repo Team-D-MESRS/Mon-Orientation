@@ -5,7 +5,7 @@ import { ArrowRight } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 
 const CIBLE = '/espace-apprenant/decouverte';
-const LIEN = 'inline-flex items-center gap-1v mt-8v text-sm font-medium text-bj-green hover:underline';
+const LIEN = 'inline-flex items-center gap-1v mt-8v text-sm font-medium text-primary hover:underline';
 
 /** Visiteur : redirigé vers l'identification, avant de revenir ici ; élève connecté : accès direct au questionnaire. */
 export function CTADecouverte() {

@@ -36,9 +36,9 @@ export function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8v mb-8v">
           <div>
             <Link href="/" className="flex items-center gap-3v mb-4v w-fit">
-              <div className="w-10 h-10 bg-bj-green rounded-full flex items-center justify-center font-bold text-sm">MO</div>
+              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center font-bold text-sm shrink-0">MO</div>
               <div>
-                <div className="font-bold text-sm">Mon Orientation</div>
+                <div className="font-serif font-bold text-base">Mon Orientation</div>
                 <div className="text-xs text-bj-gray-750">Plateforme nationale</div>
               </div>
             </Link>

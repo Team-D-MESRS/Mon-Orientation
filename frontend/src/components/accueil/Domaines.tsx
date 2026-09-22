@@ -50,9 +50,9 @@ export function Domaines() {
 
   if (erreur) {
     return (
-      <p className="text-bj-gray-500">
+      <p className="text-text-secondary">
         Les domaines ne peuvent pas être affichés pour le moment.{' '}
-        <Link href="/catalogue" className="font-medium text-bj-green hover:underline">
+        <Link href="/catalogue" className="font-medium text-primary hover:underline">
           Ouvrir le catalogue
         </Link>
       </p>
@@ -61,7 +61,7 @@ export function Domaines() {
 
   return (
     <>
-      <p className="text-bj-gray-500 mb-8v">
+      <p className="text-text-secondary mb-8v">
         {donnees ? (
           <>
             {/* Compteur animé caché aux lecteurs d'écran, qui lisent la phrase fixe */}
@@ -84,14 +84,14 @@ export function Domaines() {
                 <Apparition as="li" key={d.code} delai={(i % 4) * 90}>
                   <Link
                     href={`/catalogue?domaine=${d.code}`}
-                    className="bj-card flex flex-col sm:flex-row items-start sm:items-center gap-2v sm:gap-3v p-3v sm:p-4v h-full"
+                    className="bj-card bj-card-hoverable flex flex-col sm:flex-row items-start sm:items-center gap-2v sm:gap-3v p-3v sm:p-4v h-full"
                   >
-                    <span className="w-10 h-10 rounded-full bg-bj-green/10 text-bj-green flex items-center justify-center shrink-0">
+                    <span className="w-10 h-10 rounded-full bg-primary-soft text-primary flex items-center justify-center shrink-0">
                       <Icone size={20} aria-hidden="true" />
                     </span>
                     <span className="min-w-0">
                       <span className="block text-sm font-bold leading-tight">{d.libelle}</span>
-                      <span className="block text-xs text-bj-gray-500 mt-1v">
+                      <span className="block text-xs text-text-secondary mt-1v">
                         {d.total} formation{d.total > 1 ? 's' : ''}
                       </span>
                     </span>
@@ -99,7 +99,7 @@ export function Domaines() {
                 </Apparition>
               );
             })
-          : Array.from({ length: 8 }).map((_, i) => <li key={i} className="h-[4.5rem] rounded-bj-md bg-bj-gray-950 animate-pulse" />)}
+          : Array.from({ length: 8 }).map((_, i) => <li key={i} className="h-[4.5rem] rounded-bj-md bg-surface-sunken skeleton-pulse" />)}
       </ul>
     </>
   );

@@ -103,7 +103,7 @@ try {
   await accueil();
   await nav.cliquer('main a[href="/catalogue?domaine=NUMERIQUE"]');
   const nbNumerique = (await (await fetch(`${API}/filiere?domaine=NUMERIQUE&limit=1`)).json()).total;
-  await nav.attendre(`location.search.includes('domaine=NUMERIQUE') && document.body.textContent.includes('${nbNumerique} filière(s) trouvée(s)')`);
+  await nav.attendre(`location.search.includes('domaine=NUMERIQUE') && document.body.textContent.includes('${nbNumerique} filière${nbNumerique > 1 ? 's' : ''} trouvée${nbNumerique > 1 ? 's' : ''}')`);
   r.verifier(`Tuile Numérique → ${nbNumerique} formations`, true);
 
   await connecter('DEMO-TLE-0001', '/espace-apprenant');

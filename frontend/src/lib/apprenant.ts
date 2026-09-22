@@ -148,7 +148,14 @@ export function etiquetteProfil(decouverte: Decouverte): string {
   );
   const domaines = domainesDominants(decouverte.affinites).map((d) => DOMAINE_LABELS[d]);
   const profil = codes.length > 0 ? `Profil ${codes.join(' et ')}` : adjectifs.length > 0 ? `Profil ${adjectifs.join(' et ')}` : 'Profil';
-  if (domaines.length === 0) return `${profil}, intérêts encore à préciser.`;
+  if (domaines.length === 0) {
+    // `${profil}` peut être le seul mot « Profil » (aucun code RIASEC dominant, aucun adjectif) : une
+    // phrase dédiée plutôt que de l'accoler à une suite (« Profil, intérêts encore à préciser » ne se lit
+    // pas comme une phrase).
+    return codes.length > 0 || adjectifs.length > 0
+      ? `${profil} : les domaines qui t'intéressent le plus restent encore à préciser.`
+      : "Aucun profil ne se détache encore nettement de tes réponses, et c'est normal à ce stade.";
+  }
   return `${profil}, avec un intérêt marqué pour ${domaines.join(' et ')}.`;
 }
 

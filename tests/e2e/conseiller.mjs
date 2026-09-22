@@ -38,7 +38,10 @@ try {
   await nav.attendre(contient('Pose tes questions sur ton orientation'));
   r.verifier(
     "Élève : /conseiller mène à l'onglet Guido de son espace",
-    await nav.evaluer("document.querySelector('nav[aria-label] a[aria-current=page]')?.textContent.includes('Guido') === true"),
+    // nav[aria-label="Espace apprenant"] précisément : le lien « Mon espace » de l'en-tête porte lui aussi
+    // aria-current="page" sur toute sous-route de /espace-apprenant (correspondance par préfixe), un
+    // sélecteur nav[aria-label] générique aurait pu le retrouver en premier au lieu de l'onglet Guido.
+    await nav.evaluer("document.querySelector('nav[aria-label=\"Espace apprenant\"] a[aria-current=page]')?.textContent.includes('Guido') === true"),
   );
   r.verifier('Suggestions de questions proposées', await nav.evaluer(`[...document.querySelectorAll('section button')].filter((b) => b.textContent.includes('?')).length >= 3`));
   r.verifier(

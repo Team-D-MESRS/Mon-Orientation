@@ -1,13 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { ArrowRight, CheckCircle2, Clock, GraduationCap, ListChecks, TrendingUp } from 'lucide-react';
+import { BookOpen, CheckCircle2, Circle, Clock, GraduationCap, Heart, MessageCircle, Scale } from 'lucide-react';
 import { apprenantApi, orientationApi } from '@/lib/api';
 import {
-  dateLisible,
-  etiquetteProfil,
   noteLisible,
   palierDeSaisie,
   type Decouverte,
@@ -17,14 +14,17 @@ import {
   type Recommandation,
 } from '@/lib/apprenant';
 import { useEspace, useProfil } from '@/components/espace/EspaceContext';
-import { BadgeType, Carte, Chargement } from '@/components/espace/ui';
+import { Carte } from '@/components/espace/ui';
+import { DashboardHero, NextActionCard, ParentSummary, ProgressOverview, RecommendationPreview } from '@/components/espace/dashboard';
+import { ActionCard } from '@/components/ui/ActionCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 
-const LIEN = 'text-sm font-medium text-bj-green hover:underline';
+const LIEN = 'text-sm font-medium text-primary hover:underline';
 
 export default function TableauDeBordPage() {
-  const router = useRouter();
   const profil = useProfil();
-  const { estParent, estEleve } = useEspace();
+  const { moi, estParent, estEleve } = useEspace();
   // undefined tant que les vœux ne sont pas chargés : évite d'afficher « pas encore saisi » à tort
   const [preference, setPreference] = useState<Preference | null | undefined>(undefined);
   const [recommandations, setRecommandations] = useState<Recommandation[] | null>(null);
@@ -47,9 +47,9 @@ export default function TableauDeBordPage() {
     };
   }, [profil.nip]);
 
-  useEffect(() => {
-    if (decouverte === null) router.replace('/espace-apprenant/decouverte');
-  }, [decouverte, router]);
+  // Pas de redirection forcée vers la découverte quand `decouverte` vaut null : le mur d'entrée obligatoire
+  // a été retiré (voir stores/authStore.ts, accueilDuRole) — la découverte est une étape proposée *depuis*
+  // le tableau de bord (NextActionCard), jamais une destination imposée à l'arrivée sur cette page.
 
   useEffect(() => {
     let annule = false;
@@ -87,258 +87,356 @@ export default function TableauDeBordPage() {
     };
   }, [profil.nip, profil.palier]);
 
-  const { bilan } = profil;
+  // Un seul skeleton pour tout le contenu piloté par ces 4 signaux : les afficher un par un dès qu'ils
+  // arrivent ferait changer la Vue d'ensemble et la prochaine étape plusieurs fois de suite sous les yeux
+  // de l'utilisateur (ils se chargent en parallèle, l'écart est de toute façon bref).
+  const pret = decouverte !== undefined && recommandations !== null && favoris !== null && preference !== undefined;
+
+  const etapes = [
+    { fait: !!decouverte, label: 'Profil d’intérêts', href: '/espace-apprenant/decouverte' },
+    { fait: recommandations !== null && recommandations.length > 0, label: 'Pistes recommandées', href: '/espace-apprenant/recommandations' },
+    { fait: favoris !== null && favoris.length > 0, label: 'Formations sauvegardées', href: '/catalogue' },
+    { fait: preference !== undefined && preference !== null, label: 'Vœux préparés', href: '/espace-apprenant/preferences' },
+  ];
+  const totalFait = etapes.filter((e) => e.fait).length;
+  const progression = Math.round((totalFait / etapes.length) * 100);
+
+  const prochaine = calculerProchaineEtape({ profil, estParent, decouverte, recommandations, favoris, preference });
+
+  const etatParcours = estParent
+    ? `${totalFait} étape${totalFait > 1 ? 's' : ''} sur ${etapes.length} avancée${totalFait > 1 ? 's' : ''} · ${progression}% du parcours de ${profil.prenom} repéré.`
+    : `${totalFait} étape${totalFait > 1 ? 's' : ''} sur ${etapes.length} avancée${totalFait > 1 ? 's' : ''} · ${progression}% de ton parcours repéré.`;
+
+  if (!pret) return <SilhouetteTableauDeBord />;
 
   return (
-    // Identité, classe, département et NIP figurent déjà dans l'en-tête de l'espace (CadreEspace)
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6v">
-      {decouverte && (
-        <div className="md:col-span-2 bg-bj-green/5 border border-bj-green/30 rounded-bj-md p-4v md:p-5v">
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4v">
-            <div>
-              <p className="text-xs font-medium text-bj-green uppercase tracking-wide mb-1v">{estParent ? `Synthèse de ${profil.prenom}` : 'Ta synthèse d’orientation'}</p>
-              <p className="font-semibold">{etiquetteProfil(decouverte)}</p>
-              <p className="text-sm text-bj-gray-500 mt-1v">
-                {decouverte.reponses.metierEnvisage ? `Métier envisagé : ${decouverte.reponses.metierEnvisage}.` : 'Aucun métier précis n’est encore défini, ce qui est normal à cette étape.'}
-                {' '}{decouverte.reponses.internat === 'OUI' ? 'L’internat est envisageable.' : decouverte.reponses.internat === 'NON' ? 'Une formation proche du domicile est à privilégier.' : ''}
+    <div className="space-y-10v stagger-sections">
+      <DashboardHero
+        profil={profil}
+        prenomParent={estParent ? moi.prenom : undefined}
+        etatParcours={etatParcours}
+        profilMisAJourLe={decouverte?.updatedAt}
+        action={{ titre: prochaine.actionLabel, href: prochaine.href }}
+      />
+
+      <ProgressOverview
+        prenom={profil.prenom}
+        decouverte={decouverte}
+        recommandations={recommandations}
+        favoris={favoris}
+        preference={preference}
+        progression={progression}
+        estParent={estParent}
+      />
+
+      <NextActionCard
+        titre={prochaine.titre}
+        justification={prochaine.justification}
+        actionLabel={prochaine.actionLabel}
+        href={prochaine.href}
+        parcoursComplet={prochaine.parcoursComplet}
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6v items-start">
+        <EtapesParcours etapes={etapes} preference={preference} estParent={estParent} prenom={profil.prenom} />
+
+        <Carte titre={`Résultats ${profil.bilan.anneeScolaire ?? ''}`} icone={<GraduationCap size={18} />}>
+          {profil.bilan.moyenneGenerale === null ? (
+            <p className="text-sm text-text-secondary">Aucune note disponible pour l&apos;instant.</p>
+          ) : (
+            <>
+              <p className="text-3xl font-bold text-primary">
+                {noteLisible(profil.bilan.moyenneGenerale)}
+                <span className="text-base font-medium text-text-secondary">/20</span>
               </p>
-            </div>
-            <Link href="/espace-apprenant/decouverte" className={`${LIEN} shrink-0`}>Voir ou modifier le profil →</Link>
-          </div>
-        </div>
-      )}
+              <p className="text-xs text-text-secondary mb-4v">Moyenne générale</p>
+              {profil.bilan.forces.length > 0 && (
+                <p className="text-sm mb-1v">
+                  <span className="font-medium">{estParent ? 'Points forts' : 'Tes points forts'} :</span> {profil.bilan.forces.join(', ')}
+                </p>
+              )}
+              {profil.bilan.aAmeliorer.length > 0 && (
+                <p className="text-sm">
+                  <span className="font-medium">À renforcer :</span> {profil.bilan.aAmeliorer.join(', ')}
+                </p>
+              )}
+              <Link href="/espace-apprenant/notes" className={`${LIEN} inline-block mt-3v`}>
+                Détail des notes →
+              </Link>
+            </>
+          )}
+        </Carte>
+      </div>
 
-      <VueEnsemble profil={profil} decouverte={decouverte} recommandations={recommandations} favoris={favoris} preference={preference} estParent={estParent} />
+      {estParent && <ParentSummary prenom={profil.prenom} decouverte={decouverte} recommandations={recommandations} preference={preference} />}
 
-      <Carte titre={`Résultats ${bilan.anneeScolaire ?? ''}`} icone={<TrendingUp size={18} />}>
-        {bilan.moyenneGenerale === null ? (
-          <p className="text-sm text-bj-gray-500">Aucune note disponible pour l&apos;instant.</p>
-        ) : (
-          <>
-            <p className="text-3xl font-bold text-bj-green">
-              {noteLisible(bilan.moyenneGenerale)}
-              <span className="text-base font-medium text-bj-gray-500">/20</span>
-            </p>
-            <p className="text-xs text-bj-gray-500 mb-4v">Moyenne générale</p>
-            {bilan.forces.length > 0 && (
-              <p className="text-sm mb-1v">
-                <span className="font-medium">{estParent ? 'Points forts' : 'Tes points forts'} :</span> {bilan.forces.join(', ')}
-              </p>
-            )}
-            {bilan.aAmeliorer.length > 0 && (
-              <p className="text-sm">
-                <span className="font-medium">À renforcer :</span> {bilan.aAmeliorer.join(', ')}
-              </p>
-            )}
-            <Link href="/espace-apprenant/notes" className={`${LIEN} inline-block mt-3v`}>
-              Détail des notes →
-            </Link>
-          </>
-        )}
-      </Carte>
-
-      <Carte titre="Orientation" icone={<GraduationCap size={18} />}>
-        <EtapeOrientation profil={profil} preference={preference} estParent={estParent} />
-      </Carte>
-
-      {estParent && <ParentPilotage profil={profil} preference={preference} recommandations={recommandations ?? []} />}
-
-      <section className="md:col-span-2">
-        <div className="flex items-center justify-between mb-4v">
-          <h2 className="text-xl font-bold">{profil.palier === 'QUATRIEME' ? 'Pistes à explorer' : 'Pistes recommandées'}</h2>
-          <Link href="/espace-apprenant/recommandations" className={LIEN}>
-            Tout voir →
-          </Link>
-        </div>
-        {recommandations === null ? (
-          <Chargement />
-        ) : recommandations.length === 0 ? (
-          <p className="text-sm text-bj-gray-500">
-            Pas encore de recommandation.{' '}
+      <section aria-labelledby="titre-recommandations">
+        <SectionHeader
+          as="h2"
+          id="titre-recommandations"
+          title={profil.palier === 'QUATRIEME' ? 'Pistes à explorer' : 'Pistes recommandées'}
+          action={
             <Link href="/espace-apprenant/recommandations" className={LIEN}>
-              Voir mes pistes
+              Tout voir →
             </Link>
-          </p>
+          }
+          className="mb-4v"
+        />
+        {recommandations && recommandations.length > 0 ? (
+          <RecommendationPreview recommandations={recommandations.slice(0, 3)} />
         ) : (
-          <ul className="grid grid-cols-1 md:grid-cols-3 gap-4v">
-            {recommandations.slice(0, 3).map((r) => (
-              <li key={r.id}>
-                <Link href={`/catalogue/${r.filiere.id}`} className="bj-card block p-4v h-full">
-                  <BadgeType type={r.filiere.type} />
-                  <p className="font-bold mt-2v">{r.filiere.nom}</p>
-                  <p className="text-sm text-bj-gray-500 mt-1v">Compatibilité {Math.round(r.score)}/100</p>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <EmptyState
+            title="Pas encore de recommandation"
+            description={
+              estParent
+                ? `Elles apparaîtront ici une fois le profil de découverte et les résultats de ${profil.prenom} pris en compte.`
+                : 'Elles apparaîtront ici une fois ton profil de découverte et tes résultats pris en compte.'
+            }
+            action={
+              <Link href="/espace-apprenant/recommandations" className={LIEN}>
+                Voir mes pistes →
+              </Link>
+            }
+          />
         )}
       </section>
 
-      <section className="md:col-span-2" aria-labelledby="titre-favoris">
-        <div className="flex items-center justify-between mb-4v">
-          <h2 id="titre-favoris" className="text-xl font-bold">
-            {estEleve ? 'Mes formations mises de côté' : 'Formations mises de côté'}
-          </h2>
-          <Link href="/catalogue" className={LIEN}>
-            Catalogue →
-          </Link>
+      <section aria-labelledby="titre-explorer">
+        <SectionHeader as="h2" id="titre-explorer" title="À explorer ensuite" className="mb-4v" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4v">
+          <ActionCard
+            href="/catalogue"
+            icon={<BookOpen size={22} aria-hidden="true" />}
+            title="Le catalogue"
+            description="Toutes les formations techniques, par domaine et par département."
+            actionLabel="Explorer"
+          />
+          <ActionCard
+            href="/catalogue/comparer"
+            icon={<Scale size={22} aria-hidden="true" />}
+            title="Le comparateur"
+            description={estParent ? 'Comparez deux ou trois formations avant de décider.' : 'Mets deux ou trois formations côte à côte avant de décider.'}
+            actionLabel="Comparer"
+          />
+          <ActionCard
+            href="/espace-apprenant/conseiller"
+            icon={<MessageCircle size={22} aria-hidden="true" />}
+            title="Guido"
+            description={estParent ? 'Posez une question sur une formation, un métier ou une piste.' : 'Pose une question sur une formation, un métier ou une piste.'}
+            actionLabel="Discuter"
+          />
+          <ActionCard
+            href="/espace-apprenant/preferences"
+            icon={<Heart size={22} aria-hidden="true" />}
+            title={estEleve ? 'Mes vœux' : 'Les vœux'}
+            description={
+              !palierDeSaisie(profil.palier)
+                ? 'Se préparent en 3e et en Terminale.'
+                : estParent
+                  ? `Préparez et enregistrez les choix de ${profil.prenom}, en famille.`
+                  : 'Prépare et enregistre tes choix, avec ta famille.'
+            }
+            actionLabel="Voir les vœux"
+          />
         </div>
-        {favoris === null ? (
-          <Chargement />
-        ) : favoris.length === 0 ? (
-          <p className="text-sm text-bj-gray-500">
-            {estEleve
-              ? 'Aucune pour l’instant. Dans le catalogue, appuie sur le cœur pour garder les formations qui t’intéressent : tu les retrouveras en saisissant tes vœux.'
-              : `${profil.prenom} n'a pas encore mis de formation de côté.`}
-          </p>
-        ) : (
-          <>
-            <ul className="grid grid-cols-1 md:grid-cols-3 gap-4v">
-              {favoris.slice(0, 6).map((f) => (
-                <li key={f.filiereId}>
-                  <Link href={`/catalogue/${f.filiereId}`} className="bj-card block p-4v h-full">
-                    <BadgeType type={f.filiere.type} />
-                    <p className="font-bold mt-2v">{f.filiere.nom}</p>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            {favoris.length > 6 && <p className="text-sm text-bj-gray-500 mt-3v">Et {favoris.length - 6} autre(s).</p>}
-          </>
-        )}
       </section>
     </div>
   );
 }
 
-function VueEnsemble({
+/** Statut réel d'une étape : « en cours » n'est utilisé que là où une donnée existante le justifie (les vœux, saisis mais pas encore validés) — jamais fabriqué pour les autres étapes, binaires par nature. */
+type StatutEtape = 'termine' | 'encours' | 'afaire';
+
+const STYLE_STATUT: Record<StatutEtape, { icone: ReactNode; texte: string; classe: string }> = {
+  termine: { icone: <CheckCircle2 size={17} aria-hidden="true" />, texte: 'Terminé', classe: 'text-primary' },
+  encours: { icone: <Clock size={17} aria-hidden="true" />, texte: 'En cours', classe: 'text-warning-strong' },
+  afaire: { icone: <Circle size={17} aria-hidden="true" />, texte: 'À faire', classe: 'text-text-secondary' },
+};
+
+function EtapesParcours({
+  etapes,
+  preference,
+  estParent,
+  prenom,
+}: {
+  etapes: { fait: boolean; label: string; href: string }[];
+  preference: Preference | null | undefined;
+  estParent: boolean;
+  prenom: string;
+}) {
+  const statuts: StatutEtape[] = etapes.map((etape, i) => {
+    // Seules les 2 dernières étapes (favoris, vœux) peuvent distinguer un « en cours » réel des autres
+    // états à partir des données déjà chargées ; les deux premières restent binaires (fait ou pas).
+    if (i === 3 && preference && !preference.valideParent) return 'encours';
+    return etape.fait ? 'termine' : 'afaire';
+  });
+
+  return (
+    <section aria-labelledby="titre-progression">
+      <SectionHeader
+        as="h2"
+        id="titre-progression"
+        title={estParent ? `Le parcours de ${prenom}, étape par étape` : 'Ton parcours, étape par étape'}
+        className="mb-4v"
+      />
+      <ol className="bg-surface rounded-bj-md border border-border divide-y divide-border">
+        {etapes.map((etape, i) => {
+          const statut = STYLE_STATUT[statuts[i]];
+          return (
+            <li key={etape.href}>
+              <Link href={etape.href} className="flex items-center gap-3v p-4v transition-colors hover:bg-surface-sunken">
+                <span className={`shrink-0 ${statut.classe}`} aria-hidden="true">
+                  {statut.icone}
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block font-medium">{etape.label}</span>
+                  <span className={`block text-xs ${statut.classe}`}>
+                    {statut.texte}
+                    {i === 3 && statuts[i] === 'encours' && (estParent ? ' · en attente de votre validation' : ' · en attente de validation par ton parent')}
+                  </span>
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
+/** Silhouette pleine page (mêmes proportions que le contenu réel) le temps que les 4 signaux du tableau de bord arrivent. */
+function SilhouetteTableauDeBord() {
+  return (
+    <div className="space-y-10v" aria-busy="true" aria-label="Chargement du tableau de bord">
+      <div className="flex items-end justify-between gap-5v">
+        <div className="space-y-2v">
+          <div className="h-6 w-48 rounded-bj-sm bg-surface-sunken skeleton-pulse" />
+          <div className="h-4 w-72 rounded-bj-sm bg-surface-sunken skeleton-pulse" />
+        </div>
+        <div className="h-11 w-40 rounded-bj-sm bg-surface-sunken skeleton-pulse" />
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4v">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-24 rounded-bj-md bg-surface-sunken skeleton-pulse" />
+        ))}
+      </div>
+      <div className="h-40 rounded-bj-lg bg-surface-sunken skeleton-pulse" />
+      <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6v">
+        <div className="h-64 rounded-bj-md bg-surface-sunken skeleton-pulse" />
+        <div className="h-64 rounded-bj-md bg-surface-sunken skeleton-pulse" />
+      </div>
+    </div>
+  );
+}
+
+interface ProchaineEtape {
+  titre: string;
+  justification: string;
+  actionLabel: string;
+  href: string;
+  parcoursComplet?: boolean;
+}
+
+/** Une seule action prioritaire à la fois, dérivée du vrai état du dossier — jamais plusieurs en parallèle. */
+function calculerProchaineEtape({
   profil,
+  estParent,
   decouverte,
   recommandations,
   favoris,
   preference,
-  estParent,
 }: {
   profil: ProfilApprenant;
+  estParent: boolean;
   decouverte: Decouverte | null | undefined;
   recommandations: Recommandation[] | null;
   favoris: Favori[] | null;
   preference: Preference | null | undefined;
-  estParent: boolean;
-}) {
-  const etapes = [
-    { fait: !!decouverte, label: 'Profil d’intérêts', href: '/espace-apprenant/decouverte' },
-    { fait: recommandations !== null && recommandations.length > 0, label: 'Pistes recommandées', href: '/espace-apprenant/recommandations' },
-    { fait: favoris !== null && favoris.length > 0, label: 'Formations mises de côté', href: '/catalogue' },
-    { fait: preference !== undefined && preference !== null, label: 'Vœux préparés', href: '/espace-apprenant/preferences' },
-  ];
-  const totalFait = etapes.filter((etape) => etape.fait).length;
-  const progression = Math.round((totalFait / etapes.length) * 100);
-  const prochaine = !decouverte
-    ? { titre: 'Commencer mon profil', detail: 'Quelques réponses pour personnaliser tes pistes.', href: '/espace-apprenant/decouverte' }
-    : recommandations === null
-      ? { titre: 'Préparer tes pistes', detail: 'Les recommandations sont en cours de chargement.', href: '/espace-apprenant/recommandations' }
-      : recommandations.length === 0
-        ? { titre: 'Explorer le catalogue', detail: 'Découvre les formations techniques disponibles.', href: '/catalogue' }
-        : favoris !== null && favoris.length === 0
-          ? { titre: 'Garder une formation de côté', detail: 'Enregistre les pistes qui t’intéressent pour les comparer.', href: '/catalogue' }
-          : preference === null && palierDeSaisie(profil.palier)
-            ? { titre: 'Préparer mes vœux', detail: 'Organise tes choix avec ta famille.', href: '/espace-apprenant/preferences' }
-            : { titre: 'Comparer mes pistes', detail: 'Mets deux formations côte à côte avant de décider.', href: '/catalogue/comparer' };
-
-  return (
-    <section className="md:col-span-2 rounded-bj-md border border-bj-green/25 bg-gradient-to-br from-white to-bj-green/5 p-4v md:p-6v" aria-labelledby="vue-ensemble">
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5v">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2v text-bj-green mb-2v"><ListChecks size={18} aria-hidden="true" /><p className="text-xs font-semibold uppercase tracking-[0.14em]">Vue d’ensemble</p></div>
-          <h2 id="vue-ensemble" className="text-2xl font-bold">{estParent ? `Le parcours de ${profil.prenom}` : 'Ton parcours d’orientation'}</h2>
-          <p className="text-sm text-bj-gray-500 mt-1v">{totalFait} étape{totalFait > 1 ? 's' : ''} sur {etapes.length} avancée{totalFait > 1 ? 's' : ''} · {progression}% du parcours repéré</p>
-          <div className="h-2 max-w-xl rounded-full bg-bj-gray-925 mt-4v" role="progressbar" aria-valuenow={progression} aria-valuemin={0} aria-valuemax={100} aria-label="Progression du parcours d’orientation"><div className="h-full rounded-full bg-bj-green transition-[width] duration-500" style={{ width: `${progression}%` }} /></div>
-        </div>
-        <Link href={prochaine.href} className="group inline-flex shrink-0 items-center justify-between gap-4v rounded-bj-sm bg-bj-green px-4v py-3v text-white shadow-sm transition hover:bg-bj-green/90 hover:shadow-md focus-visible:outline-white">
-          <span><span className="block text-xs text-white/75">Prochaine étape</span><span className="block font-semibold">{prochaine.titre}</span><span className="block text-xs text-white/80 mt-1v max-w-[16rem]">{prochaine.detail}</span></span>
-          <ArrowRight size={19} className="transition-transform group-hover:translate-x-1" aria-hidden="true" />
-        </Link>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2v md:gap-3v mt-5v">
-        {etapes.map((etape) => <Link key={etape.label} href={etape.href} className="flex items-center gap-2v rounded-bj-sm border border-bj-gray-925 bg-white/80 p-3v text-sm transition hover:border-bj-green/40 hover:bg-white"><span className={etape.fait ? 'text-bj-green' : 'text-bj-gray-500'}>{etape.fait ? <CheckCircle2 size={17} aria-hidden="true" /> : <Clock size={17} aria-hidden="true" />}</span><span className={etape.fait ? 'font-medium' : 'text-bj-gray-500'}>{etape.label}</span></Link>)}
-      </div>
-    </section>
-  );
-}
-
-function ParentPilotage({ profil, preference, recommandations }: { profil: ProfilApprenant; preference: Preference | null | undefined; recommandations: Recommandation[] }) {
-  return (
-    <section className="md:col-span-2 rounded-bj-md border border-bj-blue/30 bg-bj-blue/5 p-4v md:p-5v" aria-labelledby="pilotage-parent">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3v mb-4v"><div><p className="text-xs font-semibold uppercase tracking-wide text-bj-blue">Pour accompagner {profil.prenom}</p><h2 id="pilotage-parent" className="text-xl font-bold">Les points à regarder ensemble</h2></div><Link href="/espace-apprenant/conseiller" className="text-sm font-medium text-bj-green hover:underline">Demander une explication à Guido →</Link></div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3v">
-        <div className="bg-white rounded-bj-sm p-3v"><p className="text-xs text-bj-gray-500 mb-1v">Pistes à examiner</p><p className="text-xl font-bold">{recommandations.length}</p><p className="text-xs text-bj-gray-500 mt-1v">recommandation{recommandations.length > 1 ? 's' : ''} disponible{recommandations.length > 1 ? 's' : ''}</p></div>
-        <div className="bg-white rounded-bj-sm p-3v"><p className="text-xs text-bj-gray-500 mb-1v">Vœux</p><p className="text-xl font-bold">{preference ? (preference.valideParent ? 'Validés' : 'À relire') : 'À préparer'}</p><Link href="/espace-apprenant/preferences" className="text-xs text-bj-green hover:underline">Accéder aux vœux →</Link></div>
-        <div className="bg-white rounded-bj-sm p-3v"><p className="text-xs text-bj-gray-500 mb-1v">Échange conseillé</p><p className="text-sm font-medium">Parler des envies et des contraintes de trajet, d’internat et de durée.</p></div>
-      </div>
-    </section>
-  );
-}
-
-function EtapeOrientation({
-  profil,
-  preference,
-  estParent,
-}: {
-  profil: ProfilApprenant;
-  preference: Preference | null | undefined;
-  estParent: boolean;
-}) {
-  if (!palierDeSaisie(profil.palier)) {
-    return (
-      <>
-        <p className="text-sm mb-3v">
-          {profil.palier === 'QUATRIEME'
-            ? 'En 4e, découvre les formations qui correspondent à tes résultats, avant de choisir tes vœux en 3e.'
-            : 'Les vœux se saisissent en 3e et en Terminale.'}
-        </p>
-        <Link href="/espace-apprenant/recommandations" className="bj-btn bj-btn-primary text-sm">
-          Voir les pistes
-        </Link>
-      </>
-    );
+}): ProchaineEtape {
+  if (!decouverte) {
+    return estParent
+      ? {
+          titre: `Le profil de découverte de ${profil.prenom}`,
+          justification: `Quelques réponses suffisent pour personnaliser ses pistes de formation : c’est le point de départ du parcours.`,
+          actionLabel: 'Voir le questionnaire',
+          href: '/espace-apprenant/decouverte',
+        }
+      : {
+          titre: 'Ton profil de découverte',
+          justification: 'Réponds à quelques questions sur ce qui te plaît : c’est ce qui rend tes pistes personnelles.',
+          actionLabel: 'Commencer le questionnaire',
+          href: '/espace-apprenant/decouverte',
+        };
   }
-
-  if (preference === undefined) return <Chargement />;
-
-  if (!preference) {
-    return (
-      <>
-        <p className="text-sm mb-3v">
-          {estParent ? `${profil.prenom} n'a pas encore saisi ses vœux.` : "Tu n'as pas encore saisi tes vœux d'orientation."}
-        </p>
-        {!estParent && (
-          <Link href="/espace-apprenant/preferences" className="bj-btn bj-btn-primary text-sm">
-            Saisir mes vœux
-          </Link>
-        )}
-      </>
-    );
+  if (recommandations === null || recommandations.length === 0) {
+    return estParent
+      ? {
+          titre: 'Les premières pistes',
+          justification: `À partir de son profil et de ses résultats, calculez les formations qui correspondent le mieux à ${profil.prenom}.`,
+          actionLabel: 'Voir les pistes',
+          href: '/espace-apprenant/recommandations',
+        }
+      : {
+          titre: 'Tes premières pistes',
+          justification: 'À partir de ton profil et de tes résultats, découvre les formations qui te correspondent.',
+          actionLabel: 'Voir mes pistes',
+          href: '/espace-apprenant/recommandations',
+        };
   }
-
-  if (preference.valideParent) {
-    return (
-      <p className="flex items-start gap-2v text-sm text-bj-green font-medium">
-        <CheckCircle2 size={18} className="shrink-0" aria-hidden="true" />
-        Vœux validés par le parent le {dateLisible(preference.dateValidationParent as string)}.
-      </p>
-    );
+  if (favoris !== null && favoris.length === 0) {
+    return estParent
+      ? {
+          titre: 'Des formations à garder de côté',
+          // C'est ${profil.prenom} qui met de côté (le cœur du catalogue n'est actif que pour l'élève
+          // connecté, pas pour le compte parent) : ne pas laisser croire que « vous » (le parent) peut le
+          // faire depuis son propre catalogue, sans quoi la promesse ne correspond à rien de cliquable.
+          justification: `Parcourez le catalogue ensemble : ${profil.prenom} peut mettre de côté les formations qui l'intéressent, pour les retrouver au moment de préparer les vœux.`,
+          actionLabel: 'Explorer le catalogue',
+          href: '/catalogue',
+        }
+      : {
+          titre: 'Des formations à garder de côté',
+          justification: 'Dans le catalogue, appuie sur le cœur pour garder les formations qui t’intéressent.',
+          actionLabel: 'Explorer le catalogue',
+          href: '/catalogue',
+        };
   }
-
-  return (
-    <>
-      <p className="flex items-start gap-2v text-sm mb-3v">
-        <Clock size={18} className="shrink-0 text-bj-ochre-fonce" aria-hidden="true" />
-        {estParent ? `Les vœux de ${profil.prenom} attendent ta validation.` : 'Vœux enregistrés, en attente de validation par ton parent.'}
-      </p>
-      <Link href="/espace-apprenant/preferences" className="bj-btn bj-btn-primary text-sm">
-        {estParent ? 'Voir et valider' : 'Voir mes vœux'}
-      </Link>
-    </>
-  );
+  if (palierDeSaisie(profil.palier) && preference === null) {
+    return estParent
+      ? {
+          titre: 'Les vœux à préparer',
+          justification: `${profil.prenom} peut maintenant organiser ses choix ; vous les validerez ensemble une fois saisis.`,
+          actionLabel: 'Voir les vœux',
+          href: '/espace-apprenant/preferences',
+        }
+      : {
+          titre: 'Tes vœux d’orientation',
+          justification: 'Organise et enregistre tes choix, avec ta famille.',
+          actionLabel: 'Saisir mes vœux',
+          href: '/espace-apprenant/preferences',
+        };
+  }
+  if (preference && !preference.valideParent && estParent) {
+    return {
+      titre: `Valider les vœux de ${profil.prenom}`,
+      justification: 'Relisez les choix ensemble avant de les valider : la décision revient à toute la famille.',
+      actionLabel: 'Voir et valider',
+      href: '/espace-apprenant/preferences',
+    };
+  }
+  return estParent
+    ? {
+        titre: `Le parcours de ${profil.prenom} est à jour`,
+        justification: 'Vous pouvez comparer les pistes préférées ou en discuter avec Guido avant de décider ensemble.',
+        actionLabel: 'Comparer les pistes',
+        href: '/catalogue/comparer',
+        parcoursComplet: true,
+      }
+    : {
+        titre: 'Ton parcours est à jour',
+        justification: 'Tu peux comparer tes pistes préférées ou en discuter avec Guido avant de décider.',
+        actionLabel: 'Comparer mes pistes',
+        href: '/catalogue/comparer',
+        parcoursComplet: true,
+      };
 }

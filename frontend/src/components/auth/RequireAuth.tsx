@@ -1,9 +1,12 @@
 'use client';
 
 import { useEffect, type ReactNode } from 'react';
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { ShieldAlert } from 'lucide-react';
 import { useAuthStore, type Role } from '@/stores/authStore';
+import { ButtonLink } from '@/components/ui/Button';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { LoadingState } from '@/components/ui/LoadingState';
 
 /** Réserve une page aux utilisateurs connectés, éventuellement à certains rôles. */
 export function RequireAuth({ roles, children }: { roles?: Role[]; children: ReactNode }) {
@@ -19,20 +22,21 @@ export function RequireAuth({ roles, children }: { roles?: Role[]; children: Rea
 
   if (!pret || !user) {
     return (
-      <p className="py-16v text-center text-bj-gray-500" aria-busy="true">
-        Chargement…
-      </p>
+      <div className="bj-container py-16v">
+        <LoadingState />
+      </div>
     );
   }
 
   if (roles && !roles.includes(user.role)) {
     return (
-      <div className="bj-container py-16v text-center">
-        <h1 className="text-2xl font-bold mb-2v">Accès réservé</h1>
-        <p className="text-bj-gray-500 mb-6v">Cet espace n&apos;est pas accessible avec ton profil.</p>
-        <Link href="/" className="bj-btn bj-btn-secondary">
-          Retour à l&apos;accueil
-        </Link>
+      <div className="bj-container py-16v">
+        <EmptyState
+          icon={<ShieldAlert size={22} aria-hidden="true" />}
+          title="Accès réservé"
+          description="Cet espace n’est pas accessible avec ton profil."
+          action={<ButtonLink href="/">Retour à l’accueil</ButtonLink>}
+        />
       </div>
     );
   }

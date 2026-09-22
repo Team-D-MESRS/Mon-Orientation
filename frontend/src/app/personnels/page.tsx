@@ -6,9 +6,8 @@ import { authApi } from '@/lib/api';
 import { messageErreur } from '@/lib/erreurs';
 import { cheminDeRetour } from '@/lib/redirection';
 import { accueilDuRole, useAuthStore } from '@/stores/authStore';
-
-const CHAMP =
-  'w-full px-4v py-3v border border-bj-gray-850 rounded-bj-sm text-sm focus:outline-none focus:ring-2 focus:ring-bj-green';
+import { Alerte, CHAMP } from '@/components/espace/ui';
+import { Button } from '@/components/ui/Button';
 
 /** Accès des personnels du ministère : compte interne, distinct de l'identification EducMaster. */
 export default function PersonnelsPage() {
@@ -42,8 +41,11 @@ export default function PersonnelsPage() {
       <div className="bj-container max-w-md w-full">
         <div className="bj-card p-8v">
           <div className="text-center mb-8v">
+            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-text-on-primary font-bold text-xl mx-auto mb-4v">
+              MO
+            </div>
             <h1 className="text-2xl font-bold">Accès des personnels</h1>
-            <p className="text-sm text-bj-gray-500 mt-2v">
+            <p className="text-sm text-text-secondary mt-2v">
               Administration, DGES et établissements. Les élèves et leurs parents passent par{' '}
               <span className="whitespace-nowrap">l&apos;identification EducMaster</span>.
             </p>
@@ -82,19 +84,11 @@ export default function PersonnelsPage() {
               />
             </div>
 
-            {erreur && (
-              <p role="alert" className="text-sm p-3v rounded-bj-sm border border-bj-red/40 bg-bj-red/5 text-bj-red">
-                {erreur}
-              </p>
-            )}
+            {erreur && <Alerte ton="erreur">{erreur}</Alerte>}
 
-            <button
-              type="submit"
-              disabled={envoi || !identifiant.trim() || !motDePasse}
-              className="w-full bj-btn bj-btn-primary justify-center disabled:opacity-60 disabled:cursor-not-allowed"
-            >
+            <Button type="submit" fullWidth loading={envoi} disabled={!identifiant.trim() || !motDePasse}>
               {envoi ? 'Connexion…' : 'Se connecter'}
-            </button>
+            </Button>
           </form>
         </div>
       </div>

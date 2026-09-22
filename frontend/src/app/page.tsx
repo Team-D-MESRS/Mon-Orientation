@@ -19,6 +19,9 @@ import { CTADecouverte } from '@/components/accueil/CTADecouverte';
 import { ApresLeBac } from '@/components/accueil/ApresLeBac';
 import { Domaines } from '@/components/accueil/Domaines';
 import { Apparition } from '@/components/animation/Apparition';
+import { ActionCard } from '@/components/ui/ActionCard';
+import { Badge } from '@/components/ui/Badge';
+import { SectionHeader } from '@/components/ui/SectionHeader';
 
 const PROFILS: { Icone: LucideIcon; titre: string; texte: string; href: string; action: string }[] = [
   {
@@ -78,8 +81,7 @@ const GARANTIES: { Icone: LucideIcon; titre: string; texte: string }[] = [
 function TitreSection({ titre, sousTitre, marge = 'mb-8v' }: { titre: string; sousTitre?: string; marge?: string }) {
   return (
     <Apparition className={marge}>
-      <h2 className="text-2xl md:text-3xl font-bold mb-2v">{titre}</h2>
-      {sousTitre && <p className="text-bj-gray-500">{sousTitre}</p>}
+      <SectionHeader title={titre} subtitle={sousTitre} />
     </Apparition>
   );
 }
@@ -88,19 +90,19 @@ export default function Accueil() {
   return (
     <>
       {/* Bandeau principal : recherche directe et raccourci par série (apparition en cascade au chargement) */}
-      <section className="bg-white border-b border-bj-gray-925 overflow-hidden">
+      <section className="bg-surface border-b border-border overflow-hidden">
         <div className="bj-container py-12v lg:py-16v grid grid-cols-1 lg:grid-cols-[1.25fr_1fr] gap-12v items-center">
           <div>
             <Apparition
               as="p"
-              className="inline-flex items-center gap-2v px-3v py-1v rounded-full bg-bj-green/10 text-bj-green text-sm font-semibold mb-4v"
+              className="inline-flex items-center gap-2v px-3v py-1v rounded-full bg-primary-soft text-primary text-sm font-semibold mb-4v"
             >
               <Compass size={16} aria-hidden="true" /> Plateforme nationale d&apos;orientation scolaire
             </Apparition>
-            <Apparition as="h1" delai={80} className="text-4xl md:text-5xl font-bold leading-tight mb-4v">
+            <Apparition as="h1" delai={80} className="font-serif text-4xl md:text-5xl font-bold leading-tight mb-4v">
               Choisis ton avenir avec confiance
             </Apparition>
-            <Apparition as="p" delai={160} className="text-lg text-bj-gray-500 mb-8v max-w-xl">
+            <Apparition as="p" delai={160} className="text-lg text-text-secondary mb-8v max-w-xl">
               De la 4e à la Terminale, découvre les formations, comprends tes résultats et prépare tes vœux d&apos;orientation, avec ta
               famille.
             </Apparition>
@@ -111,20 +113,20 @@ export default function Accueil() {
                   Rechercher une formation, un métier ou une ville
                 </label>
                 <div className="relative flex-1">
-                  <Search className="absolute left-3v top-1/2 -translate-y-1/2 text-bj-gray-500" size={20} aria-hidden="true" />
+                  <Search className="absolute left-3v top-1/2 -translate-y-1/2 text-text-secondary" size={20} aria-hidden="true" />
                   <input
                     id="recherche-accueil"
                     name="q"
                     type="search"
                     placeholder="Une formation, un métier, une ville…"
-                    className="w-full pl-10 pr-4v py-3v border border-bj-gray-850 rounded-bj-sm text-sm bg-white focus:outline-none focus:ring-2 focus:ring-bj-green"
+                    className="w-full pl-10 pr-4v py-3v border border-border-strong rounded-bj-sm text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
                 <button type="submit" className="bj-btn bj-btn-primary">
                   Rechercher
                 </button>
               </form>
-              <Link href="/catalogue" className="inline-flex items-center gap-1v text-sm font-medium text-bj-green hover:underline mb-8v">
+              <Link href="/catalogue" className="inline-flex items-center gap-1v text-sm font-medium text-primary hover:underline mb-8v">
                 ou parcourir tout le catalogue <ArrowRight size={14} aria-hidden="true" />
               </Link>
             </Apparition>
@@ -147,16 +149,7 @@ export default function Accueil() {
           <ul className="grid grid-cols-1 md:grid-cols-3 gap-6v">
             {PROFILS.map(({ Icone, titre, texte, href, action }, i) => (
               <Apparition as="li" key={titre} delai={i * 120}>
-                <Link href={href} className="bj-card flex flex-col h-full p-6v group">
-                  <span className="w-12 h-12 rounded-full bg-bj-green text-white flex items-center justify-center mb-4v">
-                    <Icone size={24} aria-hidden="true" />
-                  </span>
-                  <span className="text-lg font-bold mb-2v">{titre}</span>
-                  <span className="text-sm text-bj-gray-500 flex-1 mb-4v">{texte}</span>
-                  <span className="inline-flex items-center gap-1v text-sm font-medium text-bj-green group-hover:underline">
-                    {action} <ArrowRight size={14} aria-hidden="true" />
-                  </span>
-                </Link>
+                <ActionCard href={href} icon={<Icone size={24} aria-hidden="true" />} title={titre} description={texte} actionLabel={action} />
               </Apparition>
             ))}
           </ul>
@@ -164,26 +157,26 @@ export default function Accueil() {
       </section>
 
       {/* Parcours : les étapes apparaissent l'une après l'autre */}
-      <section className="py-12v bg-white border-y border-bj-gray-925">
+      <section className="py-12v bg-surface border-y border-border">
         <div className="bj-container">
           <TitreSection titre="Comment ça marche ?" />
           <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6v">
             {ETAPES.map(({ Icone, titre, texte }, i) => (
               <Apparition as="li" key={titre} delai={i * 150} className="relative pl-14">
                 <span
-                  className="absolute left-0 top-0 w-10 h-10 rounded-full border-2 border-bj-green text-bj-green font-bold flex items-center justify-center"
+                  className="absolute left-0 top-0 w-10 h-10 rounded-full border-2 border-primary text-primary font-bold flex items-center justify-center"
                   aria-hidden="true"
                 >
                   {i + 1}
                 </span>
                 <h3 className="flex items-center gap-2v font-bold mb-1v">
-                  <Icone size={18} className="text-bj-green" aria-hidden="true" />
+                  <Icone size={18} className="text-primary" aria-hidden="true" />
                   <span>
                     <span className="sr-only">Étape {i + 1} : </span>
                     {titre}
                   </span>
                 </h3>
-                <p className="text-sm text-bj-gray-500">{texte}</p>
+                <p className="text-sm text-text-secondary">{texte}</p>
               </Apparition>
             ))}
           </ol>
@@ -202,19 +195,19 @@ export default function Accueil() {
       </section>
 
       {/* Conseiller en fongbé : texte depuis la gauche, échange depuis la droite, bulles l'une après l'autre */}
-      <section className="py-12v bg-white border-y border-bj-gray-925 overflow-hidden">
+      <section className="py-12v bg-surface border-y border-border overflow-hidden">
         <div className="bj-container grid grid-cols-1 lg:grid-cols-2 gap-8v items-center">
           <Apparition effet="gauche">
-            <p className="inline-flex items-center gap-2v px-3v py-1v rounded-full bg-bj-blue/10 text-bj-blue text-sm font-semibold mb-4v">
-              <Languages size={16} aria-hidden="true" /> Nouveau
-            </p>
+            <Badge ton="info" icon={<Languages size={14} aria-hidden="true" />} className="mb-4v text-sm py-1v">
+              Nouveau
+            </Badge>
             <h2 className="text-2xl md:text-3xl font-bold mb-3v">Guido répond aussi en fongbé, et t&apos;écoute en note vocale</h2>
-            <p className="text-bj-gray-500 mb-3v">
+            <p className="text-text-secondary mb-3v">
               Pose tes questions sur les formations, les métiers et tes pistes. Choisis « Fɔ̀ngbè » pour une réponse dans ta langue, ou
               parle-lui directement en note vocale — en fon, en yoruba, en mina — s&apos;écrire n&apos;est pas toujours facile, dire les
               choses l&apos;est davantage.
             </p>
-            <p className="text-xs text-bj-gray-500 mb-6v">
+            <p className="text-xs text-text-secondary mb-6v">
               Réponses rédigées automatiquement. Guido explique, il ne décide pas à ta place.
             </p>
             <Link href="/conseiller" className="bj-btn bj-btn-primary">
@@ -222,7 +215,7 @@ export default function Accueil() {
             </Link>
           </Apparition>
 
-          <Apparition as="figure" effet="droite" delai={150} className="rounded-bj-lg border border-bj-gray-925 bg-bj-gray-975 p-6v space-y-3v">
+          <Apparition as="figure" effet="droite" delai={150} className="rounded-bj-lg border border-border bg-background p-6v space-y-3v">
             <Apparition effet="droite" delai={500} className="flex justify-end">
               <p className="bubble-user max-w-[85%] text-sm">Bonjour&nbsp;!</p>
             </Apparition>
@@ -231,10 +224,10 @@ export default function Accueil() {
                 <p lang="fon" className="text-sm font-medium">
                   A fɔ́n à, azɔ̌kplɔ́n tɛ́ a jló na bló ɖò bákì gudo&nbsp;?
                 </p>
-                <p className="text-xs text-bj-gray-500 mt-1v">« Bonjour, quelle formation veux-tu faire après le bac&nbsp;? »</p>
+                <p className="text-xs text-text-secondary mt-1v">« Bonjour, quelle formation veux-tu faire après le bac&nbsp;? »</p>
               </div>
             </Apparition>
-            <figcaption className="text-xs text-bj-gray-500 text-center pt-2v">Exemple de réponse en fongbé, avec sa traduction</figcaption>
+            <figcaption className="text-xs text-text-secondary text-center pt-2v">Exemple de réponse en fongbé, avec sa traduction</figcaption>
           </Apparition>
         </div>
       </section>
@@ -246,25 +239,25 @@ export default function Accueil() {
           <ul className="grid grid-cols-1 md:grid-cols-3 gap-8v">
             {GARANTIES.map(({ Icone, titre, texte }, i) => (
               <Apparition as="li" key={titre} delai={i * 120} className="flex gap-4v">
-                <Icone size={24} className="text-bj-green shrink-0 mt-[2px]" aria-hidden="true" />
+                <Icone size={24} className="text-primary shrink-0 mt-[2px]" aria-hidden="true" />
                 <div>
                   <h3 className="font-bold mb-1v">{titre}</h3>
-                  <p className="text-sm text-bj-gray-500">{texte}</p>
+                  <p className="text-sm text-text-secondary">{texte}</p>
                 </div>
               </Apparition>
             ))}
           </ul>
-          <Apparition as="p" delai={200} className="mt-10 text-sm text-bj-gray-500">
+          <Apparition as="p" delai={200} className="mt-10 text-sm text-text-secondary">
             Besoin d&apos;aide&nbsp;?{' '}
-            <Link href="/guide" className="font-medium text-bj-green hover:underline">
+            <Link href="/guide" className="font-medium text-primary hover:underline">
               Guide d&apos;utilisation
             </Link>{' '}
             ·{' '}
-            <Link href="/faq" className="font-medium text-bj-green hover:underline">
+            <Link href="/faq" className="font-medium text-primary hover:underline">
               Questions fréquentes
             </Link>{' '}
             ·{' '}
-            <Link href="/donnees-personnelles" className="font-medium text-bj-green hover:underline">
+            <Link href="/donnees-personnelles" className="font-medium text-primary hover:underline">
               Données personnelles
             </Link>
           </Apparition>

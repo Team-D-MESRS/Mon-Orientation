@@ -6,9 +6,8 @@ import { authApi } from '@/lib/api';
 import { messageErreur } from '@/lib/erreurs';
 import { cheminDeRetour } from '@/lib/redirection';
 import { accueilDuRole, useAuthStore } from '@/stores/authStore';
-
-const CHAMP =
-  'w-full px-4v py-3v border border-bj-gray-850 rounded-bj-sm text-sm focus:outline-none focus:ring-2 focus:ring-bj-green';
+import { Alerte, CHAMP } from '@/components/espace/ui';
+import { Button } from '@/components/ui/Button';
 
 export default function IdentificationPage() {
   const router = useRouter();
@@ -44,11 +43,11 @@ export default function IdentificationPage() {
       <div className="bj-container max-w-md w-full">
         <div className="bj-card p-8v">
           <div className="text-center mb-8v">
-            <div className="w-16 h-16 bg-bj-green rounded-full flex items-center justify-center text-white font-bold text-xl mx-auto mb-4v">
+            <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center text-text-on-primary font-bold text-xl mx-auto mb-4v">
               MO
             </div>
             <h1 className="text-2xl font-bold">S&apos;identifier</h1>
-            <p className="text-sm text-bj-gray-500 mt-2v">
+            <p className="text-sm text-text-secondary mt-2v">
               Avec les identifiants que tu utilises déjà sur EducMaster. Il n&apos;y a pas de compte à créer.
             </p>
           </div>
@@ -68,7 +67,7 @@ export default function IdentificationPage() {
                 className={CHAMP}
                 placeholder="Ton NIP ou ton numéro EducMaster"
               />
-              <p className="text-xs text-bj-gray-500 mt-1v">
+              <p className="text-xs text-text-secondary mt-1v">
                 Parent : saisis l&apos;adresse de ton compte EducMaster.
               </p>
             </div>
@@ -89,22 +88,14 @@ export default function IdentificationPage() {
               />
             </div>
 
-            {erreur && (
-              <p role="alert" className="text-sm p-3v rounded-bj-sm border border-bj-red/40 bg-bj-red/5 text-bj-red">
-                {erreur}
-              </p>
-            )}
+            {erreur && <Alerte ton="erreur">{erreur}</Alerte>}
 
-            <button
-              type="submit"
-              disabled={envoi || !identifiant.trim() || !motDePasse}
-              className="w-full bj-btn bj-btn-primary justify-center disabled:opacity-60 disabled:cursor-not-allowed"
-            >
+            <Button type="submit" fullWidth loading={envoi} disabled={!identifiant.trim() || !motDePasse}>
               {envoi ? 'Identification…' : "S'identifier"}
-            </button>
+            </Button>
           </form>
 
-          <p className="mt-6v text-center text-xs text-bj-gray-500">
+          <p className="mt-6v text-center text-xs text-text-secondary">
             Identifiants oubliés ? Rapproche-toi de ton établissement, qui gère ton dossier dans EducMaster.
           </p>
         </div>

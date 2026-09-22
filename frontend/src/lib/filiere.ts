@@ -157,17 +157,29 @@ export const TYPE_LABELS: Record<TypeFiliere, string> = {
   UNIVERSITE: 'Université',
 };
 
-export const TYPE_COLORS: Record<TypeFiliere, string> = {
-  GENERALE: 'bg-blue-100 text-blue-800',
-  TECHNIQUE: 'bg-purple-100 text-purple-800',
-  TECHNIQUE_AGRICOLE: 'bg-yellow-100 text-yellow-800',
-  PROFESSIONNELLE: 'bg-orange-100 text-orange-800',
-  UNIVERSITE: 'bg-sky-100 text-sky-800',
+/**
+ * Ton de badge par type de formation (voir components/ui/Badge.tsx). Le type de cette valeur doit rester
+ * structurellement compatible avec `Ton` de components/ui/tons.ts (pas d'import direct : lib/ reste
+ * indépendant de components/).
+ */
+export type ToneFiliere = 'neutre' | 'marque' | 'accent' | 'terre' | 'info' | 'succes' | 'attention' | 'erreur';
+
+export const TYPE_TONES: Record<TypeFiliere, ToneFiliere> = {
+  GENERALE: 'info',
+  TECHNIQUE: 'marque',
+  TECHNIQUE_AGRICOLE: 'terre',
+  PROFESSIONNELLE: 'accent',
+  UNIVERSITE: 'neutre',
 };
 
 export const NIVEAU_LABELS: Record<NiveauAcces, string> = {
   APRES_BEPC: 'Après le BEPC (fin de 3e)',
   APRES_BAC: 'Après le bac (fin de Terminale)',
+};
+
+export const NIVEAU_TONES: Record<NiveauAcces, ToneFiliere> = {
+  APRES_BEPC: 'info',
+  APRES_BAC: 'neutre',
 };
 
 /** Même liste que backend/src/filiere/domaines.ts */

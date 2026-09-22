@@ -25,6 +25,7 @@ const totalDe = async (parametres) => (await (await fetch(`${API}/filiere?limit=
 const nav = await lancerNavigateur();
 const r = rapporteur();
 const contient = (t) => `document.body.textContent.includes(${JSON.stringify(t)})`;
+const trouvees = (n) => `${n} filière${n > 1 ? 's' : ''} trouvée${n > 1 ? 's' : ''}`;
 const nbCartes = "document.querySelectorAll('main article').length";
 const barre = "document.querySelector('[aria-label=\"Comparateur de formations\"]')";
 const favorisDuTableauDeBord = "document.querySelectorAll('section[aria-labelledby=\"titre-favoris\"] ul li').length";
@@ -67,7 +68,7 @@ try {
 
   // ── Visiteur : recherche et filtres
   await nav.aller(`${BASE}/catalogue`);
-  await nav.attendre(`${nbCartes} > 0 && ${contient(`${TOTAL} filière(s) trouvée(s)`)}`);
+  await nav.attendre(`${nbCartes} > 0 && ${contient(`${trouvees(TOTAL)}`)}`);
   r.verifier(
     `Visiteur : ${TOTAL} fiches, pas de cœur (réservé aux élèves)`,
     await nav.evaluer("[...document.querySelectorAll('main article button')].every((b) => b.textContent.includes('Comparer'))"),
@@ -77,21 +78,21 @@ try {
   await nav.attendre(`location.search.includes('q=electricite') && ${contient("Métiers de l'électricité")} && !${contient(`${TOTAL} filière(s)`)}`);
   r.verifier('Recherche sans accent : « electricite » trouve le DTM Électricité', true, await nav.evaluer(`${nbCartes} + ' fiche(s)'`));
 
-  await nav.cliquerTexte('Effacer les filtres', 'button');
-  await nav.attendre(`${contient(`${TOTAL} filière(s) trouvée(s)`)} && document.querySelector('#recherche').value === ''`);
+  await nav.cliquerTexte('Tout effacer', 'button');
+  await nav.attendre(`${contient(`${trouvees(TOTAL)}`)} && document.querySelector('#recherche').value === ''`);
   await nav.saisir('#filtre-domaine', 'NUMERIQUE');
-  await nav.attendre(`location.search.includes('domaine=NUMERIQUE') && ${contient(`${NB_NUMERIQUE} filière(s) trouvée(s)`)}`);
+  await nav.attendre(`location.search.includes('domaine=NUMERIQUE') && ${contient(`${trouvees(NB_NUMERIQUE)}`)}`);
   r.verifier(`Filtre domaine : Numérique (${NB_NUMERIQUE})`, await nav.evaluer(`${nbCartes} === ${Math.min(NB_NUMERIQUE, 48)}`));
-  await nav.cliquerTexte('Effacer les filtres', 'button');
-  await nav.attendre(contient(`${TOTAL} filière(s) trouvée(s)`));
+  await nav.cliquerTexte('Tout effacer', 'button');
+  await nav.attendre(contient(`${trouvees(TOTAL)}`));
   await nav.cliquerTexte('Avec bourses', 'label');
-  await nav.attendre(`location.search.includes('bourses=true') && ${contient(`${NB_BOURSES} filière(s) trouvée(s)`)}`);
+  await nav.attendre(`location.search.includes('bourses=true') && ${contient(`${trouvees(NB_BOURSES)}`)}`);
   r.verifier(`Filtre bourses (${NB_BOURSES})`, true);
-  await nav.cliquerTexte('Effacer les filtres', 'button');
-  await nav.attendre(contient(`${TOTAL} filière(s) trouvée(s)`));
+  await nav.cliquerTexte('Tout effacer', 'button');
+  await nav.attendre(contient(`${trouvees(TOTAL)}`));
   const NB_BORGOU = await totalDe('departement=Borgou');
   await nav.saisir('#filtre-departement', 'Borgou');
-  await nav.attendre(`location.search.includes('departement=Borgou') && ${contient(`${NB_BORGOU} filière(s) trouvée(s)`)}`);
+  await nav.attendre(`location.search.includes('departement=Borgou') && ${contient(`${trouvees(NB_BORGOU)}`)}`);
   r.verifier(
     `Filtre département : Borgou (${NB_BORGOU}), parmi les 12 départements`,
     await nav.evaluer("document.querySelectorAll('#filtre-departement option').length === 13"),

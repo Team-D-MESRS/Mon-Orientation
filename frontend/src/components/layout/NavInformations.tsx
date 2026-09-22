@@ -17,7 +17,9 @@ export function NavInformations() {
                 href={href}
                 aria-current={actif ? 'page' : undefined}
                 className={`block px-3v py-2v rounded-bj-sm text-sm font-medium transition-colors ${
-                  actif ? 'bg-bj-green text-white' : 'bg-white border border-bj-gray-925 text-bj-gray-200 hover:border-bj-green'
+                  actif
+                    ? 'bg-primary text-text-on-primary'
+                    : 'bg-surface border border-border text-text-secondary hover:border-primary hover:text-text'
                 }`}
               >
                 {label}
