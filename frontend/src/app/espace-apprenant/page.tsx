@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { BookOpen, CheckCircle2, Circle, Clock, GraduationCap, Heart, MessageCircle, Scale } from 'lucide-react';
+import { BookOpen, CheckCircle2, Circle, Clock, Heart, MessageCircle, Scale } from 'lucide-react';
 import { apprenantApi, orientationApi } from '@/lib/api';
 import {
   noteLisible,
@@ -14,9 +14,9 @@ import {
   type Recommandation,
 } from '@/lib/apprenant';
 import { useEspace, useProfil } from '@/components/espace/EspaceContext';
-import { Carte } from '@/components/espace/ui';
 import { NextActionCard, ParentSummary, ProgressOverview, RecommendationPreview } from '@/components/espace/dashboard';
 import { ActionCard } from '@/components/ui/ActionCard';
+import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 
@@ -128,32 +128,39 @@ export default function TableauDeBordPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6v items-start">
         <EtapesParcours etapes={etapes} preference={preference} estParent={estParent} prenom={profil.prenom} />
 
-        <Carte titre={`Résultats ${profil.bilan.anneeScolaire ?? ''}`} icone={<GraduationCap size={18} />}>
-          {profil.bilan.moyenneGenerale === null ? (
-            <p className="text-sm text-text-secondary">Aucune note disponible pour l&apos;instant.</p>
-          ) : (
-            <>
-              <p className="text-3xl font-bold text-primary">
-                {noteLisible(profil.bilan.moyenneGenerale)}
-                <span className="text-base font-medium text-text-secondary">/20</span>
-              </p>
-              <p className="text-xs text-text-secondary mb-4v">Moyenne générale</p>
-              {profil.bilan.forces.length > 0 && (
-                <p className="text-sm mb-1v">
-                  <span className="font-medium">{estParent ? 'Points forts' : 'Tes points forts'} :</span> {profil.bilan.forces.join(', ')}
+        <section aria-labelledby="titre-resultats">
+          {/* SectionHeader ici plutôt que le titre interne de <Carte> (comme pour « Ton parcours » à
+              gauche) : les deux colonnes ont ainsi un en-tête de même hauteur, et les deux cartes qui
+              suivent démarrent exactement à la même ligne — sans ça, celle de droite, sans en-tête propre,
+              remontait plus haut que la liste d'étapes. */}
+          <SectionHeader as="h2" id="titre-resultats" title={`Résultats ${profil.bilan.anneeScolaire ?? ''}`} className="mb-4v" />
+          <Card>
+            {profil.bilan.moyenneGenerale === null ? (
+              <p className="text-sm text-text-secondary">Aucune note disponible pour l&apos;instant.</p>
+            ) : (
+              <>
+                <p className="text-3xl font-bold text-primary">
+                  {noteLisible(profil.bilan.moyenneGenerale)}
+                  <span className="text-base font-medium text-text-secondary">/20</span>
                 </p>
-              )}
-              {profil.bilan.aAmeliorer.length > 0 && (
-                <p className="text-sm">
-                  <span className="font-medium">À renforcer :</span> {profil.bilan.aAmeliorer.join(', ')}
-                </p>
-              )}
-              <Link href="/espace-apprenant/notes" className={`${LIEN} inline-block mt-3v`}>
-                Détail des notes →
-              </Link>
-            </>
-          )}
-        </Carte>
+                <p className="text-xs text-text-secondary mb-4v">Moyenne générale</p>
+                {profil.bilan.forces.length > 0 && (
+                  <p className="text-sm mb-1v">
+                    <span className="font-medium">{estParent ? 'Points forts' : 'Tes points forts'} :</span> {profil.bilan.forces.join(', ')}
+                  </p>
+                )}
+                {profil.bilan.aAmeliorer.length > 0 && (
+                  <p className="text-sm">
+                    <span className="font-medium">À renforcer :</span> {profil.bilan.aAmeliorer.join(', ')}
+                  </p>
+                )}
+                <Link href="/espace-apprenant/notes" className={`${LIEN} inline-block mt-3v`}>
+                  Détail des notes →
+                </Link>
+              </>
+            )}
+          </Card>
+        </section>
       </div>
 
       {estParent && <ParentSummary prenom={profil.prenom} decouverte={decouverte} recommandations={recommandations} preference={preference} />}
