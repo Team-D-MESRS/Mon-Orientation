@@ -4,8 +4,9 @@
   "description": "Backend API - Plateforme nationale d'orientation scolaire",
   "private": true,
   "scripts": {
+    "postinstall": "prisma generate",
     "build": "nest build",
-    "start": "nest start",
+    "start": "prisma migrate deploy && node dist/main",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
