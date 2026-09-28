@@ -1,6 +1,6 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 import type { EtablissementPourVoeu, Filiere, PageFilieres, ValeursFiltres } from './filiere';
-import type { Decouverte, Favori, Palier, Preference, ProfilApprenant, Recommandation, ReponsesDecouverte } from './apprenant';
+import type { Critere, Decouverte, Favori, Palier, Preference, ProfilApprenant, Recommandation, ReponsesDecouverte } from './apprenant';
 import { CLES_JETONS, useAuthStore, type Utilisateur } from '@/stores/authStore';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -163,7 +163,19 @@ export const apprenantApi = {
 export const orientationApi = {
   getRecommandations: (nip: string) => api.get<Recommandation[]>(`/orientation/${nip}/recommandations`),
   calculer: (nip: string) => api.post<Recommandation[]>(`/orientation/${nip}/calcul`),
+  /** Évalue une formation précise (par son code), même hors des pistes déjà calculées pour l'élève. */
+  evaluerFiliere: (nip: string, code: string) => api.get<EvaluationFiliere>(`/orientation/${nip}/evaluer/${encodeURIComponent(code)}`),
 };
+
+export interface EvaluationFiliere {
+  filiere: Filiere;
+  niveauEleve: string;
+  accessibleAuNiveauActuel: boolean;
+  score: number | null;
+  admissible: boolean;
+  rangVoeu: number | null;
+  criteres: Critere[];
+}
 
 export interface ReponseConseiller {
   conversationId: string;

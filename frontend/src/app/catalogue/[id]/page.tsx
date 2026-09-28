@@ -22,7 +22,7 @@ import {
   Sparkles,
   Wallet,
 } from 'lucide-react';
-import { filiereApi, orientationApi } from '@/lib/api';
+import { filiereApi, orientationApi, type EvaluationFiliere } from '@/lib/api';
 import type { Recommandation } from '@/lib/apprenant';
 import {
   ContenuMetier as ContenuMetierType,
@@ -333,16 +333,17 @@ function PoursuitesApresBac({ serie }: { serie: string }) {
 const formaterDate = (iso: string) => new Date(iso).toLocaleDateString('fr-FR');
 
 /**
- * « Pourquoi cette formation peut te correspondre » : jamais de justification inventée — soit la vraie
- * explication déjà calculée par le moteur d'orientation pour cet élève (identique à celle de la page
- * Recommandations), soit un message honnête indiquant pourquoi on ne peut pas répondre (pas connecté,
- * profil de découverte pas encore rempli, formation hors des pistes calculées — avec, dans ce dernier
- * cas, un vrai chemin de secours : demander l'avis de Guido, qui peut noter n'importe quelle formation du
- * catalogue via son outil evaluer_filiere, pas seulement les pistes déjà calculées).
+ * « Pourquoi cette formation peut te correspondre » : jamais de justification inventée. D'abord la
+ * vraie explication déjà calculée par le moteur d'orientation pour cet élève (identique à celle de la
+ * page Recommandations) si la formation en fait partie ; sinon, évaluée en direct via `evaluer_filiere`
+ * (même outil que celui de Guido, désormais aussi exposé au frontend) — utile en particulier quand la
+ * formation n'est pas admissible (ex. une condition de notes non remplie) : le détail dit alors
+ * précisément dans quelle(s) matière(s) et de combien il manque, pas seulement « hors de tes pistes ».
  */
-function PourquoiCetteFormation({ filiereId }: { filiereId: string }) {
+function PourquoiCetteFormation({ filiereId, code }: { filiereId: string; code: string | null }) {
   const user = useAuthStore((s) => s.user);
   const [recommandations, setRecommandations] = useState<Recommandation[] | null | undefined>(undefined);
+  const [evaluation, setEvaluation] = useState<EvaluationFiliere | null | undefined>(undefined);
 
   useEffect(() => {
     if (user?.role !== 'APPRENANT' || !user.nip) {
@@ -363,6 +364,29 @@ function PourquoiCetteFormation({ filiereId }: { filiereId: string }) {
       annule = true;
     };
   }, [user?.role, user?.nip]);
+
+  const nip = user?.role === 'APPRENANT' ? user.nip : null;
+  const dejaCalculee = recommandations?.some((r) => r.filiereId === filiereId) ?? false;
+
+  useEffect(() => {
+    if (!nip || !code || recommandations === undefined || dejaCalculee) {
+      setEvaluation(undefined);
+      return;
+    }
+    let annule = false;
+    setEvaluation(undefined);
+    orientationApi
+      .evaluerFiliere(nip, code)
+      .then(({ data }) => {
+        if (!annule) setEvaluation(data);
+      })
+      .catch(() => {
+        if (!annule) setEvaluation(null);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [nip, code, recommandations, dejaCalculee]);
 
   if (!user) {
     return (
@@ -397,15 +421,72 @@ function PourquoiCetteFormation({ filiereId }: { filiereId: string }) {
   const correspondance = recommandations.find((r) => r.filiereId === filiereId);
 
   if (!correspondance) {
+    if (!code || evaluation === null) {
+      return (
+        <Cadre>
+          <p className="text-sm text-text-secondary">
+            Impossible de vérifier la correspondance de cette formation avec ton profil pour le moment —{' '}
+            <Link href="/espace-apprenant/conseiller" className="font-medium text-primary hover:underline">
+              demande l&apos;avis de Guido
+            </Link>
+            , qui peut évaluer n&apos;importe quelle formation du catalogue.
+          </p>
+        </Cadre>
+      );
+    }
+    if (evaluation === undefined) {
+      return (
+        <Cadre>
+          <p className="text-sm text-text-secondary" aria-busy="true">
+            Vérification de la correspondance avec ton profil…
+          </p>
+        </Cadre>
+      );
+    }
+    if (!evaluation.accessibleAuNiveauActuel) {
+      return (
+        <Cadre>
+          <p className="text-sm text-text-secondary">Cette formation ne correspond pas à ton niveau actuel.</p>
+        </Cadre>
+      );
+    }
     return (
       <Cadre>
-        <p className="text-sm text-text-secondary">
-          Cette formation ne fait pas partie de tes pistes déjà calculées. Ce n&apos;est pas forcément qu&apos;elle ne te convient pas —{' '}
-          <Link href="/espace-apprenant/conseiller" className="font-medium text-primary hover:underline">
-            demande l&apos;avis de Guido
-          </Link>
-          , qui peut évaluer n&apos;importe quelle formation du catalogue.
-        </p>
+        <div className="flex items-start justify-between gap-4v mb-3v">
+          <p className="text-sm text-text-secondary max-w-md">
+            {evaluation.admissible
+              ? 'Cette formation ne fait pas encore partie de tes pistes recommandées, mais rien ne t’en empêche pour l’instant.'
+              : 'Au moins une condition officielle d’inscription n’est pas encore remplie pour cette formation, d’après tes notes actuelles.'}
+          </p>
+          {evaluation.score !== null && (
+            <div className="text-right shrink-0">
+              <p className="text-2xl font-bold text-primary leading-none">
+                {Math.round(evaluation.score)}
+                <span className="text-sm font-medium text-text-secondary">/100</span>
+              </p>
+              <p className="text-xs text-text-secondary">compatibilité</p>
+            </div>
+          )}
+        </div>
+        {evaluation.criteres.length > 0 && (
+          <ul className="space-y-1v text-sm">
+            {evaluation.criteres.map((c, i) => (
+              <li key={i} className={`flex gap-2v ${c.alerte ? 'text-warning-strong' : ''}`}>
+                {c.alerte ? (
+                  <AlertTriangle size={15} className="shrink-0 mt-[2px]" aria-hidden="true" />
+                ) : (
+                  <CheckCircle2 size={15} className="shrink-0 mt-[2px] text-primary" aria-hidden="true" />
+                )}
+                {c.detail}
+              </li>
+            ))}
+          </ul>
+        )}
+        {!evaluation.admissible && (
+          <p className="mt-3v text-sm text-text-secondary">
+            Si tu tiens à ce choix, c&apos;est dans ces matières qu&apos;il faut progresser d&apos;ici là.
+          </p>
+        )}
       </Cadre>
     );
   }
@@ -604,7 +685,7 @@ export default function FicheFilierePage() {
               </ul>
             )}
 
-            <PourquoiCetteFormation filiereId={filiere.id} />
+            <PourquoiCetteFormation filiereId={filiere.id} code={filiere.code} />
 
             <div className="flex flex-wrap items-center gap-2v mb-6v print:hidden">
               <BoutonFavori filiere={filiere} />

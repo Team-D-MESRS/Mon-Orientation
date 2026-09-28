@@ -32,4 +32,12 @@ export class OrientationController {
   ) {
     return this.orientationService.explain(nip, recommandationId);
   }
+
+  @Get(':nip/evaluer/:code')
+  @ApiOperation({
+    summary: "Évaluer une formation précise pour l'élève, même hors de ses pistes déjà calculées (ex. un vœu envisagé qui ne remplit pas encore les conditions)",
+  })
+  async evaluer(@Param('nip') nip: string, @Param('code') code: string) {
+    return this.orientationService.evaluerFiliere(nip, code);
+  }
 }

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, ExternalLink, Heart, Search } from 'lucide-react';
-import { apprenantApi, filiereApi } from '@/lib/api';
+import { apprenantApi, filiereApi, orientationApi, type EvaluationFiliere } from '@/lib/api';
 import {
   ORDINAUX,
   PALIER_LABELS,
@@ -107,6 +107,52 @@ function CarteEtablissement({ etablissement }: { etablissement: EtablissementPou
         <p className="flex-1 text-bj-gray-500">Établissement non renseigné</p>
       )}
     </div>
+  );
+}
+
+/**
+ * Vérifie le choix en cours dès qu'une condition officielle d'inscription n'est pas remplie par les
+ * notes actuelles, pour répondre tout de suite « dans quelles matières faut-il progresser » plutôt que
+ * de laisser l'élève l'apprendre après coup sur la page Recommandations ou en le demandant à Guido.
+ * Silencieux si tout va bien : pas de bloc pour chaque choix sans problème.
+ */
+function VerificationVoeu({ nip, code }: { nip: string; code: string | null }) {
+  const [evaluation, setEvaluation] = useState<EvaluationFiliere | null | undefined>(undefined);
+
+  useEffect(() => {
+    if (!code) {
+      setEvaluation(undefined);
+      return;
+    }
+    let annule = false;
+    setEvaluation(undefined);
+    orientationApi
+      .evaluerFiliere(nip, code)
+      .then(({ data }) => {
+        if (!annule) setEvaluation(data);
+      })
+      .catch(() => {
+        if (!annule) setEvaluation(null);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [nip, code]);
+
+  if (!evaluation || !evaluation.accessibleAuNiveauActuel || evaluation.admissible) return null;
+  const conditions = evaluation.criteres.filter((c) => c.critere === 'condition' && c.alerte);
+  if (conditions.length === 0) return null;
+
+  return (
+    <Alerte ton="attention">
+      <p className="font-medium mb-1v">Ce choix ne remplit pas encore une condition officielle d&apos;admission.</p>
+      <ul className="list-disc pl-5v space-y-0.5">
+        {conditions.map((c, i) => (
+          <li key={i}>{c.detail}</li>
+        ))}
+      </ul>
+      <p className="mt-2v">Tu peux quand même l&apos;enregistrer comme vœu — voici dans quelles matières il faudrait progresser d&apos;ici là.</p>
+    </Alerte>
   );
 }
 
@@ -573,6 +619,8 @@ function SaisieDesVoeux({
           {proposees.length === 0 && <p className="text-sm text-bj-gray-500">Aucune formation ne correspond à ta recherche.</p>}
         </div>
       </fieldset>
+
+      {selection && <VerificationVoeu nip={profil.nip} code={filieres.find((f) => f.id === selection)?.code ?? null} />}
 
       {erreur && <Alerte ton="erreur">{erreur}</Alerte>}
 
