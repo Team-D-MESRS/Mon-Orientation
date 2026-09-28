@@ -76,18 +76,23 @@ export const BANQUE_RIASEC: QuestionRiasec[] = [
   { id: 'c6', texte: 'Classer, ranger ou organiser une liste me procure de la satisfaction.', dimension: 'C' },
 ];
 
-export type ValeurLikert = 1 | 2 | 3 | 4 | 5;
+export type ValeurLikert = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 export type ReponseRiasec = { id: string; valeur: ValeurLikert };
 
 export const LABELS_LIKERT: Record<ValeurLikert, string> = {
   1: 'Pas du tout',
-  2: 'Un peu',
-  3: 'Moyennement',
-  4: 'Assez',
-  5: 'Beaucoup',
+  2: 'Très peu',
+  3: 'Peu',
+  4: 'Un peu',
+  5: 'Moyennement',
+  6: 'Plutôt oui',
+  7: 'Assez',
+  8: 'Bien',
+  9: 'Beaucoup',
+  10: 'Tout à fait',
 };
 
-/** Moyenne par dimension sur les items répondus, normalisée 0 à 1 — même calcul que le backend. */
+/** Moyenne par dimension sur les items répondus, normalisée 0 à 1 (échelle 1 à 10) — même calcul que le backend. */
 export function scoresRiasec(reponses: ReponseRiasec[]): Record<CodeRiasec, number> {
   const parId = new Map(BANQUE_RIASEC.map((q) => [q.id, q]));
   const sommes: Record<CodeRiasec, number> = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
@@ -99,7 +104,7 @@ export function scoresRiasec(reponses: ReponseRiasec[]): Record<CodeRiasec, numb
     comptes[q.dimension] += 1;
   }
   return Object.fromEntries(
-    CODES_RIASEC.map((c) => [c, comptes[c] === 0 ? 0 : Math.round(((sommes[c] / comptes[c] - 1) / 4) * 100) / 100]),
+    CODES_RIASEC.map((c) => [c, comptes[c] === 0 ? 0 : Math.round(((sommes[c] / comptes[c] - 1) / 9) * 100) / 100]),
   ) as Record<CodeRiasec, number>;
 }
 

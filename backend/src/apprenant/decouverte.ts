@@ -71,8 +71,8 @@ function reponsesRiasecDe(v: unknown): ReponseRiasec[] {
     if (typeof item !== 'object' || item === null) throw new Error('Réponse invalide pour « test de découverte »');
     const { id, valeur } = item as Record<string, unknown>;
     if (typeof id !== 'string' || !estQuestionRiasec(id)) throw new Error('Question inconnue dans le test de découverte');
-    if (typeof valeur !== 'number' || !Number.isInteger(valeur) || valeur < 1 || valeur > 5) {
-      throw new Error('Réponse invalide pour « test de découverte » : la valeur doit être entre 1 et 5');
+    if (typeof valeur !== 'number' || !Number.isInteger(valeur) || valeur < 1 || valeur > 10) {
+      throw new Error('Réponse invalide pour « test de découverte » : la valeur doit être entre 1 et 10');
     }
     parId.set(id, { id, valeur: valeur as ReponseRiasec['valeur'] });
   }

@@ -88,13 +88,13 @@ export const BANQUE_RIASEC: QuestionRiasec[] = [
 const QUESTIONS_PAR_ID = new Map(BANQUE_RIASEC.map((q) => [q.id, q]));
 export const estQuestionRiasec = (id: string): boolean => QUESTIONS_PAR_ID.has(id);
 
-/** Réponse à une question : échelle Likert, 1 « pas du tout » à 5 « beaucoup ». */
-export type ReponseRiasec = { id: string; valeur: 1 | 2 | 3 | 4 | 5 };
+/** Réponse à une question : échelle Likert, 1 « pas du tout » à 10 « tout à fait ». */
+export type ReponseRiasec = { id: string; valeur: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 };
 
 /**
- * Moyenne par dimension sur les items répondus, normalisée (moyenne-1)/4 → 0 à 1. Une dimension
- * sans réponse vaut 0 (pas de signal), pas une valeur neutre à 0,5 — cohérent avec le principe
- * "aucun signal = 0" déjà appliqué au calcul précédent (affinitesDomaines).
+ * Moyenne par dimension sur les items répondus, normalisée (moyenne-1)/9 → 0 à 1 (échelle 1 à 10).
+ * Une dimension sans réponse vaut 0 (pas de signal), pas une valeur neutre à 0,5 — cohérent avec le
+ * principe "aucun signal = 0" déjà appliqué au calcul précédent (affinitesDomaines).
  */
 export function scoresRiasec(reponses: ReponseRiasec[]): Record<CodeRiasec, number> {
   const sommes: Record<CodeRiasec, number> = { R: 0, I: 0, A: 0, S: 0, E: 0, C: 0 };
@@ -106,7 +106,7 @@ export function scoresRiasec(reponses: ReponseRiasec[]): Record<CodeRiasec, numb
     comptes[question.dimension] += 1;
   }
   return Object.fromEntries(
-    CODES_RIASEC.map((c) => [c, comptes[c] === 0 ? 0 : Math.round(((sommes[c] / comptes[c] - 1) / 4) * 100) / 100]),
+    CODES_RIASEC.map((c) => [c, comptes[c] === 0 ? 0 : Math.round(((sommes[c] / comptes[c] - 1) / 9) * 100) / 100]),
   ) as Record<CodeRiasec, number>;
 }
 

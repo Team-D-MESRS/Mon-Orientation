@@ -270,8 +270,8 @@ function ChoixMultiple<T extends string>({
   );
 }
 
-/** Échelle 1 (pas du tout) à 5 (beaucoup) — le chiffre et son sens toujours ensemble, jamais un chiffre seul : ça évite l'air de barème noté. */
-const VALEURS_LIKERT: ValeurLikert[] = [1, 2, 3, 4, 5];
+/** Échelle 1 (pas du tout) à 10 (tout à fait) — le chiffre et son sens toujours ensemble, jamais un chiffre seul : ça évite l'air de barème noté. */
+const VALEURS_LIKERT: ValeurLikert[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 function EchelleLikert({ valeur, onChange }: { valeur: ValeurLikert | undefined; onChange: (v: ValeurLikert) => void }) {
   return (

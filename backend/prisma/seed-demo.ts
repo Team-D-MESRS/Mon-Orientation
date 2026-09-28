@@ -37,8 +37,15 @@ interface EleveDemo {
    * passe fictif étant alors la date de naissance —, ce qui exerce ce chemin en démonstration.
    */
   avecCompte: boolean;
-  /** Notes des trois trimestres, sur 20 */
+  /** Notes des trois trimestres de l'année en cours, sur 20 */
   notes: Record<string, [number, number, number]>;
+  /**
+   * Notes des années scolaires précédentes (6e à l'avant-dernière classe) : sert à tester le calcul
+   * d'aisance par matière sur tout l'historique disponible (niveau + stabilité + tendance, voir
+   * bilan-notes.ts), pas seulement l'année en cours. Optionnel — absent pour la plupart des comptes
+   * de démo, une seule année suffisant pour les autres usages (moyenne générale, moteur d'orientation).
+   */
+  historique?: { anneeScolaire: string; notes: Record<string, [number, number, number]> }[];
   /**
    * Questionnaire de découverte déjà rempli, pour Fatou et Koffi : depuis le 16/09, les pistes ne
    * sont visibles côté frontend qu'une fois le questionnaire rempli, et les suites existantes
@@ -71,15 +78,58 @@ const ELEVES: EleveDemo[] = [
       'Histoire-Géographie': [11, 10.5, 11],
       EPS: [15, 14, 15],
     },
+    // 6e à 4e : sert à tester l'aisance par matière sur tout l'historique (bilan-notes.ts), pas
+    // seulement l'année en cours. Mathématiques progresse et reste stable (force nette) ; PCT varie
+    // beaucoup d'un trimestre à l'autre malgré une année en cours correcte (l'instabilité fait
+    // baisser son score d'aisance, contrairement à l'ancien calcul qui ne regardait que la moyenne
+    // de l'année en cours) ; Histoire-Géographie décline légèrement (déjà faible, se confirme).
+    historique: [
+      {
+        anneeScolaire: '2022-2023',
+        notes: {
+          Mathématiques: [11, 11.5, 12],
+          PCT: [9, 15, 10],
+          SVT: [10, 10.5, 11],
+          Français: [11, 11, 11.5],
+          Anglais: [10, 10.5, 11],
+          'Histoire-Géographie': [12, 11.5, 12],
+          EPS: [14, 13.5, 14],
+        },
+      },
+      {
+        anneeScolaire: '2023-2024',
+        notes: {
+          Mathématiques: [12, 13, 13],
+          PCT: [16, 9, 14],
+          SVT: [11, 12, 12],
+          Français: [11, 11.5, 12],
+          Anglais: [10.5, 11, 11.5],
+          'Histoire-Géographie': [11, 11, 11.5],
+          EPS: [14, 14.5, 14],
+        },
+      },
+      {
+        anneeScolaire: '2024-2025',
+        notes: {
+          Mathématiques: [13.5, 14, 14],
+          PCT: [10, 16, 9],
+          SVT: [12.5, 13, 13],
+          Français: [11.5, 12, 12],
+          Anglais: [11, 11.5, 12],
+          'Histoire-Géographie': [10.5, 11, 10.5],
+          EPS: [14.5, 15, 14],
+        },
+      },
+    ],
     decouverte: {
       // Dominante Réaliste/Investigateur : cohérent avec l'électricité, le numérique et le style manuel.
       riasec: reponsesRiasec({
-        R: [5, 5, 5, 4, 5, 5],
-        I: [4, 5, 4, 4, 4, 5],
-        A: [2, 2, 3, 2, 2, 3],
-        S: [3, 3, 2, 3, 3, 3],
-        E: [2, 3, 2, 2, 3, 2],
-        C: [4, 3, 4, 3, 3, 3],
+        R: [10, 10, 10, 8, 10, 10],
+        I: [8, 10, 8, 8, 8, 10],
+        A: [3, 3, 6, 3, 3, 6],
+        S: [6, 6, 3, 6, 6, 6],
+        E: [3, 6, 3, 3, 6, 3],
+        C: [8, 6, 8, 6, 6, 6],
       }),
       metierEnvisage: "Technicienne en électricité ou en énergies renouvelables",
       apresCollege: 'TECHNIQUE',
@@ -118,12 +168,12 @@ const ELEVES: EleveDemo[] = [
       // avec le métier envisagé (infirmier) et le style intellectuel. Santé doit rester le domaine
       // dominant unique — Social légèrement au-dessus d'Investigateur, pas à égalité.
       riasec: reponsesRiasec({
-        S: [5, 5, 5, 4, 5, 4],
-        I: [4, 4, 5, 4, 4, 4],
-        R: [2, 2, 2, 3, 2, 2],
-        A: [2, 3, 2, 2, 2, 3],
-        E: [2, 2, 3, 2, 2, 2],
-        C: [4, 3, 4, 4, 3, 3],
+        S: [10, 10, 10, 8, 10, 8],
+        I: [8, 8, 10, 8, 8, 8],
+        R: [3, 3, 3, 6, 3, 3],
+        A: [3, 6, 3, 3, 3, 6],
+        E: [3, 3, 6, 3, 3, 3],
+        C: [8, 6, 8, 8, 6, 6],
       }),
       metierEnvisage: 'Infirmier ou technicien de laboratoire médical',
       apresCollege: 'GENERAL',
@@ -304,14 +354,16 @@ async function main() {
     };
     await prisma.apprenant.upsert({ where: { nip: e.nip }, update: identite, create: { nip: e.nip, ...identite } });
 
-    for (const [matiere, trimestres] of Object.entries(e.notes)) {
-      for (let i = 0; i < trimestres.length; i++) {
-        const cle = { apprenantNip: e.nip, matiere, trimestre: i + 1, anneeScolaire: ANNEE_SCOLAIRE };
-        await prisma.note.upsert({
-          where: { apprenantNip_matiere_trimestre_anneeScolaire: cle },
-          update: { note: trimestres[i] },
-          create: { ...cle, note: trimestres[i], bareme: 20 },
-        });
+    for (const { anneeScolaire, notes } of [{ anneeScolaire: ANNEE_SCOLAIRE, notes: e.notes }, ...(e.historique ?? [])]) {
+      for (const [matiere, trimestres] of Object.entries(notes)) {
+        for (let i = 0; i < trimestres.length; i++) {
+          const cle = { apprenantNip: e.nip, matiere, trimestre: i + 1, anneeScolaire };
+          await prisma.note.upsert({
+            where: { apprenantNip_matiere_trimestre_anneeScolaire: cle },
+            update: { note: trimestres[i] },
+            create: { ...cle, note: trimestres[i], bareme: 20 },
+          });
+        }
       }
     }
 
