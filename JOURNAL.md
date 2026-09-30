@@ -6,6 +6,14 @@
 
 ## État actuel
 
+### Mise à jour du 01/10/2026 (3) — catalogue filtré d'emblée sur le niveau d'accès de l'élève
+
+- **Demande de l'utilisateur** : un élève de 4e ou 3e qui accède au catalogue doit déjà voir « Après le BEPC » filtré ; pareil pour les autres paliers (Première/Terminale → après le bac).
+- **Fait** : `catalogue/page.tsx`, nouveau filtre par défaut sur `niveau` dérivé du palier de l'élève (`niveauDuPalier`, déjà utilisé ailleurs) — même principe que le filtre de domaine existant (une fois par dossier et par session de navigateur, seulement si la page s'ouvre sans aucun filtre déjà choisi). Indépendant du filtre de domaine : l'un ou l'autre reste retirable sans perdre l'autre. Scope APPRENANT uniquement (même périmètre que le raccourci « Que faire avec mon bac… ? » déjà existant) — un parent n'a pas de palier propre, non traité ici.
+- **Bug de fermeture évité avant qu'il n'atteigne la prod** (trouvé en concevant, pas en testant cette fois) : le filtre de domaine existant et le nouveau filtre de niveau vérifiaient tous les deux « la page s'ouvre-t-elle sans filtre ? » via `window.location.search`, relu en direct à chaque effet — deux effets qui s'exécutent l'un après l'autre dans le même rendu, `router.replace` n'étant pas garanti synchrone, le second pouvait ne pas voir l'écriture du premier et l'écraser (même famille que le bug de fermeture des cases à cocher du type de formation, découvert plus tôt aujourd'hui). Corrigé en figeant l'état initial de l'adresse dans une ref au tout premier rendu, relue par les deux effets au lieu de l'adresse live.
+- **Vérifié en direct** : `DEMO-4E-0002` (4e) et `DEMO-3E-0001` (3e) → `?niveau=APRES_BEPC` ; `DEMO-TLE-0001` (Terminale) → `?niveau=APRES_BAC` ; menu déroulant « Niveau d'accès » déjà positionné sur la bonne valeur à l'arrivée. 0 erreur console. `tsc --noEmit` propre, `tests/api/catalogue.sh` 78/78 (changement frontend uniquement).
+- Suite : revenir vers l'utilisateur. Non commité.
+
 ### Mise à jour du 01/10/2026 (2) — limite du choix multiple annoncée avant les options
 
 - **Demande de l'utilisateur** : sur l'écran « Ce qui compte le plus pour toi dans un métier » (priorités, questionnaire de découverte), indiquer « (Trois choix max possibles) » juste sous le titre plutôt que de laisser l'élève le découvrir seulement via le compteur « 0/3 choisi » en bas.

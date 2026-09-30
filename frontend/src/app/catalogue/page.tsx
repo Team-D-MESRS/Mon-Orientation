@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Compass, Filter, GraduationCap, Info, Search, X } from 'lucide-react';
 import { authApi, filiereApi, type ParametresCatalogue } from '@/lib/api';
 import { DOMAINE_LABELS, NIVEAU_LABELS, TYPE_LABELS, type Domaine, type Filiere, type NiveauAcces, type TypeFiliere, type ValeursFiltres } from '@/lib/filiere';
-import { domaineDominant } from '@/lib/apprenant';
+import { domaineDominant, niveauDuPalier, type Palier } from '@/lib/apprenant';
 import { useAuthStore } from '@/stores/authStore';
 import { useDecouverteStore } from '@/stores/decouverteStore';
 import { useFavoris } from '@/stores/favorisStore';
@@ -78,11 +78,19 @@ function Catalogue() {
   const [page, setPage] = useState(1);
   const [suite, setSuite] = useState<'repos' | 'chargement' | 'erreur'>('repos');
   const [maSerie, setMaSerie] = useState<string | null>(null);
+  const [monPalier, setMonPalier] = useState<Palier | null>(null);
+  const [monNip, setMonNip] = useState<string | null>(null);
   const role = useAuthStore((s) => s.user?.role);
   const { erreur: erreurFavoris } = useFavoris();
   const { statut: statutMur, decouverte, nip: nipMur } = useDecouverteStore();
   const [filtreProfilActif, setFiltreProfilActif] = useState(false);
   const decisionProfilPrise = useRef(false);
+  const decisionNiveauPrise = useRef(false);
+  // Capturée une seule fois, au tout premier rendu : dit si la page s'ouvre déjà filtrée (lien partagé),
+  // sans dépendre de window.location.search — qui peut changer entre deux filtres par défaut (domaine,
+  // niveau) avant que l'un n'ait eu le temps de voir l'écriture de l'autre (router.replace n'est pas
+  // garanti synchrone).
+  const paramsInitiaux = useRef(cleRequete).current;
   const typesChoisis = useMemo(() => (params.get('type') ?? '').split(',').filter(Boolean) as TypeFiliere[], [params]);
   // router.replace ne met pas forcément à jour l'adresse de façon synchrone : deux cases cochées coup
   // sur coup, avant que le 1er changement n'ait atteint le rendu (ou même window.location), perdraient
@@ -131,10 +139,13 @@ function Catalogue() {
       .catch(() => setValeurs({ domaines: [], series: [], departements: [] }));
   }, []);
 
-  // Élève de Première ou de Terminale : raccourci vers les formations accessibles avec sa série
+  // Élève de Première ou de Terminale : raccourci vers les formations accessibles avec sa série.
+  // Palier aussi retenu, pour le filtre par défaut sur le niveau d'accès juste en dessous.
   useEffect(() => {
     if (role !== 'APPRENANT') {
       setMaSerie(null);
+      setMonPalier(null);
+      setMonNip(null);
       return;
     }
     authApi
@@ -142,9 +153,29 @@ function Catalogue() {
       .then(({ data }) => {
         const eleve = data.apprenant;
         setMaSerie(eleve?.serie && (eleve.palier === 'PREMIERE' || eleve.palier === 'TERMINALE') ? eleve.serie : null);
+        setMonPalier(eleve?.palier ?? null);
+        setMonNip(eleve?.nip ?? null);
       })
-      .catch(() => setMaSerie(null));
+      .catch(() => {
+        setMaSerie(null);
+        setMonPalier(null);
+        setMonNip(null);
+      });
   }, [role]);
+
+  // Filtre par défaut sur le niveau d'accès correspondant au palier de l'élève (4e/3e → après le BEPC,
+  // 1re/Tle → après le bac) : une fois par dossier et par session de navigateur, seulement si la page
+  // s'ouvre sans aucun filtre déjà choisi — même principe que le filtre de domaine ci-dessous, indépendant
+  // de lui (l'un ou l'autre peut être retiré sans perdre l'autre).
+  useEffect(() => {
+    if (decisionNiveauPrise.current || role !== 'APPRENANT' || monPalier === null || !monNip) return;
+    decisionNiveauPrise.current = true;
+    const cle = `catalogue-filtre-niveau:${monNip}`;
+    if (sessionStorage.getItem(cle) || paramsInitiaux) return;
+    sessionStorage.setItem(cle, '1');
+    modifier({ niveau: niveauDuPalier(monPalier) });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, monPalier, monNip]);
 
   // Filtre par défaut sur le domaine dominant du profil de découverte : une fois par dossier et par
   // session de navigateur, et seulement si la page s'ouvre sans aucun filtre déjà choisi (sinon une
@@ -154,7 +185,7 @@ function Catalogue() {
     if (decisionProfilPrise.current || statutMur !== 'pret') return;
     decisionProfilPrise.current = true;
     const cle = `catalogue-filtre-profil:${nipMur}`;
-    if (sessionStorage.getItem(cle) || window.location.search) return;
+    if (sessionStorage.getItem(cle) || paramsInitiaux) return;
     sessionStorage.setItem(cle, '1');
     const domaine = decouverte ? domaineDominant(decouverte.affinites) : null;
     if (domaine) {
