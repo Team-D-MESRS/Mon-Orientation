@@ -24,7 +24,7 @@ export class FiliereController {
 
   @Get()
   @ApiOperation({ summary: 'Liste des filières (catalogue)' })
-  @ApiQuery({ name: 'type', required: false, enum: TypeFiliere })
+  @ApiQuery({ name: 'type', required: false, description: 'Une ou plusieurs valeurs séparées par des virgules (ex. TECHNIQUE,PROFESSIONNELLE)' })
   @ApiQuery({ name: 'niveau', required: false, enum: NiveauAcces })
   @ApiQuery({ name: 'departement', required: false })
   @ApiQuery({ name: 'search', required: false, description: 'Insensible à la casse et aux accents ; porte aussi sur les métiers et le lieu de formation' })
@@ -46,14 +46,17 @@ export class FiliereController {
     @Query('page') page?: unknown,
     @Query('limit') limit?: unknown,
   ) {
-    const type = unique('type', typeBrut);
+    const type = unique('type', typeBrut)
+      ?.split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
     const niveau = unique('niveau', niveauBrut);
     const domaine = unique('domaine', domaineBrut);
     const serie = unique('serie', serieBrute)?.trim().toUpperCase();
     const numeroPage = unique('page', page);
     const taille = unique('limit', limit);
 
-    if (type && !(type in TypeFiliere)) {
+    if (type?.some((t) => !(t in TypeFiliere))) {
       throw new BadRequestException(`type doit valoir ${Object.keys(TypeFiliere).join(', ')}`);
     }
     if (niveau && !(niveau in NiveauAcces)) {
@@ -64,7 +67,7 @@ export class FiliereController {
     }
 
     return this.filiereService.findAll({
-      type: type as TypeFiliere | undefined,
+      type: type as TypeFiliere[] | undefined,
       niveau: niveau as NiveauAcces | undefined,
       departement: unique('departement', departement),
       search: unique('search', search),

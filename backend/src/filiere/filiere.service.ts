@@ -8,7 +8,8 @@ import { DOMAINES, Domaine } from './domaines';
 export type AccesSerie = 'ADMISE' | 'SOUS_CONDITIONS';
 
 export interface FiltresCatalogue {
-  type?: TypeFiliere;
+  /** Plusieurs valeurs = OR entre elles (ex. Technique ou Professionnel). */
+  type?: TypeFiliere[];
   niveau?: NiveauAcces;
   departement?: string;
   search?: string;
@@ -64,8 +65,8 @@ export class FiliereService {
     const where: Prisma.FiliereWhereInput = { masquee: false };
     const restrictions: Prisma.FiliereWhereInput[] = [];
 
-    if (type) {
-      where.type = type;
+    if (type && type.length > 0) {
+      where.type = { in: type };
     }
 
     if (niveau) {

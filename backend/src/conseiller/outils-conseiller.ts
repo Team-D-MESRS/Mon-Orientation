@@ -97,7 +97,7 @@ export class OutilsConseillerService {
     const niveau = texte(parametres.niveau);
     const { items, total } = await this.filieres.findAll({
       search: texte(parametres.texte) || undefined,
-      type: type in TypeFiliere ? (type as TypeFiliere) : undefined,
+      type: type in TypeFiliere ? [type as TypeFiliere] : undefined,
       niveau: niveau in NiveauAcces ? (niveau as NiveauAcces) : undefined,
       limit: 12,
     });

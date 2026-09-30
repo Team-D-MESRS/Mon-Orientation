@@ -6,6 +6,15 @@
 
 ## État actuel
 
+### Mise à jour du 01/10/2026 — catalogue : filtres tous visibles, type de formation multi-sélection
+
+- **Demande de l'utilisateur** : retirer le panneau replié « Plus de filtres » (tout afficher directement) et permettre de choisir plusieurs types de formation à la fois.
+- **Fait (frontend)** : `catalogue/page.tsx` restructuré en une seule grille de filtres toujours visible (niveau, domaine, département, série de bac) + un groupe de cases à cocher pour le type de formation (au lieu d'un menu déroulant à choix unique) + les deux cases bourses/source officielle. Suppression de tout ce qui gérait le repli (`plusDeFiltres`, `CLES_SECONDAIRES`, l'effet de dépliage automatique). Les puces de filtres actifs affichent maintenant une puce par type choisi (retirable individuellement), pas une seule pour tout le filtre.
+- **Fait (backend)** : `GET /filiere` accepte plusieurs valeurs de `type` séparées par une virgule (ex. `type=TECHNIQUE,UNIVERSITE`), combinées en OU (`where.type = { in: [...] }` au lieu d'une égalité stricte). Un seul type reste accepté tel quel (rétrocompatible, vérifié par les tests existants). Appelant interne (outil `evaluer_filiere`/recherche de Guido) adapté en conséquence.
+- **Bug trouvé en testant, pas en relisant le code** : deux cases de type cochées coup sur coup (avant le premier rendu React) ne gardaient que la 2e — `basculerType` lisait `typesChoisis`, figé au rendu, comme dans le bug de fermeture RIASEC déjà rencontré dans ce projet. Une tentative de lire `window.location.search` directement à la place n'a pas suffi non plus (`router.replace` ne met pas forcément à jour l'adresse de façon synchrone). Corrigé avec une `ref` mutée immédiatement à chaque clic, jamais dépendante d'un rendu ou d'un écho d'URL.
+- **Vérifié en direct** : plus de « Plus de filtres » à l'écran ; 5 cases de type, sélection de deux types → URL `?type=TECHNIQUE,PROFESSIONNELLE`, total 28 (= 14 + 14, vraie union, pas une intersection) ; retrait d'une seule puce garde l'autre type sélectionné ; `type=TECHNIQUE,BIDON` toujours rejeté en 400. 0 erreur console. `tsc --noEmit` frontend/backend propres, `tests/api/catalogue.sh` 78/78 (dont les tests existants à un seul type, toujours verts).
+- Suite : revenir vers l'utilisateur. Non commité.
+
 ### Mise à jour du 27/09/2026 (2) — dire dans quelles matières progresser pour un choix hors profil
 
 - **Demande de l'utilisateur** : si les notes d'un élève ne correspondent pas à un de ses choix, pouvoir lui dire dans quelles matières progresser s'il tient à ce choix quand même. La donnée existait déjà (le moteur calcule `admissible` et le détail exact des conditions non remplies — ex. « PCT 7,0/20, 12/20 exigé »), mais seulement pour l'outil `evaluer_filiere` de Guido (appel interne, pas de route HTTP) : une formation hors des pistes déjà calculées (non admissible = filtrée des recommandations) n'affichait qu'un message générique renvoyant vers Guido, sur la fiche catalogue comme dans les vœux.

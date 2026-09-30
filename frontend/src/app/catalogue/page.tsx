@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Compass, Filter, GraduationCap, Info, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Compass, Filter, GraduationCap, Info, Search, X } from 'lucide-react';
 import { authApi, filiereApi, type ParametresCatalogue } from '@/lib/api';
 import { DOMAINE_LABELS, NIVEAU_LABELS, TYPE_LABELS, type Domaine, type Filiere, type NiveauAcces, type TypeFiliere, type ValeursFiltres } from '@/lib/filiere';
 import { domaineDominant } from '@/lib/apprenant';
@@ -22,10 +22,8 @@ const LIMITE = 48;
 /** Filtres portés par l'adresse de la page : une recherche filtrée se partage par simple lien. */
 const CLES = ['q', 'niveau', 'type', 'domaine', 'departement', 'serie', 'bourses', 'officielle'] as const;
 type Cle = (typeof CLES)[number];
-/** Repliés par défaut sous « Plus de filtres » : moins de choix visibles d'emblée, pour ne pas donner
- * l'impression d'un formulaire administratif. Dépliés automatiquement si l'un d'eux est déjà actif
- * (lien partagé, retour arrière). */
-const CLES_SECONDAIRES: Cle[] = ['type', 'departement', 'serie', 'bourses', 'officielle'];
+/** Type de formation : plusieurs valeurs possibles, jointes par une virgule dans l'adresse (ex. ?type=TECHNIQUE,UNIVERSITE). */
+const TYPES_FORMATION = Object.keys(TYPE_LABELS) as TypeFiliere[];
 
 function requeteDepuis(chaine: string): ParametresCatalogue {
   const p = new URLSearchParams(chaine);
@@ -85,8 +83,18 @@ function Catalogue() {
   const { statut: statutMur, decouverte, nip: nipMur } = useDecouverteStore();
   const [filtreProfilActif, setFiltreProfilActif] = useState(false);
   const decisionProfilPrise = useRef(false);
-  const filtresSecondairesActifs = CLES_SECONDAIRES.some((cle) => params.get(cle));
-  const [plusDeFiltres, setPlusDeFiltres] = useState(false);
+  const typesChoisis = useMemo(() => (params.get('type') ?? '').split(',').filter(Boolean) as TypeFiliere[], [params]);
+  // router.replace ne met pas forcément à jour l'adresse de façon synchrone : deux cases cochées coup
+  // sur coup, avant que le 1er changement n'ait atteint le rendu (ou même window.location), perdraient
+  // sinon la 1re sélection — même famille que le bug de fermeture RIASEC déjà rencontré dans ce projet.
+  // Une ref mutée immédiatement au clic, jamais dépendante d'un rendu ou d'un écho d'URL, évite ça.
+  const typesRef = useRef(typesChoisis);
+  typesRef.current = typesChoisis;
+  const basculerType = (t: TypeFiliere) => {
+    const suivants = typesRef.current.includes(t) ? typesRef.current.filter((x) => x !== t) : [...typesRef.current, t];
+    typesRef.current = suivants;
+    modifier({ type: suivants.join(',') });
+  };
 
   // Lu dans l'adresse au moment du changement : un filtre modifié pendant la saisie n'est pas écrasé
   const modifier = (changements: Partial<Record<Cle, string>>) => {
@@ -115,13 +123,6 @@ function Catalogue() {
   useEffect(() => {
     setSaisie((actuelle) => (actuelle.trim() === q ? actuelle : q));
   }, [q]);
-
-  // Un filtre secondaire déjà actif (lien partagé, retour arrière) déplie le panneau : sinon il resterait
-  // invisible, contredisant l'exigence « filtres actifs visibles ».
-  useEffect(() => {
-    if (filtresSecondairesActifs) setPlusDeFiltres(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     filiereApi
@@ -205,17 +206,34 @@ function Catalogue() {
   ];
 
   // Une puce par filtre actif, avec son propre bouton de suppression — pas seulement un « tout effacer »
-  // global : l'utilisateur doit pouvoir retirer un seul critère sans perdre les autres.
-  const puces: { cle: Cle; libelle: string }[] = [
-    q && { cle: 'q' as const, libelle: `« ${q} »` },
-    params.get('niveau') && { cle: 'niveau' as const, libelle: NIVEAU_LABELS[params.get('niveau') as NiveauAcces] },
-    params.get('type') && { cle: 'type' as const, libelle: TYPE_LABELS[params.get('type') as TypeFiliere] },
-    params.get('domaine') && { cle: 'domaine' as const, libelle: DOMAINE_LABELS[params.get('domaine') as Domaine] },
-    params.get('departement') && { cle: 'departement' as const, libelle: params.get('departement') as string },
-    serie && { cle: 'serie' as const, libelle: `Bac ${serie}` },
-    params.get('bourses') === 'true' && { cle: 'bourses' as const, libelle: 'Avec bourses' },
-    params.get('officielle') === 'true' && { cle: 'officielle' as const, libelle: 'Source officielle' },
-  ].filter((p): p is { cle: Cle; libelle: string } => !!p);
+  // global : l'utilisateur doit pouvoir retirer un seul critère sans perdre les autres. Le type de
+  // formation, multi-valué, donne une puce par valeur choisie plutôt qu'une seule pour tout le filtre.
+  const puces: { id: string; libelle: string; retirer: () => void }[] = [
+    q && { id: 'q', libelle: `« ${q} »`, retirer: () => modifier({ q: '' }) },
+    params.get('niveau') && {
+      id: 'niveau',
+      libelle: NIVEAU_LABELS[params.get('niveau') as NiveauAcces],
+      retirer: () => modifier({ niveau: '' }),
+    },
+    ...typesChoisis.map((t) => ({ id: `type-${t}`, libelle: TYPE_LABELS[t], retirer: () => basculerType(t) })),
+    params.get('domaine') && {
+      id: 'domaine',
+      libelle: DOMAINE_LABELS[params.get('domaine') as Domaine],
+      retirer: () => modifier({ domaine: '' }),
+    },
+    params.get('departement') && {
+      id: 'departement',
+      libelle: params.get('departement') as string,
+      retirer: () => modifier({ departement: '' }),
+    },
+    serie && { id: 'serie', libelle: `Bac ${serie}`, retirer: () => modifier({ serie: '' }) },
+    params.get('bourses') === 'true' && { id: 'bourses', libelle: 'Avec bourses', retirer: () => modifier({ bourses: '' }) },
+    params.get('officielle') === 'true' && {
+      id: 'officielle',
+      libelle: 'Source officielle',
+      retirer: () => modifier({ officielle: '' }),
+    },
+  ].filter((p): p is { id: string; libelle: string; retirer: () => void } => !!p);
 
   return (
     <div className="py-8v">
@@ -246,9 +264,9 @@ function Catalogue() {
           <p>Catalogue constitué à partir de sources publiques, en attente de validation par le Ministère. Chaque fiche indique ses sources.</p>
         </div>
 
-        {/* Filtres primaires : les 2 critères les plus utilisés, toujours visibles avec un libellé clair. */}
+        {/* Tous les filtres visibles d'emblée, rien de replié. */}
         <div className="mb-4v">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3v">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3v">
             <div>
               <label htmlFor="filtre-niveau" className="block text-xs font-medium text-text-secondary mb-1v">
                 Niveau d&apos;accès
@@ -280,106 +298,88 @@ function Catalogue() {
                 ))}
               </select>
             </div>
+            <div>
+              <label htmlFor="filtre-departement" className="block text-xs font-medium text-text-secondary mb-1v">
+                Département
+              </label>
+              <select
+                id="filtre-departement"
+                value={params.get('departement') ?? ''}
+                onChange={(e) => modifier({ departement: e.target.value })}
+                className={CHAMP}
+              >
+                <option value="">Tous les départements</option>
+                {valeurs?.departements.map((d) => (
+                  <option key={d.nom} value={d.nom}>
+                    {d.nom} ({d.total})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="filtre-serie" className="block text-xs font-medium text-text-secondary mb-1v">
+                Série de bac
+              </label>
+              <select
+                id="filtre-serie"
+                value={serie}
+                onChange={(e) => modifier({ serie: e.target.value, ...(e.target.value ? { niveau: 'APRES_BAC' } : {}) })}
+                className={CHAMP}
+              >
+                <option value="">Accessible avec mon bac…</option>
+                {groupesSeries.map(
+                  ([titre, series]) =>
+                    series.length > 0 && (
+                      <optgroup key={titre} label={titre}>
+                        {series.map((s) => (
+                          <option key={s.serie} value={s.serie}>
+                            Bac {s.serie} — {s.libelle}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ),
+                )}
+              </select>
+            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setPlusDeFiltres(!plusDeFiltres)}
-            aria-expanded={plusDeFiltres}
-            aria-controls="filtres-secondaires"
-            className="inline-flex items-center gap-2v mt-3v text-sm font-medium text-primary hover:underline"
-          >
-            <SlidersHorizontal size={15} aria-hidden="true" />
-            {plusDeFiltres ? 'Moins de filtres' : 'Plus de filtres'}
-            {!plusDeFiltres && filtresSecondairesActifs && (
-              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary text-text-on-primary text-[10px] font-bold">
-                {CLES_SECONDAIRES.filter((cle) => params.get(cle)).length}
-              </span>
-            )}
-          </button>
-
-          {plusDeFiltres && (
-            <div id="filtres-secondaires" className="mt-3v p-4v rounded-bj-sm border border-border bg-background space-y-3v">
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3v">
-                <div>
-                  <label htmlFor="filtre-type" className="block text-xs font-medium text-text-secondary mb-1v">
-                    Type de formation
-                  </label>
-                  <select id="filtre-type" value={params.get('type') ?? ''} onChange={(e) => modifier({ type: e.target.value })} className={CHAMP}>
-                    <option value="">Tous les types</option>
-                    {(Object.keys(TYPE_LABELS) as TypeFiliere[]).map((t) => (
-                      <option key={t} value={t}>
-                        {TYPE_LABELS[t]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="filtre-departement" className="block text-xs font-medium text-text-secondary mb-1v">
-                    Département
-                  </label>
-                  <select
-                    id="filtre-departement"
-                    value={params.get('departement') ?? ''}
-                    onChange={(e) => modifier({ departement: e.target.value })}
-                    className={CHAMP}
-                  >
-                    <option value="">Tous les départements</option>
-                    {valeurs?.departements.map((d) => (
-                      <option key={d.nom} value={d.nom}>
-                        {d.nom} ({d.total})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="filtre-serie" className="block text-xs font-medium text-text-secondary mb-1v">
-                    Série de bac
-                  </label>
-                  <select
-                    id="filtre-serie"
-                    value={serie}
-                    onChange={(e) => modifier({ serie: e.target.value, ...(e.target.value ? { niveau: 'APRES_BAC' } : {}) })}
-                    className={CHAMP}
-                  >
-                    <option value="">Accessible avec mon bac…</option>
-                    {groupesSeries.map(
-                      ([titre, series]) =>
-                        series.length > 0 && (
-                          <optgroup key={titre} label={titre}>
-                            {series.map((s) => (
-                              <option key={s.serie} value={s.serie}>
-                                Bac {s.serie} — {s.libelle}
-                              </option>
-                            ))}
-                          </optgroup>
-                        ),
-                    )}
-                  </select>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-x-6v gap-y-2v pt-1v">
-                <label className="inline-flex items-center gap-2v text-sm cursor-pointer">
+          <fieldset className="mt-3v">
+            <legend className="block text-xs font-medium text-text-secondary mb-1v">Type de formation</legend>
+            <div className="flex flex-wrap gap-x-5v gap-y-2v">
+              {TYPES_FORMATION.map((t) => (
+                <label key={t} className="inline-flex items-center gap-2v text-sm cursor-pointer">
                   <input
                     type="checkbox"
-                    checked={params.get('bourses') === 'true'}
-                    onChange={(e) => modifier({ bourses: e.target.checked ? 'true' : '' })}
+                    checked={typesChoisis.includes(t)}
+                    onChange={() => basculerType(t)}
                     className="w-4 h-4 accent-primary"
                   />
-                  Avec bourses
+                  {TYPE_LABELS[t]}
                 </label>
-                <label className="inline-flex items-center gap-2v text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={params.get('officielle') === 'true'}
-                    onChange={(e) => modifier({ officielle: e.target.checked ? 'true' : '' })}
-                    className="w-4 h-4 accent-primary"
-                  />
-                  Source officielle uniquement
-                </label>
-              </div>
+              ))}
             </div>
-          )}
+          </fieldset>
+
+          <div className="flex flex-wrap items-center gap-x-6v gap-y-2v mt-3v">
+            <label className="inline-flex items-center gap-2v text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={params.get('bourses') === 'true'}
+                onChange={(e) => modifier({ bourses: e.target.checked ? 'true' : '' })}
+                className="w-4 h-4 accent-primary"
+              />
+              Avec bourses
+            </label>
+            <label className="inline-flex items-center gap-2v text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={params.get('officielle') === 'true'}
+                onChange={(e) => modifier({ officielle: e.target.checked ? 'true' : '' })}
+                className="w-4 h-4 accent-primary"
+              />
+              Source officielle uniquement
+            </label>
+          </div>
 
           {raccourci && (
             <button
@@ -400,9 +400,9 @@ function Catalogue() {
             </span>
             {puces.map((p) => (
               <button
-                key={p.cle}
+                key={p.id}
                 type="button"
-                onClick={() => modifier({ [p.cle]: '' })}
+                onClick={p.retirer}
                 className="inline-flex items-center gap-1v pl-3v pr-2v py-1v rounded-full bg-primary-soft text-primary text-xs font-medium hover:bg-primary/20"
               >
                 {p.libelle}
