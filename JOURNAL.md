@@ -6,6 +6,13 @@
 
 ## État actuel
 
+### Mise à jour du 01/10/2026 (2) — limite du choix multiple annoncée avant les options
+
+- **Demande de l'utilisateur** : sur l'écran « Ce qui compte le plus pour toi dans un métier » (priorités, questionnaire de découverte), indiquer « (Trois choix max possibles) » juste sous le titre plutôt que de laisser l'élève le découvrir seulement via le compteur « 0/3 choisi » en bas.
+- **Fait** : `ChoixMultiple` (composant générique, un seul appelant aujourd'hui — les priorités, max=3) affiche maintenant ce rappel en toutes lettres avant la liste d'options, dérivé du prop `max` existant (table `MOTS_NOMBRE` 1 à 6) plutôt qu'un texte figé — reste correct si `max` change un jour ou si le composant sert ailleurs.
+- **Vérifié en direct** : brouillon local posé directement sur cet écran (plus rapide que cliquer les 28 écrans précédents), « (Trois choix max possibles) » bien affiché juste après le titre, avant les 6 options. 0 erreur console. `tsc --noEmit` propre.
+- Suite : revenir vers l'utilisateur. Non commité.
+
 ### Mise à jour du 01/10/2026 — catalogue : filtres tous visibles, type de formation multi-sélection
 
 - **Demande de l'utilisateur** : retirer le panneau replié « Plus de filtres » (tout afficher directement) et permettre de choisir plusieurs types de formation à la fois.

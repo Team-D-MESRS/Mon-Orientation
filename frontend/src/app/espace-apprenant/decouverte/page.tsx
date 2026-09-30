@@ -237,6 +237,9 @@ function ChoixUnique<T extends string>({
   );
 }
 
+/** En toutes lettres plutôt qu'en chiffre, plus naturel pour une petite quantité (« Trois choix max possibles »). */
+const MOTS_NOMBRE: Record<number, string> = { 1: 'Un', 2: 'Deux', 3: 'Trois', 4: 'Quatre', 5: 'Cinq', 6: 'Six' };
+
 function ChoixMultiple<T extends string>({
   options,
   labels,
@@ -256,6 +259,7 @@ function ChoixMultiple<T extends string>({
   };
   return (
     <div>
+      <p className="text-sm text-text-secondary mb-3v -mt-2v text-center">({MOTS_NOMBRE[max] ?? max} choix max possibles)</p>
       <div className="grid gap-2v">
         {options.map((o) => (
           <Etiquette key={o} selectionne={valeurs.includes(o)} onClick={() => basculer(o)} pleineLargeur>
