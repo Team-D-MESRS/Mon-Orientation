@@ -18,6 +18,7 @@ enum Role {
 enum Palier {
   QUATRIEME
   TROISIEME
+  SECONDE
   PREMIERE
   TERMINALE
 }

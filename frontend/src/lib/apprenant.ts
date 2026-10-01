@@ -1,11 +1,12 @@
 import { DOMAINE_LABELS, type Domaine, type EtablissementPourVoeu, type Filiere, type NiveauAcces } from './filiere';
 import { codesDominants, LABELS_RIASEC, type ReponseRiasec, scoresRiasec } from './riasec';
 
-export type Palier = 'QUATRIEME' | 'TROISIEME' | 'PREMIERE' | 'TERMINALE';
+export type Palier = 'QUATRIEME' | 'TROISIEME' | 'SECONDE' | 'PREMIERE' | 'TERMINALE';
 
 export const PALIER_LABELS: Record<Palier, string> = {
   QUATRIEME: '4e',
   TROISIEME: '3e',
+  SECONDE: '2nde',
   PREMIERE: '1re',
   TERMINALE: 'Terminale',
 };

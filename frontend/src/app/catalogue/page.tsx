@@ -152,7 +152,7 @@ function Catalogue() {
       .moi()
       .then(({ data }) => {
         const eleve = data.apprenant;
-        setMaSerie(eleve?.serie && (eleve.palier === 'PREMIERE' || eleve.palier === 'TERMINALE') ? eleve.serie : null);
+        setMaSerie(eleve?.serie && (eleve.palier === 'SECONDE' || eleve.palier === 'PREMIERE' || eleve.palier === 'TERMINALE') ? eleve.serie : null);
         setMonPalier(eleve?.palier ?? null);
         setMonNip(eleve?.nip ?? null);
       })

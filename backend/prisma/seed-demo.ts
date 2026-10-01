@@ -261,6 +261,31 @@ const ELEVES: EleveDemo[] = [
     // (Fatou : vœux validés) et un autre qui n'a pas encore répondu au questionnaire.
   },
   {
+    nip: 'DEMO-2ND-0001',
+    numeroEducmaster: 'EM-2026-00070',
+    nom: 'Houngbo',
+    prenom: 'Edwige',
+    dateNaissance: '2010-08-22',
+    sexe: 'F',
+    departement: 'Zou',
+    commune: 'Abomey',
+    palier: 'SECONDE',
+    // Pas de série : elle se choisit à partir de la Première, pas encore en Seconde.
+    avecCompte: true,
+    notes: {
+      Mathématiques: [13, 13.5, 13],
+      PCT: [12, 12.5, 12],
+      SVT: [13, 13, 13.5],
+      Français: [12.5, 13, 13],
+      Anglais: [12, 12.5, 13],
+      'Histoire-Géographie': [13, 13, 13.5],
+      EPS: [14, 14.5, 14],
+    },
+    // Pas de découverte : palier ajouté le 01/10 (traité comme la Première — mêmes pistes du
+    // supérieur en exploration, pas de vœux à ce niveau), seul palier qui n'avait pas encore de
+    // compte de démo.
+  },
+  {
     nip: 'DEMO-4E-0002',
     numeroEducmaster: 'EM-2026-00067',
     nom: 'Zannou',

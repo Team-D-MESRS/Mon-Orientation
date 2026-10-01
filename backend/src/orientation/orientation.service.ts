@@ -25,6 +25,7 @@ interface Evaluation {
 const NIVEAU_PAR_PALIER: Record<Palier, NiveauAcces> = {
   QUATRIEME: 'APRES_BEPC',
   TROISIEME: 'APRES_BEPC',
+  SECONDE: 'APRES_BAC',
   PREMIERE: 'APRES_BAC',
   TERMINALE: 'APRES_BAC',
 };

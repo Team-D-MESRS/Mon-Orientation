@@ -6,6 +6,15 @@
 
 ## État actuel
 
+### Mise à jour du 01/10/2026 (4) — ajout du palier Seconde (manquant depuis le début)
+
+- **Trouvé en répondant à une question de l'utilisateur** (« est-ce que quelqu'un en Seconde peut se connecter ? ») : non — l'enum `Palier` en base n'avait que QUATRIEME/TROISIEME/PREMIERE/TERMINALE, aucune place pour la Seconde, alors que README/SPEC annoncent « de la 4e à la Terminale » (qui l'inclut implicitement). Si EducMaster renvoyait un jour un dossier Seconde, l'identification aurait échoué (valeur hors enum, rejetée par Postgres).
+- **Décision de l'utilisateur** : traiter la Seconde exactement comme la Première (pas de vœux à ce niveau, filières du supérieur en exploration/`APRES_BAC`).
+- **Fait** : migration Prisma (`ALTER TYPE "Palier" ADD VALUE 'SECONDE'`, via `migrate diff` + `migrate deploy`, le shell non interactif refusant `migrate dev`). `Palier` (type TS + enum Prisma), `PALIER_LABELS` (« 2nde ») des deux côtés ; `NIVEAU_PAR_PALIER` (backend, orientation) et le raccourci « Que faire avec mon bac… ? » du catalogue étendus. Aucun autre fichier à toucher : `niveauDuPalier`, `palierDeSaisie`, les ternaires limités à 3e/Terminale (vœux) et le test `QUATRIEME` (exploration en 4e) traitent déjà la Seconde correctement par construction (branche `else`/absence de clé) — confirmé par `tsc --noEmit` propre des deux côtés sans aucune autre erreur d'exhaustivité.
+- **Démo** : nouveau compte `DEMO-2ND-0001` (Edwige Houngbo, Zou/Abomey, sans série — elle se choisit à partir de la Première, pas encore en Seconde), seul palier qui n'avait pas encore de compte de test.
+- **Vérifié en direct** : connexion à `DEMO-2ND-0001` réussie, tableau de bord affiche « 2nde », catalogue auto-filtré sur `?niveau=APRES_BAC` (même comportement que Première). 0 erreur console. `tests/api/parcours-eleve.sh` 63/65 (2 échecs préexistants, sans rapport), `catalogue.sh` 78/78, `securite.sh` 39/39.
+- Suite : revenir vers l'utilisateur. Non commité (migration comprise).
+
 ### Mise à jour du 01/10/2026 (3) — catalogue filtré d'emblée sur le niveau d'accès de l'élève
 
 - **Demande de l'utilisateur** : un élève de 4e ou 3e qui accède au catalogue doit déjà voir « Après le BEPC » filtré ; pareil pour les autres paliers (Première/Terminale → après le bac).
