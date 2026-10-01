@@ -273,3 +273,4 @@ Les captures d'écran sont écrites dans `tests/e2e/captures/`. Il n'y a pas enc
 | Une classe Tailwind récente n'a pas d'effet | Si `tailwind.config.ts` a été modifié, relancer le serveur de développement |
 | « Serveur injoignable » partout | API arrêtée ou `NEXT_PUBLIC_API_URL` incorrecte ; vérifier `http://localhost:8080/api/docs` |
 | Redirection en boucle vers `/connexion` | Jetons expirés ou invalides : se déconnecter, ou vider `localStorage` (`accessToken`, `refreshToken`, `utilisateur`) |
+.
