@@ -14,8 +14,7 @@ interface ProgressOverviewProps {
   estParent: boolean;
 }
 
-const libelleVoeux = (preference: Preference | null | undefined) =>
-  preference === undefined ? '…' : !preference ? 'À préparer' : preference.valideParent ? 'Validés' : 'En attente';
+const libelleVoeux = (preference: Preference | null | undefined) => (preference === undefined ? '…' : !preference ? 'À préparer' : 'Enregistrés');
 
 /** Vue d'ensemble : quelques chiffres réels (aucune métrique inventée), plus la lecture qualitative du profil de découverte. */
 export function ProgressOverview({ prenom, decouverte, recommandations, favoris, preference, progression, estParent }: ProgressOverviewProps) {

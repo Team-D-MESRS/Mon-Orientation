@@ -87,7 +87,7 @@ try {
   await nav.saisir('#motivation', "J'aime les mathématiques et la physique.");
   await nav.cliquerTexte('Enregistrer mes vœux', 'button');
   await nav.attendre(contient('Vœux enregistrés'));
-  r.verifier('Vœux enregistrés, en attente du parent', await nav.evaluer(contient('en attente de validation')));
+  r.verifier('Vœux enregistrés, aucune validation parent requise', await nav.evaluer(`${contient('Vœux enregistrés')} && !${contient('validation')}`));
   await nav.capture(`${OUT}/b2-voeux-recap.png`);
 
   // Recommandations
@@ -110,16 +110,14 @@ try {
   await nav.taille(1280, 900);
   await deconnecter();
 
-  // Parent : validation
+  // Parent : consultation des vœux (lecture seule, aucune validation à faire — fonctionnalité retirée)
   await connecter('parent.demo@monorientation.bj', '/espace-apprenant');
-  await nav.attendre(`${contient('Suivi de Fatou')} && ${contient('attendent ta validation')}`);
-  r.verifier('Parent : suivi de Fatou, vœux à valider', true);
+  await nav.attendre(contient('Suivi de Fatou'));
+  r.verifier('Parent : suivi de Fatou', true);
   await nav.aller(`${BASE}/espace-apprenant/preferences`);
-  await nav.attendre(contient('Valider les vœux de Fatou'));
-  await nav.cliquerTexte('Valider les vœux de Fatou', 'button');
-  await nav.attendre(contient('Vœux validés le'));
-  r.verifier('Parent : vœux validés', true);
-  await nav.capture(`${OUT}/b2-parent-validation.png`);
+  await nav.attendre(contient('Vœux de Fatou'));
+  r.verifier('Parent : vœux de Fatou visibles, sans bouton de validation', await nav.evaluer("!document.body.textContent.includes('Valider')"));
+  await nav.capture(`${OUT}/b2-parent-voeux.png`);
   await deconnecter();
 
   // Terminale D : pistes du supérieur

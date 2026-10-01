@@ -2,13 +2,12 @@ import Link from 'next/link';
 import { AlertTriangle, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { ButtonLink } from '@/components/ui/Button';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import type { Decouverte, Preference, Recommandation } from '@/lib/apprenant';
+import type { Decouverte, Recommandation } from '@/lib/apprenant';
 
 interface ParentSummaryProps {
   prenom: string;
   decouverte: Decouverte | null | undefined;
   recommandations: Recommandation[] | null;
-  preference: Preference | null | undefined;
 }
 
 /**
@@ -16,13 +15,10 @@ interface ParentSummaryProps {
  * ProgressOverview, commun aux deux) — ici, ce qui mérite une conversation, dérivé du vrai état du
  * dossier, jamais d'une liste figée.
  */
-export function ParentSummary({ prenom, decouverte, recommandations, preference }: ParentSummaryProps) {
+export function ParentSummary({ prenom, decouverte, recommandations }: ParentSummaryProps) {
   const points: { texte: string; href: string }[] = [];
   if (!decouverte) {
     points.push({ texte: `${prenom} n’a pas encore rempli son profil de découverte.`, href: '/espace-apprenant/decouverte' });
-  }
-  if (preference && !preference.valideParent) {
-    points.push({ texte: `Les vœux de ${prenom} attendent votre validation.`, href: '/espace-apprenant/preferences' });
   }
   if (decouverte && recommandations !== null && recommandations.length === 0) {
     points.push({ texte: 'Aucune piste n’a encore été calculée pour l’instant.', href: '/espace-apprenant/recommandations' });

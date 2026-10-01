@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, ExternalLink, Heart, Search } from 'lucide-react';
+import { ExternalLink, Heart, Search } from 'lucide-react';
 import { apprenantApi, filiereApi, orientationApi, type EvaluationFiliere } from '@/lib/api';
 import {
   ORDINAUX,
@@ -25,7 +25,7 @@ const RECAPITULATIF = NB_ETAPES + 1;
 
 export default function PreferencesPage() {
   const profil = useProfil();
-  const { moi, estEleve } = useEspace();
+  const { estEleve } = useEspace();
   const saisieOuverte = palierDeSaisie(profil.palier);
   const [preference, setPreference] = useState<Preference | null | undefined>(undefined);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -61,7 +61,7 @@ export default function PreferencesPage() {
   if (erreur) return <Alerte ton="erreur">{erreur}</Alerte>;
   if (preference === undefined) return <Chargement />;
   if (!estEleve) {
-    return <VoeuxEnLecture profil={profil} preference={preference} peutValider={moi.role === 'PARENT'} onValide={setPreference} />;
+    return <VoeuxEnLecture profil={profil} preference={preference} />;
   }
   return <SaisieDesVoeux profil={profil} preference={preference} onEnregistre={setPreference} />;
 }
@@ -156,37 +156,11 @@ function VerificationVoeu({ nip, code }: { nip: string; code: string | null }) {
   );
 }
 
-function VoeuxEnLecture({
-  profil,
-  preference,
-  peutValider,
-  onValide,
-}: {
-  profil: ProfilApprenant;
-  preference: Preference | null;
-  peutValider: boolean;
-  onValide: (preference: Preference) => void;
-}) {
-  const [envoi, setEnvoi] = useState(false);
-  const [erreur, setErreur] = useState<string | null>(null);
-
+function VoeuxEnLecture({ profil, preference }: { profil: ProfilApprenant; preference: Preference | null }) {
   if (!preference) {
     return <Alerte ton="info">{profil.prenom} n&apos;a pas encore saisi ses vœux.</Alerte>;
   }
   const estBepc = niveauDuPalier(profil.palier as NonNullable<ProfilApprenant['palier']>) === 'APRES_BEPC';
-
-  const valider = async () => {
-    setEnvoi(true);
-    setErreur(null);
-    try {
-      const { data } = await apprenantApi.validerPreferences(profil.nip);
-      onValide(data);
-    } catch (err) {
-      setErreur(messageErreur(err));
-    } finally {
-      setEnvoi(false);
-    }
-  };
 
   return (
     <section className="bg-white rounded-bj-md border border-bj-gray-925 p-6v">
@@ -202,26 +176,6 @@ function VoeuxEnLecture({
         <blockquote className="mt-4v text-sm border-l-4 border-bj-green pl-4v italic">« {preference.motivation} »</blockquote>
       )}
       <p className="text-xs text-bj-gray-500 mt-4v">Saisis le {dateLisible(preference.dateSaisie)}.</p>
-
-      <div className="mt-6v">
-        {preference.valideParent ? (
-          <p className="flex items-center gap-2v text-bj-green font-medium">
-            <CheckCircle2 size={18} aria-hidden="true" /> Vœux validés le {dateLisible(preference.dateValidationParent as string)}.
-          </p>
-        ) : peutValider ? (
-          <>
-            <p className="text-sm mb-3v">
-              En validant, tu confirmes avoir pris connaissance des choix de {profil.prenom} et en avoir parlé ensemble.
-            </p>
-            <button type="button" onClick={valider} disabled={envoi} className="bj-btn bj-btn-primary disabled:opacity-60">
-              {envoi ? 'Validation…' : `Valider les vœux de ${profil.prenom}`}
-            </button>
-          </>
-        ) : (
-          <p className="text-sm text-bj-gray-500">En attente de validation par le parent.</p>
-        )}
-        {erreur && <Alerte ton="erreur">{erreur}</Alerte>}
-      </div>
     </section>
   );
 }
@@ -379,14 +333,6 @@ function SaisieDesVoeux({
           <textarea id="motivation" rows={3} maxLength={1000} value={motivation} onChange={(e) => setMotivation(e.target.value)} className={CHAMP} />
         </div>
 
-        {preference?.valideParent ? (
-          <Alerte ton="attention">
-            Tes vœux ont été validés par ton parent le {dateLisible(preference.dateValidationParent as string)}. Si tu les modifies, il devra les
-            valider à nouveau.
-          </Alerte>
-        ) : (
-          preference && <p className="text-sm text-bj-gray-500">Vœux en attente de validation par ton parent.</p>
-        )}
         {erreur && <Alerte ton="erreur">{erreur}</Alerte>}
         {enregistre && (
           <Alerte ton="succes">

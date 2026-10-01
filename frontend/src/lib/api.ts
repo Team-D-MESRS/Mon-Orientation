@@ -154,7 +154,6 @@ export const apprenantApi = {
   getPreferences: (nip: string) => api.get<Preference[]>(`/apprenant/${nip}/preferences`),
   enregistrerPreferences: (nip: string, data: DonneesVoeux) =>
     api.post<Preference[]>(`/apprenant/${nip}/preferences`, data),
-  validerPreferences: (nip: string) => api.post<Preference>(`/apprenant/${nip}/preferences/validation`),
   getDecouverte: (nip: string) => api.get<Decouverte | null>(`/apprenant/${nip}/decouverte`),
   enregistrerDecouverte: (nip: string, reponses: ReponsesDecouverte) =>
     api.post<Decouverte>(`/apprenant/${nip}/decouverte`, { reponses }),

@@ -41,6 +41,18 @@ const MAX_PRIORITES = 3;
 const QUESTIONS_PAR_DIMENSION = 4;
 const QUESTIONS_PARCOURS = BANQUE_RIASEC.filter((_, index) => index % 6 < QUESTIONS_PAR_DIMENSION);
 const NB_QUESTIONS_PARCOURS = QUESTIONS_PARCOURS.length;
+/** Même ordre que construireEcrans : sert à retrouver, pour un indexEcran de brouillon repris, quels
+ * écrans ont forcément déjà été passés (et donc répondus, voir `touches`). */
+const CLES_ECRANS_EN_ORDRE = [
+  ...QUESTIONS_PARCOURS.map((q) => `riasec-${q.id}`),
+  'metier',
+  'styleTravail',
+  'statut',
+  'dureeEtudes',
+  'priorites',
+  'internat',
+  'mobiliteDepartement',
+];
 
 const VIDE: ReponsesDecouverte = {
   riasec: [],
@@ -572,6 +584,14 @@ function Questionnaire({
   const [confirmationFinale, setConfirmationFinale] = useState<Decouverte | null>(null);
   const zoneQuestionRef = useRef<HTMLDivElement>(null);
   const derniereNavigationRef = useRef(0);
+  // Un profil déjà soumis (reponsesActuelles) est entièrement répondu par construction — rien à
+  // forcer de nouveau en mode « Modifier mes réponses ». Pour un démarrage à vide, rempli au fil de
+  // l'eau par `maj`/`definirRiasec` (plusieurs champs, ex. styleTravail, partent d'une valeur par
+  // défaut dans VIDE plutôt que d'un état vide : sans ce suivi, « Suivant » la laisserait filer comme
+  // si elle avait été choisie) ; mis à jour aussi à la reprise d'un brouillon local, ci-dessous.
+  const [touches, setTouches] = useState<Set<string>>(
+    () => new Set(reponsesActuelles ? CLES_ECRANS_EN_ORDRE : []),
+  );
 
   const cleBrouillon = `mon-orientation:onboarding:${profil.nip}`;
 
@@ -588,10 +608,15 @@ function Questionnaire({
         const parse = JSON.parse(brut) as { reponses?: ReponsesDecouverte; indexEcran?: number } | ReponsesDecouverte;
         if ('reponses' in parse && parse.reponses) {
           setR(parse.reponses);
+          setTouches(new Set(parse.reponses.riasec.map((x) => `riasec-${x.id}`)));
           if (typeof parse.indexEcran === 'number' && parse.indexEcran > 0) {
             setIndexEcran(parse.indexEcran);
             setDemarre(true);
             setReprise(true);
+            // Les écrans avant la position reprise ont forcément déjà été passés (et donc répondus,
+            // sans quoi « Suivant » ne les aurait pas laissés avancer) — y compris les champs à valeur
+            // par défaut (styleTravail, statut…) que `touches` ne peut pas déduire de leur simple valeur.
+            setTouches((actuel) => new Set([...Array.from(actuel), ...CLES_ECRANS_EN_ORDRE.slice(0, parse.indexEcran)]));
           }
         } else {
           setR(parse as ReponsesDecouverte);
@@ -615,15 +640,19 @@ function Questionnaire({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [brouillonCharge, cleBrouillon, modifier, r, indexEcran]);
 
-  const maj = <K extends keyof ReponsesDecouverte>(champ: K, valeur: ReponsesDecouverte[K]) =>
+  const maj = <K extends keyof ReponsesDecouverte>(champ: K, valeur: ReponsesDecouverte[K]) => {
     setR((actuel) => ({ ...actuel, [champ]: valeur }));
+    setTouches((actuel) => (actuel.has(champ) ? actuel : new Set(actuel).add(champ)));
+  };
 
   // Mutateur fonctionnel (pas juste `maj('riasec', [...r.riasec, ...])`) : plusieurs réponses
   // peuvent être enregistrées dans la même rafale d'évènements (ex. remplissage automatisé des
   // tests) sans attendre un nouveau rendu entre chaque clic — une fermeture sur `r.riasec` figée au
   // rendu précédent ferait perdre toutes les réponses sauf la dernière.
-  const definirRiasec = (id: string, valeur: ValeurLikert) =>
+  const definirRiasec = (id: string, valeur: ValeurLikert) => {
     setR((actuel) => ({ ...actuel, riasec: [...actuel.riasec.filter((x) => x.id !== id), { id, valeur }] }));
+    setTouches((actuel) => (actuel.has(`riasec-${id}`) ? actuel : new Set(actuel).add(`riasec-${id}`)));
+  };
 
   // Empêche qu'un double clic (ou un Entrée suivi d'un clic accidentel) ne saute deux questions d'un coup.
   const allerA = (cible: number) => {
@@ -637,6 +666,9 @@ function Questionnaire({
   const NB_ECRANS = ecrans.length;
   const surRecap = indexEcran >= NB_ECRANS;
   const chapitreCourant = surRecap ? 5 : ecrans[indexEcran].chapitre;
+  // Seul l'écran du métier envisagé est facultatif (texte libre, « je ne sais pas encore » étant déjà
+  // une réponse honnête qu'on ne force pas) — tous les autres doivent être explicitement cochés.
+  const ecranRepondu = surRecap || ecrans[indexEcran].cle === 'metier' || touches.has(ecrans[indexEcran].cle);
 
   // Remonte en haut et replace le focus sur la nouvelle question à chaque changement — utile au clavier
   // et aux lecteurs d'écran, qui doivent retrouver le contexte sans avoir à chercher sur la page.
@@ -766,7 +798,12 @@ function Questionnaire({
                     Retour
                   </Button>
                   {!surRecap ? (
-                    <Button size="lg" onClick={() => allerA(indexEcran + 1)} iconRight={<ArrowRight size={18} aria-hidden="true" />}>
+                    <Button
+                      size="lg"
+                      onClick={() => allerA(indexEcran + 1)}
+                      disabled={!ecranRepondu}
+                      iconRight={<ArrowRight size={18} aria-hidden="true" />}
+                    >
                       Suivant
                     </Button>
                   ) : (

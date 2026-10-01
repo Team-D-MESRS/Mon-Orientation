@@ -79,14 +79,6 @@ export class ApprenantController {
     return this.apprenantService.enregistrerPreferences(nip, dto);
   }
 
-  @Post(':nip/preferences/validation')
-  @HttpCode(HttpStatus.OK)
-  @UseGuards(RolesGuard)
-  @Roles('PARENT')
-  @ApiOperation({ summary: 'Validation des vœux de l\'enfant par le parent' })
-  async validerPreferences(@Param('nip') nip: string) {
-    return this.apprenantService.validerPreferences(nip);
-  }
 
   @Get(':nip/favoris')
   @ApiOperation({ summary: 'Formations mises de côté par l\'élève (visibles du parent)' })

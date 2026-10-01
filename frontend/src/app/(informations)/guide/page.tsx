@@ -12,7 +12,6 @@ const ETAPES = [
   { id: 'resultats', titre: 'Suivre tes résultats' },
   { id: 'pistes', titre: 'Découvrir tes pistes' },
   { id: 'voeux', titre: 'Saisir tes vœux' },
-  { id: 'parent', titre: 'La validation par le parent' },
   { id: 'conseiller', titre: 'Poser tes questions à Guido' },
 ];
 
@@ -121,14 +120,7 @@ export default function GuidePage() {
         <p>En 4e et en 1re, commence par explorer le catalogue et les pistes proposées.</p>
       </Bloc>
 
-      <Bloc id="parent" titre="7. La validation par le parent">
-        <p>
-          Une fois les vœux saisis, le parent rattaché les retrouve dans son espace et les valide, après en avoir parlé avec son enfant.
-          Si l&apos;élève modifie ensuite ses vœux, une nouvelle validation est nécessaire.
-        </p>
-      </Bloc>
-
-      <Bloc id="conseiller" titre="8. Poser tes questions à Guido">
+      <Bloc id="conseiller" titre="7. Poser tes questions à Guido">
         <p>
           Dans ton espace, l&apos;onglet Guido répond à tes questions sur les formations, les métiers et tes pistes, en s&apos;appuyant
           sur le catalogue et sur ton dossier. Les parents peuvent aussi l&apos;utiliser.

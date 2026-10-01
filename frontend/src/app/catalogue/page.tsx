@@ -79,7 +79,6 @@ function Catalogue() {
   const [suite, setSuite] = useState<'repos' | 'chargement' | 'erreur'>('repos');
   const [maSerie, setMaSerie] = useState<string | null>(null);
   const [monPalier, setMonPalier] = useState<Palier | null>(null);
-  const [monNip, setMonNip] = useState<string | null>(null);
   const role = useAuthStore((s) => s.user?.role);
   const { erreur: erreurFavoris } = useFavoris();
   const { statut: statutMur, decouverte, nip: nipMur } = useDecouverteStore();
@@ -145,7 +144,6 @@ function Catalogue() {
     if (role !== 'APPRENANT') {
       setMaSerie(null);
       setMonPalier(null);
-      setMonNip(null);
       return;
     }
     authApi
@@ -154,28 +152,24 @@ function Catalogue() {
         const eleve = data.apprenant;
         setMaSerie(eleve?.serie && (eleve.palier === 'SECONDE' || eleve.palier === 'PREMIERE' || eleve.palier === 'TERMINALE') ? eleve.serie : null);
         setMonPalier(eleve?.palier ?? null);
-        setMonNip(eleve?.nip ?? null);
       })
       .catch(() => {
         setMaSerie(null);
         setMonPalier(null);
-        setMonNip(null);
       });
   }, [role]);
 
   // Filtre par défaut sur le niveau d'accès correspondant au palier de l'élève (4e/3e → après le BEPC,
-  // 1re/Tle → après le bac) : une fois par dossier et par session de navigateur, seulement si la page
-  // s'ouvre sans aucun filtre déjà choisi — même principe que le filtre de domaine ci-dessous, indépendant
-  // de lui (l'un ou l'autre peut être retiré sans perdre l'autre).
+  // 1re/2nde/Tle → après le bac) : toujours réappliqué à chaque arrivée sur la page sans aucun filtre
+  // déjà choisi (lien partagé) — pas qu'une fois par session : l'élève peut le retirer pour tout voir
+  // le temps de sa visite, mais revenir ensuite sur le catalogue (nouvelle navigation) le filtre à
+  // nouveau. Indépendant du filtre de domaine ci-dessous : l'un ou l'autre reste retirable seul.
   useEffect(() => {
-    if (decisionNiveauPrise.current || role !== 'APPRENANT' || monPalier === null || !monNip) return;
+    if (decisionNiveauPrise.current || role !== 'APPRENANT' || monPalier === null || paramsInitiaux) return;
     decisionNiveauPrise.current = true;
-    const cle = `catalogue-filtre-niveau:${monNip}`;
-    if (sessionStorage.getItem(cle) || paramsInitiaux) return;
-    sessionStorage.setItem(cle, '1');
     modifier({ niveau: niveauDuPalier(monPalier) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [role, monPalier, monNip]);
+  }, [role, monPalier]);
 
   // Filtre par défaut sur le domaine dominant du profil de découverte : une fois par dossier et par
   // session de navigateur, et seulement si la page s'ouvre sans aucun filtre déjà choisi (sinon une

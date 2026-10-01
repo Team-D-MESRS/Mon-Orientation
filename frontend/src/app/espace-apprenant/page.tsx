@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { BookOpen, CheckCircle2, Circle, Clock, Heart, MessageCircle, Scale } from 'lucide-react';
+import { BookOpen, CheckCircle2, Circle, Heart, MessageCircle, Scale } from 'lucide-react';
 import { apprenantApi, orientationApi } from '@/lib/api';
 import {
   noteLisible,
@@ -126,7 +126,7 @@ export default function TableauDeBordPage() {
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6v items-start">
-        <EtapesParcours etapes={etapes} preference={preference} estParent={estParent} prenom={profil.prenom} />
+        <EtapesParcours etapes={etapes} estParent={estParent} prenom={profil.prenom} />
 
         <section aria-labelledby="titre-resultats">
           {/* SectionHeader ici plutôt que le titre interne de <Carte> (comme pour « Ton parcours » à
@@ -163,7 +163,7 @@ export default function TableauDeBordPage() {
         </section>
       </div>
 
-      {estParent && <ParentSummary prenom={profil.prenom} decouverte={decouverte} recommandations={recommandations} preference={preference} />}
+      {estParent && <ParentSummary prenom={profil.prenom} decouverte={decouverte} recommandations={recommandations} />}
 
       <section aria-labelledby="titre-recommandations">
         <SectionHeader
@@ -239,32 +239,23 @@ export default function TableauDeBordPage() {
   );
 }
 
-/** Statut réel d'une étape : « en cours » n'est utilisé que là où une donnée existante le justifie (les vœux, saisis mais pas encore validés) — jamais fabriqué pour les autres étapes, binaires par nature. */
-type StatutEtape = 'termine' | 'encours' | 'afaire';
+type StatutEtape = 'termine' | 'afaire';
 
 const STYLE_STATUT: Record<StatutEtape, { icone: ReactNode; texte: string; classe: string }> = {
   termine: { icone: <CheckCircle2 size={17} aria-hidden="true" />, texte: 'Terminé', classe: 'text-primary' },
-  encours: { icone: <Clock size={17} aria-hidden="true" />, texte: 'En cours', classe: 'text-warning-strong' },
   afaire: { icone: <Circle size={17} aria-hidden="true" />, texte: 'À faire', classe: 'text-text-secondary' },
 };
 
 function EtapesParcours({
   etapes,
-  preference,
   estParent,
   prenom,
 }: {
   etapes: { fait: boolean; label: string; href: string }[];
-  preference: Preference | null | undefined;
   estParent: boolean;
   prenom: string;
 }) {
-  const statuts: StatutEtape[] = etapes.map((etape, i) => {
-    // Seules les 2 dernières étapes (favoris, vœux) peuvent distinguer un « en cours » réel des autres
-    // états à partir des données déjà chargées ; les deux premières restent binaires (fait ou pas).
-    if (i === 3 && preference && !preference.valideParent) return 'encours';
-    return etape.fait ? 'termine' : 'afaire';
-  });
+  const statuts: StatutEtape[] = etapes.map((etape) => (etape.fait ? 'termine' : 'afaire'));
 
   return (
     <section aria-labelledby="titre-progression">
@@ -285,10 +276,7 @@ function EtapesParcours({
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block font-medium">{etape.label}</span>
-                  <span className={`block text-xs ${statut.classe}`}>
-                    {statut.texte}
-                    {i === 3 && statuts[i] === 'encours' && (estParent ? ' · en attente de votre validation' : ' · en attente de validation par ton parent')}
-                  </span>
+                  <span className={`block text-xs ${statut.classe}`}>{statut.texte}</span>
                 </span>
               </Link>
             </li>
@@ -400,7 +388,7 @@ function calculerProchaineEtape({
     return estParent
       ? {
           titre: 'Les vœux à préparer',
-          justification: `${profil.prenom} peut maintenant organiser ses choix ; vous les validerez ensemble une fois saisis.`,
+          justification: `${profil.prenom} peut maintenant organiser ses choix, avec vous.`,
           actionLabel: 'Voir les vœux',
           href: '/espace-apprenant/preferences',
         }
@@ -410,14 +398,6 @@ function calculerProchaineEtape({
           actionLabel: 'Saisir mes vœux',
           href: '/espace-apprenant/preferences',
         };
-  }
-  if (preference && !preference.valideParent && estParent) {
-    return {
-      titre: `Valider les vœux de ${profil.prenom}`,
-      justification: 'Relisez les choix ensemble avant de les valider : la décision revient à toute la famille.',
-      actionLabel: 'Voir et valider',
-      href: '/espace-apprenant/preferences',
-    };
   }
   return estParent
     ? {

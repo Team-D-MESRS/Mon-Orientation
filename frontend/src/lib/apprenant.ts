@@ -53,8 +53,6 @@ export interface Preference {
   etablissement: EtablissementPourVoeu | null;
   motivation: string | null;
   dateSaisie: string;
-  valideParent: boolean;
-  dateValidationParent: string | null;
 }
 
 /** Formation mise de côté par l'élève en parcourant le catalogue */

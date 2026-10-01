@@ -13,7 +13,7 @@ Scripts de vérification contre l'application **lancée en local** (`./start.sh`
 
 ```bash
 bash tests/api/securite.sh          # droits d'accès, identification EducMaster, jetons, limitation des tentatives
-bash tests/api/parcours-eleve.sh    # bilan des notes, moteur d'orientation, vœux, validation parent
+bash tests/api/parcours-eleve.sh    # bilan des notes, moteur d'orientation, vœux
 node tests/e2e/connexion.mjs        # identification, accès des personnels, session, pages protégées, déconnexion
 node tests/e2e/parcours-eleve.mjs   # parcours complet élève / parent / Terminale, captures ordinateur et mobile
 bash tests/api/conseiller.sh        # conseiller : droits, validation, conversations, limitation (sans appel au modèle)

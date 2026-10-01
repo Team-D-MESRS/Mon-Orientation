@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { Eye, EyeOff } from 'lucide-react';
 import { authApi } from '@/lib/api';
 import { messageErreur } from '@/lib/erreurs';
 import { cheminDeRetour } from '@/lib/redirection';
@@ -14,6 +15,7 @@ export default function IdentificationPage() {
   const { user, pret, login } = useAuthStore();
   const [identifiant, setIdentifiant] = useState('');
   const [motDePasse, setMotDePasse] = useState('');
+  const [motDePasseVisible, setMotDePasseVisible] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
 
@@ -76,16 +78,27 @@ export default function IdentificationPage() {
               <label htmlFor="password" className="block text-sm font-medium mb-1v">
                 Mot de passe
               </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={motDePasse}
-                onChange={(e) => setMotDePasse(e.target.value)}
-                className={CHAMP}
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  type={motDePasseVisible ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  value={motDePasse}
+                  onChange={(e) => setMotDePasse(e.target.value)}
+                  className={`${CHAMP} pr-10`}
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMotDePasseVisible(!motDePasseVisible)}
+                  aria-label={motDePasseVisible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                  aria-pressed={motDePasseVisible}
+                  className="absolute right-3v top-1/2 -translate-y-1/2 text-text-secondary hover:text-text"
+                >
+                  {motDePasseVisible ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+                </button>
+              </div>
             </div>
 
             {erreur && <Alerte ton="erreur">{erreur}</Alerte>}

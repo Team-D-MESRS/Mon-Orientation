@@ -136,9 +136,8 @@ export class ApprenantService {
       existante.etablissementId === voeux.etablissementId &&
       existante.motivation === voeux.motivation;
 
-    // Toute modification des vœux annule la validation du parent
     if (!inchangee) {
-      const donnees = { ...voeux, dateSaisie: new Date(), valideParent: false, dateValidationParent: null };
+      const donnees = { ...voeux, dateSaisie: new Date() };
       await this.prisma.preference.upsert({
         where: { apprenantNip_palier: { apprenantNip: nip, palier } },
         update: donnees,
@@ -148,20 +147,6 @@ export class ApprenantService {
     }
 
     return this.getPreferences(nip);
-  }
-
-  async validerPreferences(nip: string) {
-    const palier = await this.palierDeSaisie(nip);
-    const preference = await this.prisma.preference.findUnique({
-      where: { apprenantNip_palier: { apprenantNip: nip, palier } },
-    });
-    if (!preference) throw new NotFoundException("Aucun vœu à valider pour l'instant");
-
-    return this.prisma.preference.update({
-      where: { id: preference.id },
-      data: { valideParent: true, dateValidationParent: new Date() },
-      include: FILIERES_DES_VOEUX,
-    });
   }
 
   /** Formations mises de côté, les plus récentes d'abord. */

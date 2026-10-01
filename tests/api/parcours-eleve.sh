@@ -133,7 +133,6 @@ check "parent ne saisit pas les vœux → 403" 403 $(req POST /apprenant/DEMO-3E
 check "autre élève → 403" 403 $(req POST /apprenant/DEMO-3E-0001/preferences "$TK" "{\"filiereId1\":\"$F3\"}")
 check "établissement qui ne dispense pas les 2 choix → 400" 400 $(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$F3\",\"filiereId2\":\"$G2\",\"etablissementId\":\"$TCHAOUROU\"}")
 check "Fatou enregistre ses 2 choix et son établissement" 201 $(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$F3\",\"filiereId2\":\"$G2\",\"etablissementId\":\"$COULIBALY\",\"motivation\":\"J'aime les maths\"}")
-check "  non validés par le parent" false "$(js 'return j[0].valideParent')"
 check "  1er vœu = série F3" BAC-F3 "$(js 'return j[0].filiere1.code')"
 check "  pas de 3e vœu (2 choix seulement)" true "$(js 'return j[0].filiereId3===null')"
 check "  établissement demandé = LTP Coulibaly" LTP\ Coulibaly "$(js 'return j[0].etablissement.nom')"
@@ -145,12 +144,6 @@ check "Koffi enregistre 3 vœux du supérieur" 201 $(req POST /apprenant/DEMO-TL
 check "  3e choix conservé (pas de restriction à 2 hors de la 3e)" true "$(js 'return !!j[0].filiereId3')"
 check "  pas d'établissement (admission au supérieur, pas la fiche unique)" true "$(js 'return j[0].etablissementId===null')"
 check "  le 3e vœu est évalué même hors du top" true "$(req GET /orientation/DEMO-TLE-0001/recommandations "$TK" >/dev/null; js 'return j.some(r=>r.criteres.some(c=>c.critere==="preference"&&c.rang===3))')"
-
-echo "── Validation parent"
-check "Fatou ne valide pas elle-même → 403" 403 $(req POST /apprenant/DEMO-3E-0001/preferences/validation "$TF")
-check "parent valide" 200 $(req POST /apprenant/DEMO-3E-0001/preferences/validation "$TP"); check "  validés" true "$(js 'return j.valideParent')"
-check "mêmes vœux ré-enregistrés → validation conservée" true "$(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$F3\",\"filiereId2\":\"$G2\",\"etablissementId\":\"$COULIBALY\",\"motivation\":\"J'aime les maths\"}" >/dev/null; js 'return j[0].valideParent')"
-check "vœux modifiés → validation annulée" false "$(req POST /apprenant/DEMO-3E-0001/preferences "$TF" "{\"filiereId1\":\"$G2\",\"filiereId2\":\"$F3\"}" >/dev/null; js 'return j[0].valideParent')"
 
 echo "── Élève de 4e (1re identification puis pistes)"
 check "Adama s'identifie (1re fois : son compte est créé)" 200 $(req POST /auth/identification "" '{"identifiant":"DEMO-4E-0001","motDePasse":"2012-07-08"}')

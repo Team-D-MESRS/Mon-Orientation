@@ -43,8 +43,7 @@ export default function DonneesPersonnellesPage() {
             <strong>Lien familial</strong> : rattachement d&apos;un parent ou tuteur au dossier de l&apos;enfant.
           </li>
           <li>
-            <strong>Orientation</strong> : vœux et motivation, validation par le parent, formations mises de côté, pistes proposées et
-            leur explication.
+            <strong>Orientation</strong> : vœux et motivation, formations mises de côté, pistes proposées et leur explication.
           </li>
           <li>
             <strong>Guido, le conseiller IA</strong> : questions posées (écrites ou en note vocale) et réponses reçues.
