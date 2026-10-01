@@ -187,7 +187,7 @@ try {
   r.verifier(
     'Fiche : domaine cliquable, partage et impression proposés',
     await nav.evaluer(
-      `!!document.querySelector('a[href="/catalogue?domaine=SCIENCES"]') && ${contient('WhatsApp')} && ${contient('Copier le lien')} && ${contient('Imprimer')} && !${contient('Mettre de côté')}`,
+      `!!document.querySelector('a[href="/catalogue?domaine=SCIENCES"]') && ${contient('WhatsApp')} && ${contient('Copier le lien')} && ${contient('Imprimer')} && !${contient('Mettre en favoris')}`,
     ),
   );
   await nav.cliquerTexte('Copier le lien', 'button');
@@ -231,14 +231,14 @@ try {
   r.verifier('Raccourci « Que faire avec mon bac D ? »', true);
   await nav.aller(`${BASE}/catalogue?serie=D&domaine=SANTE`);
   await nav.attendre(`${contient('Médecine générale')} && !!document.querySelector('main article button[title]:not([disabled])')`);
-  await cliquerDansCarte('Médecine générale', 'Mettre de côté');
-  await cliquerDansCarte('Pharmacie', 'Mettre de côté');
+  await cliquerDansCarte('Médecine générale', 'Mettre en favoris');
+  await cliquerDansCarte('Pharmacie', 'Mettre en favoris');
   await nav.attendre(`${etatDansCarte('Médecine générale', 'cœur')} === 'true' && ${etatDansCarte('Pharmacie', 'cœur')} === 'true'`);
   // Fiche après le BEPC mise de côté par un élève de Terminale : elle doit être signalée hors niveau
   // sur la page des vœux. La série C ne convient plus, les bacs généraux étant masqués du catalogue.
   await nav.aller(`${BASE}/catalogue?q=${encodeURIComponent('série F3')}`);
   await nav.attendre(`${contient('Baccalauréat série F3')} && !!document.querySelector('main article button[title]:not([disabled])')`);
-  await cliquerDansCarte('Baccalauréat série F3', 'Mettre de côté');
+  await cliquerDansCarte('Baccalauréat série F3', 'Mettre en favoris');
   await nav.attendre(`${etatDansCarte('Baccalauréat série F3', 'cœur')} === 'true'`);
   await nav.aller(`${BASE}/catalogue?serie=D&domaine=SANTE`);
   await nav.attendre(`${etatDansCarte('Médecine générale', 'cœur')} === 'true'`);
@@ -268,7 +268,7 @@ try {
 
   await nav.aller(`${BASE}/catalogue/${await idDe('UNIV-FSS-MEDECINE')}`);
   await nav.attendre("document.querySelector('main button[aria-pressed][title]:not([disabled])')?.getAttribute('aria-pressed') === 'true'");
-  await nav.cliquerTexte('Mettre de côté', 'main button');
+  await nav.cliquerTexte('Mettre en favoris', 'main button');
   await nav.attendre("document.querySelector('main button[aria-pressed][title]').getAttribute('aria-pressed') === 'false'");
   await nav.aller(`${BASE}/espace-apprenant`);
   await nav.attendre(`${favorisDuTableauDeBord} === 2`);

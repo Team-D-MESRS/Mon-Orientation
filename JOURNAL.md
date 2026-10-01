@@ -6,6 +6,13 @@
 
 ## État actuel
 
+### Mise à jour du 01/10/2026 (9) — « Mettre de côté » renommé « Mettre en favoris »
+
+- **Fait** : `BoutonFavori.tsx` (texte visible, infobulle, libellé d'accessibilité) et la page Accessibilité renommés de « (Mettre/Mise) de côté » à « (Mettre/Mise en) favoris » — cohérent avec le nom déjà utilisé en interne (`favorisStore`, `estFavori`). Scope volontairement limité à ce bouton : le badge « Mise de côté » de la page vœux (liste de sélection) n'a pas été touché, l'utilisateur n'ayant visé que ce bouton précis.
+- **Corrigé au passage (cassé par ce changement, pas une dérive préexistante)** : 5 références à l'ancien texte dans `tests/e2e/catalogue.mjs`. Vérifié ensuite que le reste des échecs de cette suite (comparateur, 4/9) est la dérive déjà connue et documentée (structure de filtres/comparateur jamais remise à jour), pas un effet de ce changement — le scénario progresse largement au-delà des clics renommés avant d'échouer sur le comparateur.
+- **Vérifié en direct** : `tests/api/catalogue.sh` 78/78 (API non touchée). `tsc --noEmit` propre.
+- Suite : revenir vers l'utilisateur. Non commité.
+
 ### Mise à jour du 01/10/2026 (8) — la tendance des notes nuance les recommandations
 
 - **Demande de l'utilisateur** : la variation des notes doit compter dans les recommandations — dire qu'un élève progresse dans une matière, ou qu'il doit s'améliorer dans une matière s'il veut pouvoir tenir une condition d'admission d'une des filières visées.

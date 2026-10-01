@@ -31,7 +31,7 @@ export default function AccessibilitePage() {
         <ul>
           <li>un lien « Aller au contenu principal » en haut de chaque page, accessible au clavier ;</li>
           <li>des titres structurés et des zones de navigation nommées, pour les lecteurs d&apos;écran ;</li>
-          <li>des boutons et des tableaux décrits pour les lecteurs d&apos;écran (comparateur, vœux, cœur « Mettre de côté ») ;</li>
+          <li>des boutons et des tableaux décrits pour les lecteurs d&apos;écran (comparateur, vœux, cœur « Mettre en favoris ») ;</li>
           <li>des couleurs de texte suffisamment contrastées, y compris pour les avertissements ;</li>
           <li>un affichage adapté aux téléphones, sans défilement horizontal ;</li>
           <li>des fiches et des comparaisons imprimables ;</li>
