@@ -185,7 +185,7 @@ export class OrientationService {
     const moyenneCles =
       matieresCles.length > 0 ? moyenne([...matieresCles.map((m) => m.moyenne), ...(complement !== null ? [complement] : [])]) : null;
     if (moyenneCles !== null) {
-      const detailMatieres = matieresCles.map((m) => `${m.matiere} ${noteLisible(m.moyenne)}`).join(', ');
+      const detailMatieres = matieresCles.map((m) => `${m.matiere} ${noteLisible(m.moyenne)}${texteTendance(m.tendance)}`).join(', ');
       criteres.push({
         critere: 'resultats',
         points: Math.round(POIDS_RESULTATS * progression(moyenneCles)),
@@ -245,9 +245,13 @@ export class OrientationService {
           manquantes.push(matieres.join(' ou '));
           continue;
         }
-        const meilleure = Math.max(...notes.map((m) => m.moyenne));
-        if (meilleure < c.seuil) {
-          echouees.push(`${matieres.join(' ou ')} (${noteLisible(meilleure)}/20, ${c.seuil}/20 exigé)`);
+        const meilleureNote = notes.reduce((a, b) => (b.moyenne > a.moyenne ? b : a));
+        if (meilleureNote.moyenne < c.seuil) {
+          // La tendance de la matière qui s'en sort le mieux parmi les alternatives (« Allemand ou
+          // Espagnol ») : dit si l'effort nécessaire est déjà en cours ou encore à amorcer.
+          echouees.push(
+            `${matieres.join(' ou ')} (${noteLisible(meilleureNote.moyenne)}/20, ${c.seuil}/20 exigé)${texteTendance(meilleureNote.tendance)}`,
+          );
         }
       }
       // Une matière manquante ne rend pas la filière inadmissible : on ne peut pas prouver qu'elle échoue.
@@ -333,3 +337,15 @@ export class OrientationService {
 const progression = (note: number) => Math.max(0, Math.min(1, (note - 8) / 8));
 const moyenne = (valeurs: number[]) => valeurs.reduce((a, b) => a + b, 0) / valeurs.length;
 const noteLisible = (note: number) => note.toFixed(1).replace('.', ',');
+
+/** En dessous, la variation est considérée comme du bruit plutôt qu'une vraie tendance (constante
+ * ronde, comme SEUIL_FORCE/SEUIL_FAIBLESSE de bilan-notes.ts, pas dérivée d'une donnée officielle). */
+const SEUIL_TENDANCE_NOTABLE = 1;
+
+/** Nuance une note avec sa tendance (bilan-notes.ts) quand elle est assez marquée pour être utile à
+ * l'élève — « en progression »/« à améliorer » plutôt qu'un chiffre brut sans contexte. */
+const texteTendance = (tendance: number): string => {
+  if (tendance >= SEUIL_TENDANCE_NOTABLE) return ' (en progression)';
+  if (tendance <= -SEUIL_TENDANCE_NOTABLE) return ' (en baisse)';
+  return '';
+};

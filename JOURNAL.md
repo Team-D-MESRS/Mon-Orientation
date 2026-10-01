@@ -6,6 +6,13 @@
 
 ## État actuel
 
+### Mise à jour du 01/10/2026 (8) — la tendance des notes nuance les recommandations
+
+- **Demande de l'utilisateur** : la variation des notes doit compter dans les recommandations — dire qu'un élève progresse dans une matière, ou qu'il doit s'améliorer dans une matière s'il veut pouvoir tenir une condition d'admission d'une des filières visées.
+- **Fait** : `bilan-notes.ts` expose désormais `tendance` par matière (déjà calculée en interne pour le score d'aisance du lot précédent — simplement rendue publique, aucun nouveau calcul). `orientation.service.ts` : le critère « résultats » nuance chaque matière clé avec « (en progression) »/« (en baisse) » quand l'écart dépasse 1 point (seuil rond, comme SEUIL_FORCE/SEUIL_FAIBLESSE) ; le critère « condition », quand une condition officielle n'est pas remplie, ajoute la tendance de la matière la plus favorable parmi les alternatives (ex. « Allemand ou Espagnol ») — dit si l'effort est déjà engagé ou encore à amorcer. Rien à changer côté frontend : la fiche catalogue, la page vœux (`VerificationVoeu`) et les recommandations affichent déjà `critere.detail` tel quel, donc héritent du changement automatiquement.
+- **Vérifié en direct** : recommandations de Koffi (SVT/PCT en progression nette sur son historique 6e→Tle) → « SVT 15,5 (en progression), PCT 14,5 (en progression) ». Condition échouée simulée pour Fatou (PCT abaissé temporairement) → « PCT (7,0/20, 12/20 exigé) (en baisse) », puis notes restaurées et vérifiées identiques. 0 erreur console sur la page Recommandations. `tsc --noEmit` propre, `parcours-eleve.sh` 66/68 (2 échecs préexistants, sans rapport), `catalogue.sh` 78/78.
+- Suite : revenir vers l'utilisateur. Non commité.
+
 ### Mise à jour du 01/10/2026 (7) — historique des notes, de la 6e au palier actuel, BEPC/BAC distincts
 
 - **Demande de l'utilisateur** : la page Notes doit montrer, par onglet, toutes les classes depuis la 6e jusqu'au palier actuel (3e → 6e,5e,4e,3e,BEPC si déjà passé ; 4e → 6e,5e,4e ; 2nde → 6e,5e,4e,3e,BEPC,2nde ; etc.), avec ce qui est réellement transmis par EducMaster — y compris des établissements à 2 semestres au lieu de 3 trimestres, jamais supposé fixe. Clarifié en échangeant : les notes du BEPC/BAC sont de vraies notes d'examen, différentes des notes de salle de 3e/Tle — pas juste une relecture de l'année.

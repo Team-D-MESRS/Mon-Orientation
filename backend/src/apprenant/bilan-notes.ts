@@ -4,6 +4,10 @@ export interface MoyenneMatiere {
   matiere: string;
   moyenne: number;
   notes: { trimestre: number; note: number }[];
+  /** Progression entre la 1re et la 2e moitié de tout l'historique dispo (pas seulement l'année en
+   * cours) : positif = en hausse, négatif = en baisse, 0 si un seul point ou stable. Sert à nuancer
+   * les recommandations (« en progression », « doit s'améliorer ») — voir orientation.service.ts. */
+  tendance: number;
 }
 
 export interface BilanNotes {
@@ -54,11 +58,22 @@ export function bilanNotes(notes: Pick<Note, 'matiere' | 'note' | 'bareme' | 'tr
     }
   }
 
+  // Historique chronologique par matière (toutes années confondues), calculé une seule fois : sert à
+  // la fois à l'aisance (forces/aAmeliorer, ci-dessous) et à la tendance exposée sur chaque matière.
+  const chronologiqueParMatiere = new Map<string, number[]>();
+  for (const [matiere, historique] of historiqueParMatiere) {
+    chronologiqueParMatiere.set(
+      matiere,
+      historique.sort((a, b) => a.anneeScolaire.localeCompare(b.anneeScolaire) || a.trimestre - b.trimestre).map((x) => x.note),
+    );
+  }
+
   const matieres = Array.from(parMatiere.entries())
     .map(([matiere, liste]) => ({
       matiere,
       moyenne: arrondi(moyenne(liste.map((x) => x.note))),
       notes: liste.sort((a, b) => a.trimestre - b.trimestre),
+      tendance: arrondi(tendance(chronologiqueParMatiere.get(matiere) ?? [])),
     }))
     .sort((a, b) => b.moyenne - a.moyenne);
 
@@ -68,11 +83,9 @@ export function bilanNotes(notes: Pick<Note, 'matiere' | 'note' | 'bareme' | 'tr
   // eux, sur tout l'historique disponible et viennent corriger ce niveau. Un élève qui n'a qu'une
   // seule année de notes reste couvert : tendance nulle, écart-type calculé sur les seuls trimestres
   // disponibles.
-  const aisance = matieres.map(({ matiere, moyenne: niveauActuel }) => {
-    const chronologique = (historiqueParMatiere.get(matiere) ?? [])
-      .sort((a, b) => a.anneeScolaire.localeCompare(b.anneeScolaire) || a.trimestre - b.trimestre)
-      .map((x) => x.note);
-    const score = niveauActuel - PENALITE_INSTABILITE * ecartType(chronologique) + BONUS_TENDANCE * tendance(chronologique);
+  const aisance = matieres.map(({ matiere, moyenne: niveauActuel, tendance: tendanceMatiere }) => {
+    const chronologique = chronologiqueParMatiere.get(matiere) ?? [];
+    const score = niveauActuel - PENALITE_INSTABILITE * ecartType(chronologique) + BONUS_TENDANCE * tendanceMatiere;
     return { matiere, score: arrondi(score) };
   });
 
