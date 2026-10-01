@@ -335,7 +335,9 @@ export const REFERENTIEL_FILIERES: FiliereReferentiel[] = [
   dtmAgricole('BOVINS', 'Élevage de bovins et petits ruminants'),
   dtmAgricole('PORCINS', 'Élevage de porcins'),
   dtmAgricole('PISCICULTURE', 'Pisciculture et aquaculture'),
-  dtmAgricole('HORTICULTURE', 'Horticulture vivrière et ornementale'),
+  // « Horticulture vivrière et ornementale » dans l'ancien répertoire ; la note circulaire et le
+  // profil de sortie de la fiche métier disent tous deux « Conduite de productions horticoles ».
+  dtmAgricole('HORTICULTURE', 'Conduite de productions horticoles'),
   dtmAgricole('CEREALES', 'Production céréalière et légumineuse'),
   dtmAgricole('RACINES-TUBERCULES', 'Production de racines et tubercules'),
   dtmAgricole('FIBRES', 'Production de plantes à fibres et textiles'),
