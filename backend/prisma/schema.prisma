@@ -97,6 +97,7 @@ model Apprenant {
 
   utilisateur     Utilisateur?      @relation(fields: [utilisateurId], references: [id])
   notes           Note[]
+  resultatsExamen ResultatExamen[]
   preferences     Preference[]
   recommandations Recommandation[]
   conversations   ConversationIA[]
@@ -265,6 +266,31 @@ model Note {
 
   @@unique([apprenantNip, matiere, trimestre, anneeScolaire])
   @@map("notes")
+}
+
+/// Notes obtenues à un examen officiel (BEPC, BAC) — une note par matière, distincte des notes de
+/// salle de classe (Note, ci-dessus) : un élève de 3e a une moyenne de salle ET, une fois l'examen
+/// passé, des notes d'examen séparées, pas forcément corrélées (barème, coefficients et jury différents).
+model ResultatExamen {
+  id            String   @id @default(uuid())
+  apprenantNip  String   @map("apprenant_nip")
+  examen        Examen
+  matiere       String
+  note          Float
+  bareme        Int      @default(20)
+  anneeScolaire String   @map("annee_scolaire")
+  derniereSync  DateTime? @map("derniere_sync")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  apprenant Apprenant @relation(fields: [apprenantNip], references: [nip], onDelete: Cascade)
+
+  @@unique([apprenantNip, examen, matiere, anneeScolaire])
+  @@map("resultats_examen")
+}
+
+enum Examen {
+  BEPC
+  BAC
 }
 
 model Preference {

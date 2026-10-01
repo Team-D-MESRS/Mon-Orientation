@@ -25,6 +25,24 @@ export interface Bilan {
   aAmeliorer: string[];
 }
 
+export interface MatiereHistorique {
+  matiere: string;
+  moyenne: number;
+  notes: { periode: number; note: number }[];
+}
+
+/** Un onglet de l'historique des notes : une année scolaire (6e à aujourd'hui), ou un examen (BEPC/BAC). */
+export interface EntreeHistorique {
+  cle: string;
+  titre: string;
+  type: 'annee' | 'examen';
+  anneeScolaire: string | null;
+  matieres: MatiereHistorique[];
+  moyenneGenerale: number | null;
+  /** 2 (semestres) ou 3 (trimestres) selon l'établissement, jamais supposé fixe ; 0 pour un examen. */
+  nombrePeriodes: number;
+}
+
 export interface ProfilApprenant {
   nip: string;
   nom: string;

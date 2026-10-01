@@ -17,3 +17,4 @@ export * from './ProgressBar';
 export * from './Breadcrumb';
 export * from './StatCard';
 export * from './ActionCard';
+export * from './Tabs';

@@ -1,6 +1,6 @@
 import axios, { type InternalAxiosRequestConfig } from 'axios';
 import type { EtablissementPourVoeu, Filiere, PageFilieres, ValeursFiltres } from './filiere';
-import type { Critere, Decouverte, Favori, Palier, Preference, ProfilApprenant, Recommandation, ReponsesDecouverte } from './apprenant';
+import type { Critere, Decouverte, EntreeHistorique, Favori, Palier, Preference, ProfilApprenant, Recommandation, ReponsesDecouverte } from './apprenant';
 import { CLES_JETONS, useAuthStore, type Utilisateur } from '@/stores/authStore';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -150,7 +150,7 @@ export const apprenantApi = {
   ajouterFavori: (nip: string, filiereId: string) => api.put(`/apprenant/${nip}/favoris/${filiereId}`),
   retirerFavori: (nip: string, filiereId: string) => api.delete(`/apprenant/${nip}/favoris/${filiereId}`),
   getProfile: (nip: string) => api.get<ProfilApprenant>(`/apprenant/${nip}`),
-  getNotes: (nip: string) => api.get(`/apprenant/${nip}/notes`),
+  getHistoriqueNotes: (nip: string) => api.get<EntreeHistorique[]>(`/apprenant/${nip}/notes/historique`),
   getPreferences: (nip: string) => api.get<Preference[]>(`/apprenant/${nip}/preferences`),
   enregistrerPreferences: (nip: string, data: DonneesVoeux) =>
     api.post<Preference[]>(`/apprenant/${nip}/preferences`, data),

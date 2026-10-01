@@ -37,15 +37,19 @@ interface EleveDemo {
    * passe fictif étant alors la date de naissance —, ce qui exerce ce chemin en démonstration.
    */
   avecCompte: boolean;
-  /** Notes des trois trimestres de l'année en cours, sur 20 */
-  notes: Record<string, [number, number, number]>;
+  /** Notes de l'année en cours, sur 20 — 2 valeurs (semestres) ou 3 (trimestres) selon l'établissement,
+   * jamais supposé fixe (voir historique-notes.ts). */
+  notes: Record<string, number[]>;
   /**
    * Notes des années scolaires précédentes (6e à l'avant-dernière classe) : sert à tester le calcul
    * d'aisance par matière sur tout l'historique disponible (niveau + stabilité + tendance, voir
-   * bilan-notes.ts), pas seulement l'année en cours. Optionnel — absent pour la plupart des comptes
-   * de démo, une seule année suffisant pour les autres usages (moyenne générale, moteur d'orientation).
+   * bilan-notes.ts) et l'historique par palier affiché à l'élève (historique-notes.ts), pas seulement
+   * l'année en cours. Optionnel — absent pour la plupart des comptes de démo, une seule année
+   * suffisant pour les autres usages (moyenne générale, moteur d'orientation).
    */
-  historique?: { anneeScolaire: string; notes: Record<string, [number, number, number]> }[];
+  historique?: { anneeScolaire: string; notes: Record<string, number[]> }[];
+  /** Notes d'examen officiel (BEPC et/ou BAC), distinctes des notes de salle — voir historique-notes.ts. */
+  resultatsExamen?: { examen: 'BEPC' | 'BAC'; anneeScolaire: string; notes: Record<string, number> }[];
   /**
    * Questionnaire de découverte déjà rempli, pour Fatou et Koffi : depuis le 16/09, les pistes ne
    * sont visibles côté frontend qu'une fois le questionnaire rempli, et les suites existantes
@@ -163,6 +167,93 @@ const ELEVES: EleveDemo[] = [
       'Histoire-Géographie': [11, 12, 11.5],
       EPS: [14, 15, 14],
     },
+    // 6e à 1re : sert à tester l'historique complet par palier (historique-notes.ts), avec un cas de
+    // 2 semestres (5e, au lieu de 3 trimestres — certains établissements fonctionnent ainsi) pour
+    // vérifier que l'affichage s'adapte au nombre de périodes réellement transmises, pas une valeur
+    // fixe. Progression cohérente avec son profil (fort en SVT/PCT, sciences).
+    historique: [
+      {
+        anneeScolaire: '2019-2020', // 6e
+        notes: {
+          Mathématiques: [10, 10.5, 11],
+          PCT: [11, 11, 11.5],
+          SVT: [11, 11.5, 12],
+          Français: [10, 10, 10.5],
+          Anglais: [10, 10.5, 10],
+          'Histoire-Géographie': [10, 10, 10.5],
+          EPS: [13, 13, 13.5],
+        },
+      },
+      {
+        anneeScolaire: '2020-2021', // 5e — établissement à 2 semestres
+        notes: {
+          Mathématiques: [11, 11.5],
+          PCT: [12, 12],
+          SVT: [12.5, 13],
+          Français: [10.5, 11],
+          Anglais: [11, 11],
+          'Histoire-Géographie': [10.5, 11],
+          EPS: [13.5, 13.5],
+        },
+      },
+      {
+        anneeScolaire: '2021-2022', // 4e
+        notes: {
+          Mathématiques: [11.5, 12, 12],
+          PCT: [12.5, 13, 13],
+          SVT: [13, 13.5, 13.5],
+          Français: [11, 11, 11.5],
+          Anglais: [11, 11.5, 11.5],
+          'Histoire-Géographie': [11, 11, 11.5],
+          EPS: [14, 13.5, 14],
+        },
+      },
+      {
+        anneeScolaire: '2022-2023', // 3e
+        notes: {
+          Mathématiques: [12, 12, 12.5],
+          PCT: [13, 13.5, 13.5],
+          SVT: [13.5, 14, 14],
+          Français: [11, 11.5, 11.5],
+          Anglais: [11.5, 12, 12],
+          'Histoire-Géographie': [11, 11.5, 11.5],
+          EPS: [14, 14, 14.5],
+        },
+      },
+      {
+        anneeScolaire: '2023-2024', // 2nde
+        notes: {
+          Mathématiques: [11.5, 12, 12],
+          PCT: [13.5, 14, 14],
+          SVT: [14, 14.5, 14.5],
+          Français: [11, 11, 11.5],
+          Philosophie: [10, 10.5, 10.5],
+          Anglais: [11.5, 12, 12],
+          'Histoire-Géographie': [11, 11, 11.5],
+          EPS: [14, 14.5, 14],
+        },
+      },
+      {
+        anneeScolaire: '2024-2025', // 1re
+        notes: {
+          Mathématiques: [12, 12.5, 12],
+          PCT: [14, 14, 14.5],
+          SVT: [14.5, 15, 15],
+          Français: [11, 11.5, 11.5],
+          Philosophie: [10.5, 11, 10.5],
+          Anglais: [12, 12, 12.5],
+          'Histoire-Géographie': [11.5, 11.5, 12],
+          EPS: [14.5, 14, 14.5],
+        },
+      },
+    ],
+    resultatsExamen: [
+      {
+        examen: 'BEPC',
+        anneeScolaire: '2022-2023',
+        notes: { Mathématiques: 12, PCT: 13, SVT: 14, Français: 11, Anglais: 12, 'Histoire-Géographie': 12, EPS: 14 },
+      },
+    ],
     decouverte: {
       // Dominante Social (santé), avec un Investigateur (sciences) marqué juste derrière : cohérent
       // avec le métier envisagé (infirmier) et le style intellectuel. Santé doit rester le domaine
@@ -389,6 +480,17 @@ async function main() {
             create: { ...cle, note: trimestres[i], bareme: 20 },
           });
         }
+      }
+    }
+
+    for (const { examen, anneeScolaire, notes } of e.resultatsExamen ?? []) {
+      for (const [matiere, note] of Object.entries(notes)) {
+        const cle = { apprenantNip: e.nip, examen, matiere, anneeScolaire };
+        await prisma.resultatExamen.upsert({
+          where: { apprenantNip_examen_matiere_anneeScolaire: cle },
+          update: { note },
+          create: { ...cle, note, bareme: 20 },
+        });
       }
     }
 

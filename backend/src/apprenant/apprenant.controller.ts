@@ -45,10 +45,10 @@ export class ApprenantController {
     return this.apprenantService.getNotes(nip);
   }
 
-  @Get(':nip/parcours')
-  @ApiOperation({ summary: 'Parcours de l\'apprenant' })
-  async getParcours(@Param('nip') nip: string) {
-    return this.apprenantService.getParcours(nip);
+  @Get(':nip/notes/historique')
+  @ApiOperation({ summary: "Historique des notes, de la 6e au palier actuel (+ BEPC/BAC si déjà passés)" })
+  async getHistoriqueNotes(@Param('nip') nip: string) {
+    return this.apprenantService.getHistoriqueNotes(nip);
   }
 
   @Get(':nip/decouverte')

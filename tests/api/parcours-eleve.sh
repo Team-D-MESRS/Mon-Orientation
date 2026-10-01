@@ -59,6 +59,17 @@ check "  toutes admettent la série D (séries officielles du guide du MESRS)" t
 check "  au plus 2 par établissement" true "$(js 'const c={};j.forEach(r=>c[r.filiere.etablissementId]=(c[r.filiere.etablissementId]||0)+1);return Object.values(c).every(n=>n<=2)')"
 echo "  → $(js 'return j.map(r=>r.filiere.code+" "+r.score).join(" | ")')"
 
+echo "── Historique des notes (de la 6e au palier actuel, + BEPC/BAC si déjà passés)"
+check "Koffi → historique" 200 $(req GET /apprenant/DEMO-TLE-0001/notes/historique "$TK")
+check "  8 onglets (6e à Tle + BEPC)" 8 "$(js 'return j.length')"
+check "  ordre chronologique" "SIXIEME,CINQUIEME,QUATRIEME,TROISIEME,BEPC,SECONDE,PREMIERE,TERMINALE" "$(js 'return j.map(e=>e.cle).join(",")')"
+check "  BEPC est un examen, pas une année" examen "$(js 'return j.find(e=>e.cle==="BEPC").type')"
+check "  5e a 2 périodes (établissement à semestres)" 2 "$(js 'return j.find(e=>e.cle==="CINQUIEME").nombrePeriodes')"
+check "  3e a 3 périodes (trimestres)" 3 "$(js 'return j.find(e=>e.cle==="TROISIEME").nombrePeriodes')"
+check "Fatou → historique" 200 $(req GET /apprenant/DEMO-3E-0001/notes/historique "$TF")
+check "  4 onglets (6e à 3e, pas de BEPC jamais transmis)" 4 "$(js 'return j.length')"
+check "  pas d'onglet BEPC" false "$(js 'return j.some(e=>e.cle==="BEPC")')"
+
 echo "── Questionnaire de découverte : test RIASEC (lot 5, refondu le 18/09)"
 $PSQL <<SQL
 delete from recommandations where apprenant_nip like 'TEST-LOT5-%';

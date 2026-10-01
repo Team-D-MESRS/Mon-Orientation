@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { OrientationService } from '../orientation/orientation.service';
 import { FiliereService, ETABLISSEMENT_POUR_VOEU } from '../filiere/filiere.service';
 import { bilanNotes } from './bilan-notes';
+import { historiqueNotes } from './historique-notes';
 import { affinitesDomaines, validerReponses } from './decouverte';
 import { PreferencesDto } from './dto/preferences.dto';
 import { DecouverteDto } from './dto/decouverte.dto';
@@ -61,12 +62,15 @@ export class ApprenantService {
     });
   }
 
-  async getParcours(nip: string) {
-    return this.prisma.note.findMany({
-      where: { apprenantNip: nip },
-      orderBy: [{ anneeScolaire: 'asc' }, { trimestre: 'asc' }],
-      distinct: ['anneeScolaire'],
+  /** Historique complet des notes, de la 6e au palier actuel, par année scolaire (+ BEPC/BAC si déjà
+   * passés) — voir historique-notes.ts. Remplace getParcours (liste brute, jamais exploitée). */
+  async getHistoriqueNotes(nip: string) {
+    const apprenant = await this.prisma.apprenant.findUnique({
+      where: { nip },
+      select: { palier: true, notes: true, resultatsExamen: true },
     });
+    if (!apprenant) throw new NotFoundException('Apprenant non trouvé');
+    return historiqueNotes(apprenant.notes, apprenant.resultatsExamen, apprenant.palier);
   }
 
   async getPreferences(nip: string) {
