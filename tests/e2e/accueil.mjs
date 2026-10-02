@@ -62,7 +62,7 @@ try {
     await nav.evaluer(phraseFixe),
   );
   r.verifier("Visiteur : « S'identifier », sans création de compte", await nav.evaluer(`${dansMain("S'identifier")} && !document.querySelector('main a[href="/inscription"]')`));
-  r.verifier('Exemple du conseiller marqué en fongbé (lang="fon")', await nav.evaluer(`!!document.querySelector('main [lang="fon"]')`));
+  r.verifier('Exemple de Guido présenté en français', await nav.evaluer(`${dansMain('Exemple de question écrite en français')}`));
 
   // Animations au défilement
   r.verifier(

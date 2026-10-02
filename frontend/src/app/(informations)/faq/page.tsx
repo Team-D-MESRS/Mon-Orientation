@@ -95,17 +95,17 @@ export default function FaqPage() {
             tes parents, tes enseignants ou le conseiller d&apos;orientation de ton établissement.
           </p>
         </Question>
-        <Question question="Comment lui parler en fon, en yoruba ou en mina ?">
+        <Question question="Sur quels sujets Guido peut-il répondre ?">
           <p>
-            Par note vocale : appuie sur le micro dans l&apos;onglet Guido, dis ta question dans ta langue, puis envoie. Guido
-            reformule ce qu&apos;il a compris avant de répondre, pour que tu puisses vérifier. La note vocale elle-même
-            n&apos;est pas conservée.
+            Écris en français tes questions générales sur les métiers et les formations techniques au Bénin, notamment les LTP,
+            LTA et EFMS. Le chat ne consulte pas ton dossier scolaire, tes notes ou tes recommandations.
           </p>
         </Question>
         <Question question="Quelles informations reçoit-il ?">
           <p>
-            Ta classe, ta série, le bilan de tes notes, tes vœux et les pistes proposées. Il ne reçoit ni ton nom, ni ton NIP, ni ta date
-            de naissance. Détails sur la page <Link href="/donnees-personnelles">Données personnelles</Link>.
+            Ton message et les 12 derniers échanges de cette conversation sont transmis au service externe Guido pour produire
+            une réponse. La plateforme n&apos;y ajoute ni ton NIP, ni ton dossier, ni tes notes. N&apos;écris pas d&apos;informations personnelles.
+            Détails sur la page <Link href="/donnees-personnelles">Données personnelles</Link>.
           </p>
         </Question>
       </Bloc>

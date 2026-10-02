@@ -22,10 +22,10 @@ export class ConseillerController {
   @Roles('APPRENANT', 'PARENT')
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({
-    summary: "Poser une question au conseiller (élève ou parent rattaché) ; réponse fondée sur le catalogue et le dossier de l'élève",
+    summary: 'Poser une question écrite au conseiller externe (élève ou parent rattaché)',
   })
   async chat(@Param('nip') nip: string, @Body() dto: ChatDto, @UtilisateurCourant() user: UtilisateurConnecte) {
-    return this.conseillerService.chat(nip, dto.message, user, dto.conversationId, dto.langue, dto.audio);
+    return this.conseillerService.chat(nip, dto.message, user, dto.conversationId);
   }
 
   @Get(':nip/historique')

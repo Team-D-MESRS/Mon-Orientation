@@ -54,7 +54,7 @@ try {
 
   // ── 2. Élève connecté : dashboard, découverte, recommandations (320 → 1024)
   await connecter('DEMO-3E-0001', 'Demo2026!');
-  const PAGES_ELEVE = ['/espace-apprenant', '/espace-apprenant/decouverte', '/espace-apprenant/recommandations', '/espace-apprenant/conseiller'];
+  const PAGES_ELEVE = ['/espace-apprenant', '/espace-apprenant/decouverte', '/espace-apprenant/recommandations', '/conseiller'];
   for (const page of PAGES_ELEVE) {
     for (const largeur of LARGEURS) {
       await nav.taille(largeur, 800, largeur < 600);
@@ -69,9 +69,9 @@ try {
     }
   }
 
-  // ── 3. Guido (connecté) : le champ de saisie ne doit pas écraser les boutons voisins (320px)
+  // ── 3. Guido (connecté) : la page autonome reste utilisable sur mobile (320px)
   await nav.taille(320, 800, true);
-  await nav.aller(`${BASE}/espace-apprenant/conseiller`);
+  await nav.aller(`${BASE}/conseiller`);
   await nav.attendre("!!document.querySelector('#question')");
   await new Promise((res) => setTimeout(res, 300));
   const boutonsForm = await nav.evaluer(`
@@ -82,7 +82,7 @@ try {
     })()
   `);
   r.verifier(
-    'Guido @ 320px : micro et envoyer restent à taille normale (44px), pas écrasés par le champ',
+    'Guido @ 320px : bouton Envoyer reste à taille normale, pas écrasé par le champ',
     boutonsForm.every((b) => b.w >= 40 && b.h >= 40),
     JSON.stringify(boutonsForm),
   );

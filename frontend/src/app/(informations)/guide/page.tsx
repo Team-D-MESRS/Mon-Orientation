@@ -122,17 +122,17 @@ export default function GuidePage() {
 
       <Bloc id="conseiller" titre="7. Poser tes questions à Guido">
         <p>
-          Dans ton espace, l&apos;onglet Guido répond à tes questions sur les formations, les métiers et tes pistes, en s&apos;appuyant
-          sur le catalogue et sur ton dossier. Les parents peuvent aussi l&apos;utiliser.
+          Depuis le lien Guido du menu principal, tu peux poser des questions générales en français sur les métiers et les formations techniques.
+          Les parents peuvent aussi l&apos;utiliser. Guido ne consulte pas ton dossier scolaire, tes notes ou tes recommandations.
         </p>
         <p>
-          Tu peux lui écrire, ou lui parler en note vocale si tu préfères — en fon, en yoruba, en mina ou toute autre langue que tu
-          parles : appuie sur le micro, dis ta question, puis envoie.
+          Écris ta question en français. Le chat ne prend pas en charge les notes vocales ni les réponses en langues locales pour
+          le moment.
         </p>
         <p>
-          Guido explique, il ne décide pas : vérifie toujours les informations sur les fiches, et parles-en avec tes parents, tes
-          enseignants ou le conseiller d&apos;orientation de ton établissement. N&apos;écris pas d&apos;informations personnelles (nom,
-          adresse, téléphone) dans tes questions.
+          Guido fournit des renseignements généraux et ne décide pas à ta place : vérifie les informations auprès de
+          l&apos;établissement ou d&apos;un conseiller d&apos;orientation. Ta question et les échanges récents sont transmis au service Guido ;
+          n&apos;écris pas d&apos;informations personnelles (nom, adresse, téléphone, NIP) dans tes questions.
         </p>
       </Bloc>
 

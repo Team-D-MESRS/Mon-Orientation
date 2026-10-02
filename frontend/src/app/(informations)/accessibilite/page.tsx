@@ -35,7 +35,7 @@ export default function AccessibilitePage() {
           <li>des couleurs de texte suffisamment contrastées, y compris pour les avertissements ;</li>
           <li>un affichage adapté aux téléphones, sans défilement horizontal ;</li>
           <li>des fiches et des comparaisons imprimables ;</li>
-          <li>la note vocale pour poser une question à Guido, sans avoir à écrire ni à lire une langue peu familière.</li>
+          <li>une zone de texte et des boutons accessibles au clavier pour échanger avec Guido.</li>
         </ul>
       </Bloc>
 
@@ -43,7 +43,7 @@ export default function AccessibilitePage() {
         <ul>
           <li>pas encore de mode à contraste renforcé ;</li>
           <li>contenus proposés en français uniquement pour le moment ;</li>
-          <li>Guido peut être interrogé par écrit ou par note vocale, mais répond par écrit uniquement.</li>
+          <li>Guido accepte les questions écrites en français uniquement ; la saisie vocale et les langues nationales ne sont pas disponibles actuellement.</li>
         </ul>
       </Bloc>
 

@@ -39,7 +39,7 @@ Elle consomme l'API décrite dans [../backend/README.md](../backend/README.md) e
 | État | Zustand (`src/stores/` : session, formations mises de côté, sélection du comparateur) |
 | HTTP | Axios, avec intercepteurs pour le jeton et son rafraîchissement automatique |
 | Icônes | lucide-react |
-| Polices | Montserrat (texte) et Spectral (éditorial), via Google Fonts |
+| Polices | DM Sans (texte) et Fraunces (éditorial), via Google Fonts |
 | Prévues mais pas encore utilisées | TanStack Query, next-intl (langues nationales), next-pwa (hors-ligne) |
 
 ---
@@ -138,8 +138,8 @@ frontend/src/
 | `/espace-apprenant/notes` | élève, parent, admin | ✅ API | Tableau par matière et trimestre (vue compacte sur mobile) |
 | `/espace-apprenant/preferences` | élève (saisie), parent (validation), admin (lecture) | ✅ API | Vœux en 3 étapes, enregistrés à chaque étape, récapitulatif, motivation ; formations mises de côté proposées en premier, recherche sans accents. En 3e (fiche unique d'inscription) : 2 choix de spécialité + 1 établissement qui les dispense tous deux ; en Terminale (admission au supérieur) : 3 choix libres, sans établissement |
 | `/espace-apprenant/recommandations` | élève, parent, admin | ✅ API | Pistes classées, score sur 100, critères détaillés (dont l'intérêt, tiré du questionnaire de découverte), alertes ; bloqué tant que la découverte n'est pas remplie |
-| `/espace-apprenant/conseiller` | élève, parent | ✅ API | Conversation avec le conseiller : suggestions, question conservée en cas d'erreur, nouvelle conversation ; réponses en français ou en fongbé (choix retenu par l'appareil, réponses marquées `lang="fon"`) |
-| `/conseiller` | public | ✅ | Présentation ; élèves et parents connectés redirigés vers leur espace |
+| `/conseiller` | public, élève, parent | ✅ API | Page Guido autonome depuis le menu principal ; présentation pour les visiteurs, chat pour les élèves/parents connectés et sélection de l'enfant pour les comptes parents |
+| `/espace-apprenant/conseiller` | compatibilité | redirection | Redirige vers `/conseiller` pour préserver les anciens liens |
 | `/guide`, `/faq`, `/contact` | public | ✅ statique | Guide d'utilisation, questions fréquentes (dépliables), à qui s'adresser |
 | `/mentions-legales`, `/donnees-personnelles`, `/accessibilite` | public | ✅ provisoire | Pages légales à valider par le Ministère ; toute information non communiquée (contact, directeur de la publication, hébergeur, délégué aux données, durée de conservation) est signalée, jamais inventée : la renseigner dans `src/lib/site.ts` |
 | `/stats` | DGES, admin | maquette | Tableau de bord, pas encore relié à `/api/stats` |

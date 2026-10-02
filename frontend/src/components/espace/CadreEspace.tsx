@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { BookOpen, Compass, FlaskConical, Heart, LayoutDashboard, Lightbulb, MessageCircle, UserSearch, Users } from 'lucide-react';
+import { BookOpen, Compass, FlaskConical, Heart, LayoutDashboard, Lightbulb, UserSearch, Users } from 'lucide-react';
 import { classeLisible } from '@/lib/apprenant';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -16,7 +16,6 @@ const ONGLETS = [
   { href: '/espace-apprenant/notes', label: 'Notes', Icone: BookOpen },
   { href: '/espace-apprenant/preferences', label: 'Vœux', Icone: Heart },
   { href: '/espace-apprenant/recommandations', label: 'Recommandations', Icone: Lightbulb },
-  { href: '/espace-apprenant/conseiller', label: 'Guido', Icone: MessageCircle },
 ];
 
 const CLE_DEJA_VISITE = 'mon-orientation:espace-deja-visite';

@@ -21,7 +21,11 @@ export default function IdentificationPage() {
 
   useEffect(() => {
     if (pret && user) {
-      const destination = user.role === 'APPRENANT' || user.role === 'PARENT' ? '/espace-apprenant' : cheminDeRetour() ?? accueilDuRole(user.role);
+      const retour = cheminDeRetour();
+      const destination =
+        user.role === 'APPRENANT' || user.role === 'PARENT'
+          ? retour === '/conseiller' ? retour : '/espace-apprenant'
+          : retour ?? accueilDuRole(user.role);
       router.replace(destination);
     }
   }, [pret, user, router]);

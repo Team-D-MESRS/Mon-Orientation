@@ -214,7 +214,7 @@ export default function TableauDeBordPage() {
             actionLabel="Comparer"
           />
           <ActionCard
-            href="/espace-apprenant/conseiller"
+            href="/conseiller"
             icon={<MessageCircle size={22} aria-hidden="true" />}
             title="Guido"
             description={estParent ? 'Posez une question sur une formation, un métier ou une piste.' : 'Pose une question sur une formation, un métier ou une piste.'}

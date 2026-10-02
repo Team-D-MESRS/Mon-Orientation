@@ -16,9 +16,9 @@ bash tests/api/securite.sh          # droits d'accès, identification EducMaster
 bash tests/api/parcours-eleve.sh    # bilan des notes, moteur d'orientation, vœux
 node tests/e2e/connexion.mjs        # identification, accès des personnels, session, pages protégées, déconnexion
 node tests/e2e/parcours-eleve.mjs   # parcours complet élève / parent / Terminale, captures ordinateur et mobile
-bash tests/api/conseiller.sh        # conseiller : droits, validation, conversations, limitation (sans appel au modèle)
-CONSEILLER_TEST_LLM=1 bash tests/api/conseiller.sh   # + appels réels au modèle (clé GEMINI_API_KEY requise, quota gratuit limité)
-node tests/e2e/conseiller.mjs       # conseiller dans le navigateur (sans clé : message explicite ; avec clé : réponse)
+bash tests/api/conseiller.sh        # Guido : droits, validation, filet local, historique, limitation (sans appel externe)
+(cd backend && npm run test:guido-api) # contrat API via un mock HTTP local (aucun appel au bot réel)
+node tests/e2e/conseiller.mjs       # page autonome Guido, accès du header, compatibilité ancienne route, interface élève/parent
 bash tests/api/catalogue.sh         # recherche sans accents, filtres, séries du bac, domaines, formations mises de côté
 node tests/e2e/catalogue.mjs        # filtres, comparateur, « Et après ce bac ? », partage, impression, cœurs, mobile
 node tests/e2e/pied-de-page.mjs     # pages d'information, liens du pied de page (aucun lien mort), pied de page en bas, 404

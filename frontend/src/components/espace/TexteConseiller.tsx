@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
-// Le texte vient d'un modèle de langage : seuls les liens internes connus deviennent cliquables.
+// Le texte vient du service Guido : seuls les liens internes connus deviennent cliquables.
 const LIEN_INTERNE = /^\/(catalogue\/[0-9a-f-]{36}|espace-apprenant(\/[a-z-]+)?)$/;
 const EN_LIGNE = /\*\*([^*]+)\*\*|\[([^\]]+)\]\(([^)\s]+)\)/g;
 

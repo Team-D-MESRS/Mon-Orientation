@@ -37,7 +37,7 @@ API REST de la plateforme nationale d'orientation scolaire. Elle gère l'authent
 | Validation | `class-validator` via une `ValidationPipe` globale (`whitelist`, `forbidNonWhitelisted`, `transform`) |
 | Sécurité HTTP | `helmet` (CSP désactivée : API JSON + Swagger), CORS limité à `CORS_ORIGIN`, `@nestjs/throttler` |
 | Documentation | `@nestjs/swagger` |
-| Conseiller pédagogique | SDK officiel `@google/genai` : Gemini (`gemini-3.6-flash` par défaut) avec appel de fonctions côté serveur |
+| Conseiller pédagogique | Proxy NestJS vers le service Guido externe ; l’API externe fournie utilise elle-même Gemini |
 | Dépendances installées mais pas encore utilisées | `minio` (fichiers), `zod` |
 
 ---
@@ -68,7 +68,7 @@ backend/
 │   │   └── profils-filieres.ts      matières clés et seuils par filière, compatibilité des séries
 │   ├── filiere/                     catalogue (public) : recherche sans accents, filtres, séries du bac
 │   │   └── domaines.ts              domaines (secteurs d'activité) du catalogue
-│   ├── conseiller/                  conseiller pédagogique : consignes, outils, boucle d'appels à Gemini
+│   ├── conseiller/                  proxy serveur, historique local et filet déterministe
 │   └── stats/                       indicateurs de pilotage (DGES / admin)
 ├── setup.sh                         installation : dépendances, .env, Prisma, migrations, seed
 └── .env.example
@@ -117,9 +117,9 @@ Variables lues dans `backend/.env` :
 | `NODE_ENV` | non | — | `production` interdit le seed de démonstration et impose `SEED_ADMIN_PASSWORD` |
 | `MINIO_*` | non | — | Prévu (fichiers), non utilisé à ce stade |
 | `EDUCMASTER_API_URL` | non | — | Prévu pour l'intégration EducMaster (tâche 2.1), non utilisé |
-| `GEMINI_API_KEY` | pour le conseiller | — | Clé de l'API Gemini (Google AI Studio) ; sans elle, le conseiller répond 503 « pas encore configuré » |
-| `CONSEILLER_MODELE` | non | `gemini-3.6-flash` | Modèle Gemini utilisé par le conseiller (`gemini-3.8-flash` est limité à 20 requêtes par jour dans l'offre gratuite) |
-| `CONSEILLER_MODELE_SECOURS` | non | `gemini-3.5-flash-lite` | Modèle de secours si le principal est surchargé ou a épuisé son quota ; vide pour désactiver |
+| `GUIDO_API_URL` | pour le conseiller | — | URL de base du service Guido ; configurer une URL HTTPS en production |
+| `GUIDO_API_KEY` | pour le conseiller | — | Clé envoyée dans `X-API-Key`, gardée uniquement dans les secrets du backend |
+| `GUIDO_ALLOW_INSECURE_HTTP` | non | `false` | Dérogation de développement uniquement pour une API HTTP distante ; ne jamais activer en production |
 
 Ne jamais versionner `.env`. En production, utiliser des secrets longs et aléatoires (par exemple `openssl rand -base64 48`).
 
@@ -336,7 +336,7 @@ Chaque recommandation contient `score` (0 à 100), `explication` (texte) et `cri
 
 | Méthode | Route | Accès | Description |
 |---|---|---|---|
-| POST | `/conseiller/:nip/chat` | élève, parent rattaché (10/min par compte) | Question `{ message (≤ 2000), conversationId?, langue? }` → `{ conversationId, reponse, outilsUtilises }`. `langue` : `fr` (par défaut) ou `fon` (réponse rédigée en fongbé, enregistrée avec la conversation) ; 503 sans clé API |
+| POST | `/conseiller/:nip/chat` | élève, parent rattaché (10/min par compte) | Question écrite `{ message (≤ 2000), conversationId? }` → `{ conversationId, reponse, outilsUtilises: [] }`. Le backend relaie au bot externe ; 503 si l’API n’est pas configurée ou disponible |
 | GET | `/conseiller/:nip/historique` | dossier | 10 dernières conversations |
 | GET | `/stats/national` | DGES, admin | Effectifs, nombre de filières et d'établissements, répartition par type |
 | GET | `/stats/departement/:code` | DGES, admin | Indicateurs d'un département |
@@ -373,54 +373,28 @@ Le bilan des notes (`src/apprenant/bilan-notes.ts`) porte sur l'année scolaire 
 
 ## Conseiller pédagogique
 
-Le conseiller est un **prototype du niveau B** : il informe et **explique les propositions du moteur**, mais ne formule pas de recommandation lui-même (« le moteur propose, le conseiller explique »). Ce périmètre correspond au point 5 des arbitrages du SPEC et reste à confirmer par le client.
+Le backend ne contacte plus Gemini directement et n’embarque plus le SDK Google. Le contrôleur NestJS conserve l’authentification JWT, les règles d’accès élève/parent et la limitation de débit, puis relaie les messages à l’API Guido fournie par le projet. **Cette API distante utilise elle-même Gemini** (sa documentation mentionne une clé Gemini côté service et des erreurs de modèle 502/503) : cette refonte retire donc la dépendance LLM directe du dépôt, pas le LLM de l’hébergeur du bot.
 
-Le code se trouve dans `src/conseiller/` :
+### Échange et données
 
-| Fichier | Rôle |
-|---|---|
-| `prompt-conseiller.ts` | Consignes fixes (rôle, sources, neutralité, orientation vers un adulte en cas de détresse, style), puis une précision selon l'interlocuteur (élève tutoyé, parent vouvoyé) |
-| `outils-conseiller.ts` | Outils proposés au modèle et exécutés côté serveur |
-| `conseiller.service.ts` | Boucle d'appels, conversations, gestion des erreurs |
+Le service externe est sans état. À chaque tour, le backend envoie au serveur distant `conversation_id`, la question et les 12 derniers échanges `{question, reponse}`. Le NIP reste utilisé uniquement par le backend pour les contrôles d’accès et le stockage local ; il n’est pas inclus dans le corps de l’appel externe. Le dossier, les notes, les recommandations et les vœux de l’élève ne sont plus ajoutés au contexte. Les conversations continuent d’être conservées dans `conversations_ia`.
 
-### Outils
+Le bot fourni est présenté comme un assistant général sur les métiers et formations techniques (LTP, LTA, EFMS) au Bénin. Son contrat ne prévoit ni consultation du profil scolaire, ni langue sélectionnée, ni message audio. L’interface a donc été recentrée sur les questions textuelles en français et avertit qu’elle ne consulte pas le dossier scolaire. L’API distante déclare `GET /api/health` et `POST /api/chat`; le second exige l’en-tête `X-API-Key` dans Swagger.
 
-| Outil | Source | Contenu renvoyé |
-|---|---|---|
-| `rechercher_filieres` | `FiliereService.findAll` | 12 formations au plus : code, nom, type, niveau, séries admises, lien |
-| `fiche_filiere` | `FiliereService.findByCode` | Fiche complète, avec l'indication « source officielle » ou non |
-| `evaluer_filiere` | `OrientationService.evaluerFiliere` | Avis du moteur sur une formation choisie par l'élève, sans rien enregistrer |
+### Configuration et sécurité
 
-**Contexte joint à chaque question** (`OutilsConseillerService.contexteEleve`) : le dossier de l'élève (classe, série, département, moyennes, points forts, vœux) et les propositions actuelles du moteur avec leurs critères, calculées si besoin. Il est **pseudonymisé : ni nom, ni NIP, ni date de naissance, ni commune, ni motivation écrite**. Le joindre directement évite un appel de fonction à chaque question, ce qui ménage le quota gratuit de Gemini.
+1. Copier `backend/.env.example` vers `backend/.env`, puis renseigner `GUIDO_API_KEY` comme secret **côté backend seulement**.
+2. `GUIDO_API_URL` doit désigner l’origine de l’API (par exemple `https://guido.example.bj`). Le code refuse par défaut les URLs HTTP distantes. Le serveur fourni actuellement par IP ne propose que `http://13.140.158.110:8010`; demander au propriétaire une terminaison HTTPS ou un accès réseau privé avant d’y envoyer clé ou conversations.
+3. `GUIDO_ALLOW_INSECURE_HTTP=true` n’est prévu que pour du développement explicitement autorisé, hors production. Le trafic HTTP expose la clé et le contenu en transit ; ne pas l’activer en production.
+4. Redémarrer le backend après modification de `.env`. Aucun secret ne doit être inscrit dans le frontend, versionné ou envoyé dans le chat.
 
-Aucun outil ne prend de NIP en paramètre : le dossier consulté est toujours celui de la route, déjà contrôlé par `AccesApprenantGuard`. Chaque formation citée porte un lien `/catalogue/<id>`, que le frontend est seul à rendre cliquable.
+La documentation Swagger de l’API déclare `X-API-Key` obligatoire, mais l’interface publique `/` semble appeler `/api/chat` sans cet en-tête. À confirmer auprès du propriétaire du service avant le déploiement. La politique de conservation et de traitement des conversations par ce service externe doit également être vérifiée avant d’y transmettre des échanges d’élèves.
 
-### Appel au modèle
+### Vérification
 
-- `client.models.generateContent` (SDK `@google/genai`) avec `gemini-3.6-flash` : les consignes passent en `systemInstruction`, les outils en `functionDeclarations` (schémas JSON).
-- **Boucle bornée** à 6 appels au modèle par question. Les résultats des fonctions sont renvoyés ensemble, dans un seul message (`functionResponse`, avec `output` ou `error`). Le contenu du modèle est renvoyé tel quel au tour suivant, car il porte les signatures de réflexion.
-- **Filtres de sécurité** : si Gemini bloque la question (`promptFeedback.blockReason`) ou la réponse (arrêt `SAFETY`, `PROHIBITED_CONTENT`, `BLOCKLIST`, `SPII`, `RECITATION`), l'élève reçoit une réponse neutre.
-- **Cache** : Gemini réutilise automatiquement un début de requête identique. Les consignes et les outils sont donc placés en tête et ne changent jamais ; chaque appel journalise `cache=` (jetons relus) et `réflexion=`.
-- **Modèle de secours** : si le modèle principal renvoie 429, 500, 503 ou 504 à n'importe quel moment (surcharge ou quota épuisé, fréquent sur l'offre gratuite), la question **repart de zéro** sur `CONSEILLER_MODELE_SECOURS`, qui a son propre quota. On repart de zéro car les signatures de réflexion déjà reçues sont propres au premier modèle. Le SDK ne fait qu'une seule relance (`retryOptions.attempts: 2`, contre 5 par défaut), pour basculer vite.
-- **Erreurs** : clé refusée (400, 401 ou 403 : Gemini répond 400 pour une clé invalide) → 503 ; quota atteint (429) → 429 ; autre erreur de l'API ou du réseau → 503.
-- **Conversations** : chaque session a sa conversation (`conversations_ia`), qui ne conserve que le texte des échanges et la liste des outils utilisés. Les 20 derniers messages sont renvoyés au modèle.
-
-### Mettre en service
-
-1. Créer une clé sur [Google AI Studio](https://aistudio.google.com). C'est gratuit et ne demande pas de carte bancaire.
-2. Ajouter `GEMINI_API_KEY=…` dans `backend/.env`, puis relancer le backend : `nest start --watch` ne relit pas `.env` tout seul.
-3. Vérifier avec des appels réels : `CONSEILLER_TEST_LLM=1 bash tests/api/conseiller.sh`, puis `node tests/e2e/conseiller.mjs`.
-
-**Offre gratuite : réservée à la démonstration.** Elle ne coûte rien, mais son quota est limité (consultable dans AI Studio), et chaque question peut consommer plusieurs requêtes à cause des appels de fonctions. Surtout, d'après la page officielle des tarifs, **Google peut utiliser les échanges de l'offre gratuite pour améliorer ses produits** : seules les données de démonstration peuvent y passer, jamais celles de vrais élèves. Les quotas gratuits varient beaucoup d'un modèle à l'autre : le 13/09/2026, `gemini-3.8-flash` était limité à 20 requêtes par jour, d'où le choix de `gemini-3.6-flash` par défaut. Les quotas du projet sont consultables sur [aistudio.google.com/rate-limit](https://aistudio.google.com/rate-limit). En production, il faudra l'offre payante, où les données ne servent pas à l'entraînement, au tarif indiqué pour le modèle retenu sur la [page officielle des tarifs](https://ai.google.dev/gemini-api/docs/pricing). L'autre option est un modèle hébergé au Bénin.
-
-### Avant la production
-
-- Le client doit confirmer le niveau B, et le ministère décider de l'hébergement des données envoyées au modèle (APDP). L'offre gratuite de Gemini est exclue pour des données réelles.
-- Il manque un outil de supervision (relecture des conversations signalées ou tirées au sort) et un jeu d'une centaine de questions types validées par les conseillers d'orientation, à rejouer avant chaque mise en production.
-- Les réponses ne sont pas encore diffusées en continu (streaming).
-- Langues nationales : le fongbé écrit passe déjà par Gemini (`langue: "fon"`), avec une qualité jugée correcte sur un premier échantillon, à faire relire plus largement. Les messages fixes (refus, erreurs) restent en français. Pour la voix et les autres langues, « J'aime ma langue » n'offre pas d'API publique à ce jour (voir ARCHITECTURE §2.4).
-
----
+- `cd backend && npm run test:guido-api` démarre un faux serveur HTTP sur loopback et vérifie l’en-tête secret, le contrat JSON, l’historique, l’absence de NIP dans le corps, le filet local de détresse et le refus du HTTP distant non sécurisé. Aucune question n’est envoyée au chatbot réel.
+- `bash tests/api/conseiller.sh` vérifie les droits, la validation, le stockage local et le filet déterministe sans appel externe.
+- `node tests/e2e/conseiller.mjs` vérifie la présentation, les espaces élève/parent et l’interface adaptée, sans soumettre de question.
 
 ## Tests
 
@@ -429,7 +403,8 @@ Les tests de bout en bout se trouvent dans le dossier racine `tests/`, et s'exé
 ```bash
 bash tests/api/securite.sh        # 37 vérifications
 bash tests/api/parcours-eleve.sh  # 38 vérifications (nécessite le seed de démonstration)
-bash tests/api/conseiller.sh      # 11 vérifications sans appel au modèle ; 22 avec CONSEILLER_TEST_LLM=1 (appels réels, dont une réponse en fongbé)
+bash tests/api/conseiller.sh          # droits, validation, filet local et limitation ; aucun appel externe
+(cd backend && npm run test:guido-api) # contrat JSON via un mock local, sans appel au service réel
 bash tests/api/catalogue.sh       # 66 vérifications : recherche, filtres, séries, domaines, supérieur (guide du MESRS), formations mises de côté
 ```
 
@@ -455,5 +430,5 @@ Il n'y a pas encore de tests unitaires (Jest n'est pas configuré) : c'est l'obj
 | L'API sert l'ancien code alors que `dist/` est à jour | Un `node dist/main` orphelin tient le port 8080 : `ss -ltnp \| grep :8080`, arrêter le processus. `nest start --watch` ne relance son serveur qu'après un vrai changement de contenu dans `src/` (un simple `touch` ne suffit pas) |
 | `npx prisma …` télécharge prisma 8 | Commande lancée hors de `backend/` : se placer dans `backend/` |
 | `P2002` (contrainte d'unicité) à l'inscription | Un compte existe déjà pour ce NIP ou cet email (l'API renvoie normalement 409) |
-| Le conseiller répond « pas encore configuré » | `GEMINI_API_KEY` absente de `.env` : l'ajouter, puis relancer le backend |
+| Le conseiller répond « pas encore configuré » | Renseigner `GUIDO_API_URL` et `GUIDO_API_KEY` dans `backend/.env`, puis relancer le backend ; l’URL distante doit être en HTTPS |
 | 429 à la connexion | Plus de 5 tentatives en une minute pour cet identifiant depuis cette IP : patienter une minute |

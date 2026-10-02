@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { ThrottlerGuard } from '@nestjs/throttler';
 
 /**
- * Compte les requêtes par compte connecté. Pour le conseiller, cela borne le coût du modèle de langage
- * et les abus ; l'IP ne convient pas, les établissements partageant souvent une même connexion.
+ * Compte les requêtes par compte connecté. Pour le conseiller, cela borne les abus et le volume d'appels
+ * au service externe ; l'IP ne convient pas, les établissements partageant souvent une même connexion.
  * À placer après AuthGuard('jwt').
  */
 @Injectable()

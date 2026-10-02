@@ -182,21 +182,10 @@ export interface ReponseConseiller {
   outilsUtilises: string[];
 }
 
-/** Langue des réponses du conseiller */
-export type LangueConseiller = 'fr' | 'fon';
-
-/** Note vocale (langues locales peu écrites) : à la place du message écrit, jamais les deux à vide. */
-export interface NoteVocale {
-  data: string;
-  mimeType: string;
-}
-
 export const conseillerApi = {
-  chat: (nip: string, message: string | undefined, conversationId: string | undefined, langue: LangueConseiller = 'fr', audio?: NoteVocale) =>
+  chat: (nip: string, message: string, conversationId?: string) =>
     api.post<ReponseConseiller>(`/conseiller/${nip}/chat`, {
-      ...(message ? { message } : {}),
-      ...(audio ? { audio } : {}),
-      langue,
+      message,
       ...(conversationId ? { conversationId } : {}),
     }),
   getHistorique: (nip: string) => api.get(`/conseiller/${nip}/historique`),

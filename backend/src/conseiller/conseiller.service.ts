@@ -1,156 +1,108 @@
-import { BadRequestException, HttpException, HttpStatus, Injectable, Logger, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadGatewayException,
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ApiError, Content, FinishReason, FunctionCall, GenerateContentResponse, GoogleGenAI, Part } from '@google/genai';
 import { Prisma } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { UtilisateurConnecte } from '../auth/utilisateur-courant.decorator';
-import { CONSIGNES_CONSEILLER, CONSIGNE_INTERLOCUTEUR, CONSIGNE_LANGUE, Interlocuteur, Langue } from './prompt-conseiller';
-import { ErreurOutil, OUTILS_CONSEILLER, OutilsConseillerService } from './outils-conseiller';
 
-/** Message tel qu'enregistré en base : texte seulement, les appels d'outils ne sont pas rejoués. */
 interface MessageEnregistre {
   role: 'user' | 'assistant';
   content: string;
   horodatage: string;
-  outils?: string[];
-  langue?: Langue;
 }
 
-const MAX_TOURS_MODELE = 6; // appels au modèle pour un même message de l'utilisateur
-const MAX_MESSAGES_HISTORIQUE = 20; // derniers messages renvoyés au modèle (nombre pair : l'historique commence par l'utilisateur)
-const DELAI_APPEL_MS = 90_000;
-const MAX_JETONS_SORTIE = 8192;
+interface EchangeGuido {
+  question: string;
+  reponse: string;
+}
 
-// Arrêts où les filtres de sécurité de Gemini ont empêché une réponse exploitable
-const ARRETS_BLOQUES = new Set<FinishReason>([
-  FinishReason.SAFETY,
-  FinishReason.PROHIBITED_CONTENT,
-  FinishReason.BLOCKLIST,
-  FinishReason.SPII,
-  FinishReason.RECITATION,
-]);
+interface ReponseApiGuido {
+  conversation_id: string;
+  question: string;
+  reponse: string;
+}
 
-const REPONSE_REFUS = "Je ne peux pas répondre à cette demande. Pose-moi une question sur ton orientation, les formations ou les métiers.";
-const REPONSE_TROP_LONGUE =
-  'Ta question demande plus de recherches que je ne peux en faire en une fois. Peux-tu la découper en questions plus simples ?';
-const REPONSE_VIDE = "Je n'ai pas pu formuler de réponse. Peux-tu reformuler ta question ?";
+const MAX_ECHANGES_API = 12;
+const DELAI_APPEL_MS = 45_000;
 
-/**
- * Filet de sécurité déterministe (pas laissé au seul jugement du modèle) : des signaux sérieux — pas le
- * stress ordinaire du choix d'orientation, un sujet légitime que la consigne du conseiller sait déjà
- * traiter avec empathie — coupent court à toute réponse générée et renvoient vers un adulte. Liste volontairement
- * étroite : « stressé », « je suis perdu » etc. sont des messages fréquents et normaux dans ce contexte,
- * les y ajouter déclencherait sur la quasi-totalité des conversations sur le choix d'une filière.
- */
+// Réponse déterministe pour les signaux sérieux : ce filet reste local et ne transmet pas le message au bot externe.
 const SIGNAUX_DETRESSE = [
-  'harcèlement',
-  'harcelée',
-  'harcelé',
-  'harcele',
-  'me frappe',
-  'me tape',
-  'me bat',
-  'violence',
-  'abusé',
-  'abusée',
-  'agressée',
-  'agressé',
-  'envie de mourir',
-  'me suicider',
-  'suicide',
-  'me faire du mal',
-  'me blesser',
-  "j'ai peur de rentrer",
-  "j'ai peur de lui",
-  "j'ai peur d'elle",
+  'harcèlement', 'harcèle', 'harcelée', 'harcelé', 'harcele', 'me frappe', 'me tape', 'me bat', 'violence',
+  'abusé', 'abusée', 'agressée', 'agressé', 'envie de mourir', 'me suicider', 'suicide',
+  'me faire du mal', 'me blesser', "j'ai peur de rentrer", "j'ai peur de lui", "j'ai peur d'elle",
 ];
 
-const REPONSE_DETRESSE: Record<Interlocuteur, string> = {
-  eleve:
-    "Ce que tu dis est important, mais je ne suis pas la bonne personne pour t'aider avec ça : je suis un assistant sur l'orientation scolaire. Parle-en dès que possible à un adulte de confiance — un parent, ton professeur principal, le conseiller d'orientation ou le chef d'établissement. Tu peux revenir me parler d'orientation quand tu veux.",
-  parent:
-    "Ce que vous décrivez dépasse ce que je peux traiter : je suis un assistant sur l'orientation scolaire, pas un professionnel formé pour ce type de situation. Je vous invite à en parler sans attendre à un adulte de confiance de l'établissement (conseiller d'orientation, chef d'établissement) ou à un professionnel adapté. Je reste disponible pour toute question sur l'orientation de votre enfant.",
-};
+const REPONSE_DETRESSE_ELEVE =
+  "Ce que tu dis est important, mais je ne suis pas la bonne personne pour t'aider avec ça : je suis un assistant sur l'orientation scolaire. Parle-en dès que possible à un adulte de confiance — un parent, ton professeur principal, le conseiller d'orientation ou le chef d'établissement. Tu peux revenir me parler d'orientation quand tu veux.";
+const REPONSE_DETRESSE_PARENT =
+  "Ce que vous décrivez dépasse ce que je peux traiter : je suis un assistant sur l'orientation scolaire, pas un professionnel formé pour ce type de situation. Je vous invite à en parler sans attendre à un adulte de confiance de l'établissement (conseiller d'orientation, chef d'établissement) ou à un professionnel adapté. Je reste disponible pour toute question sur l'orientation de votre enfant.";
 
 @Injectable()
 export class ConseillerService {
   private readonly logger = new Logger(ConseillerService.name);
-  private readonly client: GoogleGenAI | null;
-  private readonly modele: string;
-  private readonly modeleSecours: string | null;
+  private readonly apiUrl: string;
+  private readonly apiKey: string;
+  private readonly autoriserHttpNonSecurise: boolean;
 
   constructor(
     private prisma: PrismaService,
-    private outils: OutilsConseillerService,
     config: ConfigService,
   ) {
-    // Sans clé, le conseiller répond « non configuré » plutôt que d'échouer à chaque appel
-    const cle = config.get<string>('GEMINI_API_KEY') || config.get<string>('GOOGLE_API_KEY');
-    this.client = cle ? new GoogleGenAI({ apiKey: cle }) : null;
-    this.modele = config.get<string>('CONSEILLER_MODELE', 'gemini-3.6-flash');
-    this.modeleSecours = config.get<string>('CONSEILLER_MODELE_SECOURS', 'gemini-3.5-flash-lite') || null;
-    if (!this.client) this.logger.warn('GEMINI_API_KEY absente : le conseiller pédagogique est désactivé');
+    this.apiUrl = config.get<string>('GUIDO_API_URL')?.trim() ?? '';
+    this.apiKey = config.get<string>('GUIDO_API_KEY')?.trim() ?? '';
+    this.autoriserHttpNonSecurise = config.get<string>('GUIDO_ALLOW_INSECURE_HTTP') === 'true';
+    if (!this.apiUrl || !this.apiKey) {
+      this.logger.warn('Guido externe non configuré : renseigner GUIDO_API_URL et GUIDO_API_KEY côté serveur');
+    }
   }
 
   async chat(
     nip: string,
-    message: string | undefined,
+    message: string,
     utilisateur: UtilisateurConnecte,
     conversationId?: string,
-    langue: Langue = 'fr',
-    audio?: { data: string; mimeType: string },
   ) {
+    const question = message?.trim();
+    if (!question) throw new BadRequestException('Le message est vide');
+    if (question.length > 2000) throw new BadRequestException('Le message dépasse la limite de 2000 caractères.');
+
     const conversation = conversationId
       ? await this.prisma.conversationIA.findFirst({ where: { id: conversationId, apprenantNip: nip } })
       : null;
     if (conversationId && !conversation) throw new NotFoundException('Conversation introuvable');
-    if (!message && !audio) throw new BadRequestException('Le message est vide');
-    if (!this.client) {
-      throw new ServiceUnavailableException("Le conseiller n'est pas encore configuré sur ce serveur.");
-    }
 
     const historique = (conversation?.messages as unknown as MessageEnregistre[] | null) ?? [];
-    // Note vocale : la partie audio est envoyée au modèle mais jamais conservée (ni le son, ni sa transcription
-    // brute) — seule la réponse de Guido, qui reformule ce qu'il a compris, reste dans l'historique.
-    const partieAudio: Part[] = audio ? [{ inlineData: { data: audio.data, mimeType: audio.mimeType } }] : [];
-    const partieTexte: Part[] = message ? [{ text: message }] : [];
-    const contents: Content[] = [
-      ...historique.slice(-MAX_MESSAGES_HISTORIQUE).map((m) => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }],
-      })),
-      { role: 'user', parts: [{ text: this.blocContexte(await this.outils.contexteEleve(nip)) }, ...partieAudio, ...partieTexte] },
-    ];
-    const interlocuteur: Interlocuteur = utilisateur.role === 'PARENT' ? 'parent' : 'eleve';
-    const questionPosee = new Date().toISOString();
+    const id = conversation?.id ?? randomUUID();
+    const dateQuestion = new Date().toISOString();
+    const estSignalDetresse = SIGNAUX_DETRESSE.some((signal) => question.toLocaleLowerCase('fr').includes(signal));
+    const reponse = estSignalDetresse
+      ? utilisateur.role === 'PARENT' ? REPONSE_DETRESSE_PARENT : REPONSE_DETRESSE_ELEVE
+      : await this.appelerGuido(id, question, this.formerHistorique(historique));
 
-    // Filet de sécurité : un signal sérieux court-circuite le modèle, la réponse est fixe et validée d'avance.
-    // Ne porte que sur le texte : une note vocale s'appuie sur la seule consigne du modèle (même protection qu'avant ce filet).
-    const { texte, outilsUtilises } = message && this.signaleDetresse(message)
-      ? { texte: REPONSE_DETRESSE[interlocuteur], outilsUtilises: [] as string[] }
-      : await this.repondre(contents, interlocuteur, nip, langue);
-
-    const conversationMaj = [
+    const messages = [
       ...historique,
-      { role: 'user', content: message ?? '🎤 Note vocale', horodatage: questionPosee },
-      { role: 'assistant', content: texte, horodatage: new Date().toISOString(), outils: outilsUtilises, langue },
+      { role: 'user', content: question, horodatage: dateQuestion },
+      { role: 'assistant', content: reponse, horodatage: new Date().toISOString() },
     ] satisfies MessageEnregistre[];
-    const donnees = conversationMaj as unknown as Prisma.InputJsonValue;
+    const donnees = messages as unknown as Prisma.InputJsonValue;
 
-    let id: string;
     if (conversation) {
-      // La langue de la conversation est celle de la dernière réponse
-      await this.prisma.conversationIA.update({ where: { id: conversation.id }, data: { messages: donnees, langue } });
-      id = conversation.id;
+      await this.prisma.conversationIA.update({ where: { id: conversation.id }, data: { messages: donnees, langue: 'fr' } });
     } else {
       const apprenant = await this.prisma.apprenant.findUnique({ where: { nip }, select: { palier: true } });
-      const creee = await this.prisma.conversationIA.create({
-        data: { apprenantNip: nip, messages: donnees, langue, palier: apprenant?.palier ?? 'TROISIEME' },
+      await this.prisma.conversationIA.create({
+        data: { id, apprenantNip: nip, messages: donnees, langue: 'fr', palier: apprenant?.palier ?? 'TROISIEME' },
       });
-      id = creee.id;
     }
 
-    return { conversationId: id, reponse: texte, outilsUtilises };
+    return { conversationId: id, reponse, outilsUtilises: [] as string[] };
   }
 
   async getHistorique(nip: string) {
@@ -161,130 +113,76 @@ export class ConseillerService {
     });
   }
 
-  /** Boucle d'appels de fonctions, bornée à MAX_TOURS_MODELE appels au modèle. */
-  private async repondre(contenusInitiaux: Content[], interlocuteur: Interlocuteur, nip: string, langue: Langue) {
-    let modele = this.modele;
-    let contents = [...contenusInitiaux];
-    let outilsUtilises: string[] = [];
-
-    for (let tour = 0; tour < MAX_TOURS_MODELE; tour++) {
-      let reponse: GenerateContentResponse;
-      try {
-        reponse = await this.appelerModele(contents, interlocuteur, modele, langue);
-      } catch (err) {
-        // Surcharge ou quota épuisé (fréquent sur l'offre gratuite) : la question repart de zéro sur le modèle de secours,
-        // qui a son propre quota. De zéro, car les signatures de réflexion déjà reçues sont propres au premier modèle.
-        if (this.modeleSecours && modele !== this.modeleSecours && this.estPassager(err)) {
-          const detail = (err as ApiError).message.match(/"quotaId":\s*"([^"]+)"/)?.[1] ?? (err as ApiError).status;
-          this.logger.warn(`${modele} indisponible (${detail}) : la question repart sur ${this.modeleSecours}`);
-          modele = this.modeleSecours;
-          contents = [...contenusInitiaux];
-          outilsUtilises = [];
-          tour = -1;
-          continue;
-        }
-        throw this.erreurFournisseur(err);
+  private formerHistorique(messages: MessageEnregistre[]): EchangeGuido[] {
+    const echanges: EchangeGuido[] = [];
+    for (let i = 0; i + 1 < messages.length; i += 1) {
+      const question = messages[i];
+      const reponse = messages[i + 1];
+      if (question.role === 'user' && reponse.role === 'assistant') {
+        echanges.push({ question: question.content.slice(0, 2000), reponse: reponse.content.slice(0, 8000) });
       }
-      const candidat = reponse.candidates?.[0];
+    }
+    return echanges.slice(-MAX_ECHANGES_API);
+  }
 
-      const blocage = reponse.promptFeedback?.blockReason ?? (candidat?.finishReason && ARRETS_BLOQUES.has(candidat.finishReason) ? candidat.finishReason : null);
-      if (blocage) {
-        this.logger.warn(`Réponse bloquée par les filtres de sécurité (${blocage})`);
-        return { texte: REPONSE_REFUS, outilsUtilises };
-      }
-
-      const appels = reponse.functionCalls ?? [];
-      if (appels.length > 0 && candidat?.content) {
-        // Le contenu du modèle est renvoyé tel quel : il porte les signatures de réflexion attendues au tour suivant
-        contents.push(candidat.content);
-        outilsUtilises.push(...appels.map((a) => a.name ?? 'inconnu'));
-        // Tous les résultats dans un seul message (appels parallèles)
-        const resultats = await Promise.all(appels.map((appel) => this.resultatOutil(appel, nip)));
-        contents.push({ role: 'user', parts: resultats });
-        continue;
-      }
-
-      const texte = (reponse.text ?? '').trim();
-      return { texte: texte || REPONSE_VIDE, outilsUtilises };
+  private async appelerGuido(conversationId: string, question: string, historique: EchangeGuido[]): Promise<string> {
+    if (!this.apiUrl || !this.apiKey) {
+      throw new ServiceUnavailableException("Le conseiller n'est pas configuré : renseignez GUIDO_API_URL et GUIDO_API_KEY côté serveur.");
     }
 
-    this.logger.warn(`Limite de ${MAX_TOURS_MODELE} appels au modèle atteinte (outils : ${outilsUtilises.join(', ')})`);
-    return { texte: REPONSE_TROP_LONGUE, outilsUtilises };
-  }
-
-  /** Signal sérieux (harcèlement, violence, mise en danger) : insensible aux accents et à la casse. */
-  private signaleDetresse(message: string): boolean {
-    const normalise = message
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '');
-    return SIGNAUX_DETRESSE.some((signal) => normalise.includes(signal.normalize('NFD').replace(/[̀-ͯ]/g, '')));
-  }
-
-  /** Contexte placé avant la question : dossier pseudonymisé et propositions, sans nom ni NIP. */
-  private blocContexte(contexte: unknown) {
-    return `Contexte fourni par la plateforme (dossier pseudonymisé de l'élève et propositions actuelles du moteur) :\n${JSON.stringify(contexte)}`;
-  }
-
-  /** Un appel au modèle ; les erreurs du SDK remontent telles quelles (traduites par repondre). */
-  private async appelerModele(
-    contents: Content[],
-    interlocuteur: Interlocuteur,
-    modele: string,
-    langue: Langue,
-  ): Promise<GenerateContentResponse> {
-    const reponse = await this.client!.models.generateContent({
-      model: modele,
-      contents,
-      config: {
-        // Consignes communes en tête : Gemini réutilise automatiquement ce préfixe identique (cache implicite)
-        systemInstruction: [CONSIGNES_CONSEILLER, CONSIGNE_INTERLOCUTEUR[interlocuteur], CONSIGNE_LANGUE[langue]].filter(Boolean).join('\n\n'),
-        tools: [{ functionDeclarations: OUTILS_CONSEILLER }],
-        maxOutputTokens: MAX_JETONS_SORTIE,
-        // Une seule relance (le SDK en fait 5 par défaut) : en cas de surcharge, mieux vaut basculer vite sur le modèle de secours
-        httpOptions: { timeout: DELAI_APPEL_MS, retryOptions: { attempts: 2 } },
-      },
-    });
-    const u = reponse.usageMetadata;
-    this.logger.log(
-      `modèle=${modele} fin=${reponse.candidates?.[0]?.finishReason ?? '?'} appels=${reponse.functionCalls?.map((a) => a.name).join(',') || '-'} entrée=${u?.promptTokenCount ?? 0} cache=${u?.cachedContentTokenCount ?? 0} réflexion=${u?.thoughtsTokenCount ?? 0} sortie=${u?.candidatesTokenCount ?? 0}`,
-    );
-    return reponse;
-  }
-
-  /** Erreur passagère côté Google : quota du modèle épuisé, surcharge ou panne momentanée. */
-  private estPassager(err: unknown): boolean {
-    return err instanceof ApiError && [429, 500, 503, 504].includes(err.status);
-  }
-
-  private async resultatOutil(appel: FunctionCall, nip: string): Promise<Part> {
-    const nom = appel.name ?? '';
+    let base: URL;
     try {
-      const resultat = await this.outils.executer(nom, appel.args, nip);
-      return { functionResponse: { id: appel.id, name: nom, response: { output: resultat } } };
-    } catch (err) {
-      if (!(err instanceof ErreurOutil)) this.logger.error(`Outil ${nom} : ${String(err)}`);
-      const message = err instanceof ErreurOutil ? err.message : 'Erreur interne lors de la consultation des données.';
-      return { functionResponse: { id: appel.id, name: nom, response: { error: message } } };
+      base = new URL(this.apiUrl);
+    } catch {
+      throw new ServiceUnavailableException('La configuration de l’API Guido est invalide.');
     }
-  }
+    const boucleLocale = ['localhost', '127.0.0.1', '[::1]'].includes(base.hostname);
+    const httpAutorise = base.protocol === 'http:' && (
+      boucleLocale || (this.autoriserHttpNonSecurise && process.env.NODE_ENV !== 'production')
+    );
+    if (base.protocol !== 'https:' && !httpAutorise) {
+      throw new ServiceUnavailableException('L’API Guido doit être configurée en HTTPS avant tout échange.');
+    }
+    if (base.username || base.password || base.search || base.hash) {
+      throw new ServiceUnavailableException('La configuration de l’API Guido ne doit contenir ni identifiants ni paramètres.');
+    }
 
-  /** Traduit les erreurs de l'API Gemini en réponses HTTP lisibles pour l'élève. */
-  private erreurFournisseur(err: unknown): HttpException {
-    if (err instanceof ApiError) {
-      // Gemini répond 400 (et non 401) quand la clé est invalide
-      if (err.status === 401 || err.status === 403 || (err.status === 400 && /API[_ ]?KEY/i.test(err.message))) {
-        this.logger.error(`Clé Gemini refusée (${err.status})`);
-        return new ServiceUnavailableException("Le conseiller n'est pas correctement configuré sur ce serveur.");
-      }
-      if (err.status === 429) {
-        this.logger.warn(`Quota Gemini atteint (429) : ${err.message.replace(/\s+/g, ' ').slice(0, 400)}`);
-        return new HttpException('Le conseiller reçoit trop de demandes. Réessaie dans une minute.', HttpStatus.TOO_MANY_REQUESTS);
-      }
-      this.logger.error(`Erreur de l'API Gemini ${err.status} : ${err.message}`);
-      return new ServiceUnavailableException('Le conseiller est momentanément indisponible. Réessaie dans quelques instants.');
+    const chemin = base.pathname.replace(/\/+$/, '');
+    const endpoint = `${base.origin}${chemin}/api/chat`;
+    let response: Response;
+    try {
+      response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-API-Key': this.apiKey },
+        body: JSON.stringify({ conversation_id: conversationId, question, historique }),
+        signal: AbortSignal.timeout(DELAI_APPEL_MS),
+      });
+    } catch (error) {
+      this.logger.warn(`API Guido injoignable (${error instanceof Error ? error.name : 'erreur réseau'})`);
+      throw new ServiceUnavailableException('Guido est momentanément indisponible. Réessaie dans quelques instants.');
     }
-    this.logger.error(`Appel à Gemini impossible : ${String(err)}`);
-    return new ServiceUnavailableException('Le conseiller est momentanément injoignable. Réessaie dans quelques instants.');
+
+    if (response.status === 401) {
+      this.logger.error('L’API Guido a refusé la clé serveur (401)');
+      throw new ServiceUnavailableException('Le service Guido est mal configuré.');
+    }
+    if (response.status === 502 || response.status === 503 || response.status === 429) {
+      throw new ServiceUnavailableException('Guido est momentanément indisponible. Réessaie dans quelques instants.');
+    }
+    if (!response.ok) {
+      this.logger.warn(`Réponse inattendue de l’API Guido (${response.status})`);
+      throw new BadGatewayException('Le service Guido a renvoyé une réponse inattendue.');
+    }
+
+    let donnees: ReponseApiGuido;
+    try {
+      donnees = await response.json() as ReponseApiGuido;
+    } catch {
+      throw new BadGatewayException('Le service Guido a renvoyé une réponse invalide.');
+    }
+    if (donnees.conversation_id !== conversationId || typeof donnees.reponse !== 'string' || !donnees.reponse.trim()) {
+      throw new BadGatewayException('Le service Guido a renvoyé une réponse incompatible avec son contrat API.');
+    }
+    return donnees.reponse;
   }
 }

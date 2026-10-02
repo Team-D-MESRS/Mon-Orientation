@@ -46,7 +46,7 @@ export default function DonneesPersonnellesPage() {
             <strong>Orientation</strong> : vœux et motivation, formations mises de côté, pistes proposées et leur explication.
           </li>
           <li>
-            <strong>Guido, le conseiller IA</strong> : questions posées (écrites ou en note vocale) et réponses reçues.
+            <strong>Guido</strong> : questions écrites et réponses reçues, conservées dans l&apos;historique de la plateforme.
           </li>
         </ul>
       </Bloc>
@@ -70,17 +70,15 @@ export default function DonneesPersonnellesPage() {
 
       <Bloc titre="Guido, le conseiller IA">
         <p>
-          Pour répondre, Guido transmet la question à un service d&apos;intelligence artificielle, accompagnée de la classe, de
-          la série, du bilan des notes, des vœux et des pistes proposées. Il ne transmet ni le nom, ni le NIP, ni la date de naissance, ni
-          la commune de l&apos;élève. N&apos;écrivez pas d&apos;informations personnelles dans vos questions : elles seraient transmises
-          telles quelles.
+          Pour répondre, le backend transmet au service externe Guido le message écrit et les 12 derniers échanges de la
+          conversation. Il n&apos;y ajoute pas le nom, le NIP, la classe, la série, les notes, les vœux ou les recommandations de
+          l&apos;élève. N&apos;écrivez pas d&apos;informations personnelles dans vos questions : elles seraient transmises telles quelles.
         </p>
         <p>
-          Une question peut aussi être posée en note vocale : le son est alors transmis au même service pour être compris, mais
-          n&apos;est conservé ni par la plateforme, ni au-delà de cet échange.
+          Le chat accepte uniquement des questions écrites en français ; il ne prend pas en charge les notes vocales.
         </p>
         <p>
-          <ACompleter>Prestataire et lieu de traitement du service d&apos;intelligence artificielle à préciser avant la mise en service.</ACompleter>
+          <ACompleter>Prestataire, lieu de traitement et durée de conservation par le service externe à préciser avant l&apos;ouverture au public. L&apos;API doit être accessible en HTTPS ; l&apos;adresse fournie actuellement est en HTTP et n&apos;est donc pas prête pour la production.</ACompleter>
         </p>
       </Bloc>
 
