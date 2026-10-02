@@ -85,13 +85,13 @@ backend.)*
 
 | Technologie | Choix | Justification |
 |---|---|---|
-| **LLM** | Gemini (`gemini-3.6-flash`, secours `gemini-3.5-flash-lite`, API Google, SDK `@google/genai`) — prototype sur l'offre gratuite, données de démonstration uniquement ; offre payante ou modèle hébergé au Bénin pour la production | Appel de fonctions, français, sans coût pour le prototype |
-| **Orchestration** | Appel d'outils natif du SDK, boucle bornée côté NestJS (pas de LangChain) | Chaque réponse s'appuie sur nos services : traçable et auditable |
+| **Service conversationnel** | Proxy NestJS vers l’API Guido externe, clé `X-API-Key` côté serveur ; cette API déclare elle-même utiliser Gemini. Le backend du dépôt n’embarque plus le SDK Google | Sépare le produit de son fournisseur de modèle, mais n’élimine pas le LLM distant |
+| **Orchestration** | API distante sans état ; NestJS transmet la question et les 12 derniers échanges, puis garde l’historique dans PostgreSQL | Authentification, droits et données de conversation restent gérés par la plateforme |
 | **Embeddings** | Reportés : inutiles pour 67 filières interrogées par outils | À prévoir avec le guide numérique (documents longs) |
 | **Vector store** | pgvector (PostgreSQL), reporté | Recherche documentaire dans le guide numérique |
-| **Langues nationales (texte)** | Gemini : le conseiller répond en fongbé (paramètre `langue`) | Qualité jugée correcte sur un premier échantillon ; à faire relire plus largement |
-| **Vocal** | À choisir. « J'aime ma langue » (ASIN/IIDIA) collecte des voix pour entraîner des modèles mais n'offre pas d'API publique (vérifié le 14/09/2026) : partenariat à demander. En attendant : Meta MMS (`mms-tts-fon`, `mms-1b-all`, fon inclus, licence CC-BY-NC 4.0 non commerciale) | STT/TTS en langues nationales |
-| **RAG** | Outils sur le catalogue, le dossier pseudonymisé et le moteur d'orientation | Réponses personnalisées sans donner au modèle le nom ni le NIP de l'élève |
+| **Langue de dialogue** | Français écrit uniquement dans le contrat externe actuel | Pas de sélection fongbé/yoruba dans cette version |
+| **Vocal** | Non pris en charge par l’API externe actuelle ; micro retiré de Guido | À réévaluer avec un endpoint audio distinct |
+| **Contexte métier** | API distante décrite comme un bot général sur les métiers techniques (LTP, LTA, EFMS) ; le backend ne transmet ni NIP, ni notes, ni dossier | Les réponses ne sont plus personnalisées à partir du moteur d’orientation local |
 
 ### 2.5 Infrastructure
 
@@ -438,8 +438,8 @@ Code push → GitHub Actions → Tests → Build → Deploy
 | Risque | Impact | Mitigation |
 |---|---|---|
 | API EducMaster non documentée | Bloquant | Contact équipe Tics Master dès le début |
-| Performance LLM pour le conseiller | Élevé | Cache des réponses, modèle optimisé, fallback texte |
+| Dépendance et disponibilité du bot externe | Élevé | Time-out et erreurs traduits côté backend ; prévoir suivi SLA et solution de repli |
 | Connexion internet instable (zones rurales) | Élevé | Mode hors-ligne robuste, sync différée |
 | Délai serré (MVP fin octobre) | Élevé | Scope MVP strict, features non critiques reportées |
-| Protection des données élèves | Critique | Audit sécurité, chiffrement, consentement |
-| Multi-langues : vocal en langues nationales | Moyen | Texte en fongbé déjà possible via Gemini ; pas d'API « J'aime ma langue » à ce jour : partenariat ASIN/IIDIA à demander par le MESTFP, Meta MMS (licence non commerciale) en solution d'attente |
+| Protection des données élèves | Critique | L’API est externe et déclarée fondée sur Gemini ; vérifier conservation, hébergement et responsabilités. Le point d’accès fourni est HTTP : exiger HTTPS avant transmission de conversations ou clé |
+| Perte de personnalisation, voix et langues nationales | Moyen | L’API actuelle ne reçoit pas le dossier ni l’audio et n’offre pas de paramètre de langue ; concevoir un service étendu avant de rétablir ces fonctions |

@@ -24,6 +24,7 @@ Elle est conçue pour le Ministère des Enseignements Secondaire, Technique et d
 | [frontend/README.md](frontend/README.md) | Application web Next.js : pages, authentification, design system |
 | [tests/README.md](tests/README.md) | Tests de bout en bout (API et navigateur) |
 | [docs/ETAT-ACTUEL-2026-09-19.md](docs/ETAT-ACTUEL-2026-09-19.md) | État fonctionnel et technique livré le 19 septembre 2026 |
+| [docs/generation-images-filieres/README.md](docs/generation-images-filieres/README.md) | Kit de direction artistique, références, template et prompts pour créer de nouvelles images de filières |
 
 ---
 
@@ -51,7 +52,7 @@ Elle est conçue pour le Ministère des Enseignements Secondaire, Technique et d
 | 5.5 Espace apprenant / parent | ✅ Tableau de bord, routage conditionnel après connexion, onboarding RIASEC avec reprise et récapitulatif, vue d'ensemble avec progression réelle du parcours, notes, recommandations, favoris et vœux ; validation par le parent (données de démonstration) |
 | Authentification, rôles, droits d'accès | ✅ Élève, parent, DGES et admin ; rôle établissement à compléter |
 | 5.6 Intégration EducMaster & NIP | ⏳ En attente de l'accès à l'API EducMaster ; notes de démonstration en attendant |
-| 5.4 Conseiller pédagogique IA | 🚧 Prototype du niveau B : Gemini (offre gratuite, données de démonstration uniquement), avec des outils sur le catalogue, le dossier pseudonymisé et le moteur ; clé API à configurer, périmètre à confirmer par le client |
+| 5.4 Conseiller pédagogique | 🚧 Interface reliée au service Guido externe pour les questions générales sur les métiers techniques ; le backend ne contacte plus Gemini directement. Le service externe utilise Gemini et n’accède pas au dossier scolaire. HTTPS et clé serveur restent à configurer avant déploiement |
 | 5.7 Pilotage et statistiques | ✅ API d'indicateurs, statistiques web et première console d'administration en lecture seule |
 | 5.2 Module d'information, 5.8 Séances, back-office avancé | ⏳ À faire : édition, validation métier et publication du catalogue |
 
@@ -70,16 +71,16 @@ flowchart LR
   DB[("PostgreSQL 16<br/>:5434")]
   EM["EducMaster<br/>SIGE national"]
   JML["« J'aime ma langue »<br/>ASIN / IIDIA<br/>(voix : partenariat à demander)"]
-  LLM["Gemini — API Google<br/>(conseiller pédagogique)"]
+  G["API Guido externe<br/>chat technique — HTTPS requis"]
 
   W -->|HTTPS + JWT| API
   API --> DB
   API -.->|NIP| EM
   API -.-> JML
-  API -->|clé API| LLM
+  API -->|X-API-Key + question/historique| G
 ```
 
-Les traits pleins sont en service ; les pointillés sont prévus mais pas encore branchés. Pas de Redis (retiré le 17/09/2026 : jamais branché à rien, voir JOURNAL.md) : la limitation de débit est en mémoire dans le process backend, à revoir si l'API tourne un jour sur plusieurs instances.
+Le backend conserve l’authentification, les droits et l’historique local ; il n’envoie au bot externe que la question et les derniers échanges. Le service fourni utilise Gemini en interne. L’API fournie n’est disponible actuellement qu’en HTTP : il faut l’exposer en HTTPS avant production. Pas de Redis (retiré le 17/09/2026 : jamais branché à rien, voir JOURNAL.md) : la limitation de débit est en mémoire dans le process backend, à revoir si l'API tourne un jour sur plusieurs instances.
 
 - **Frontend** : Next.js 14 (App Router), React 18, TypeScript, Tailwind CSS aux couleurs du DSBJ (composants `.bj-*` maison, pas de paquet DSBJ officiel), Zustand, Axios.
 - **Backend** : NestJS 10, Prisma 5, PostgreSQL 16, JWT (jeton d'accès de 15 min, jeton de rafraîchissement de 7 jours avec rotation), helmet, limitation des tentatives de connexion.
@@ -97,6 +98,7 @@ Les traits pleins sont en service ; les pointillés sont prévus mais pas encore
 ├── frontend/                Application web Next.js (voir frontend/README.md)
 │   └── src/                 app/ (pages), components/, lib/, stores/
 ├── tests/                   Tests de bout en bout : api/ (bash + curl), e2e/ (Chrome headless)
+├── docs/generation-images-filieres/ Kit de référence artistique et prompts d’images
 ├── docker-compose.yml       PostgreSQL 16 (port 5434)
 ├── docker-compose.dev.yml   Conteneurs backend/frontend — Dockerfiles pas encore écrits
 ├── setup.sh                 Installation complète (conteneurs, dépendances, base de données)
@@ -190,8 +192,9 @@ bash tests/api/securite.sh          # 39 vérifications : droits d'accès, ident
 bash tests/api/parcours-eleve.sh    # 39 vérifications : bilan, moteur d'orientation, vœux, validation parent
 node tests/e2e/connexion.mjs        # 9 scénarios navigateur : identification EducMaster, accès des personnels, session
 node tests/e2e/parcours-eleve.mjs   # 11 scénarios : parcours élève / parent / Terminale, ordinateur et mobile
-bash tests/api/conseiller.sh        # 11 vérifications sans appel au modèle ; 22 avec CONSEILLER_TEST_LLM=1 (appels réels, dont une réponse en fongbé)
-node tests/e2e/conseiller.mjs       # 8 scénarios : présentation, onglet Conseiller, langue des réponses, sans ou avec clé API
+  bash tests/api/conseiller.sh        # droits, validation, filet local et limitation, sans appel externe
+  (cd backend && npm run test:guido-api) # contrat du proxy avec un mock local, aucun appel au bot réel
+  node tests/e2e/conseiller.mjs       # présentation et interface texte élève/parent, sans appel externe
 bash tests/api/catalogue.sh         # 66 vérifications : recherche, filtres, séries du bac, domaines, supérieur (guide du MESRS), formations mises de côté
 node tests/e2e/catalogue.mjs        # 30 scénarios : filtres, pagination, comparateur, « Et après ce bac ? », admission, partage, impression, cœurs, mobile
 node tests/e2e/pied-de-page.mjs     # 23 scénarios : pages d'information, liens du pied de page, pied de page en bas, 404
@@ -218,7 +221,7 @@ Les prérequis et les variables sont décrits dans [tests/README.md](tests/READM
 |---|---|---|
 | `localhost:3000` refuse la connexion, `next dev` s'arrête sans message après « Starting… » | Binaire natif SWC tronqué (installation npm interrompue) | `cd frontend && rm -rf node_modules/@next/swc-linux-x64-gnu && npm install` |
 | L'API répond avec l'ancien code (routes en 404, anciennes validations) | Un `node backend/dist/main` orphelin tient le port 8080 | `ss -ltnp \| grep :8080`, arrêter le processus (ou `bash stop.sh`), puis relancer `start.sh` |
-| Le conseiller répond « pas encore configuré » | `GEMINI_API_KEY` absente de `backend/.env` | Créer une clé gratuite sur Google AI Studio, l'ajouter, puis relancer `start.sh` |
+| Le conseiller répond « pas encore configuré » | `GUIDO_API_URL` ou `GUIDO_API_KEY` absente, ou URL HTTP distante refusée | Renseigner ces variables dans `backend/.env` ; exposer le bot en HTTPS avant production |
 | Le serveur backend refuse de démarrer | `JWT_SECRET` absent de `backend/.env` | Renseigner `JWT_SECRET` (voir `.env.example`) |
 | Pages sans style ou erreurs `Cannot find module './vendor-chunks/…'` | `next build` lancé pendant que `next dev` tourne (dossier `.next` partagé) | Arrêter `start.sh`, supprimer `frontend/.next`, relancer |
 | Une nouvelle couleur ou classe Tailwind n'apparaît pas | Configuration Tailwind modifiée pendant que `next dev` tourne | Relancer `start.sh` |
