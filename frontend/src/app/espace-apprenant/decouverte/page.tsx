@@ -170,7 +170,7 @@ function ResultatProfil({ decouverte }: { decouverte: Decouverte }) {
         <ButtonLink href="/espace-apprenant/recommandations" variant="secondary" size="sm">
           Voir mes pistes
         </ButtonLink>
-        <ButtonLink href="/espace-apprenant/conseiller" variant="secondary" size="sm">
+        <ButtonLink href="/conseiller" variant="secondary" size="sm">
           Parler à Guido
         </ButtonLink>
       </div>
