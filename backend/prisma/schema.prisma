@@ -220,6 +220,8 @@ model Filiere {
   contenuMetier      Json?        @map("contenu_metier")
   etablissementId    String?      @map("etablissement_id")
   imageUrl           String?      @map("image_url")
+  /// Vidéo YouTube présentant le métier et ses débouchés, curatée manuellement (prisma/data/videos-filieres.ts)
+  videoUrl           String?      @map("video_url")
   createdAt          DateTime     @default(now()) @map("created_at")
   updatedAt          DateTime     @updatedAt @map("updated_at")
 

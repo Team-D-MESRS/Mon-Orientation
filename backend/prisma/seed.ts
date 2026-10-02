@@ -5,6 +5,7 @@ import * as path from 'path';
 import { REFERENTIEL_FILIERES } from './data/referentiel-filieres';
 import { ECOLES_METIERS, FICHES_CATALOGUE, SPECIALITES_REPERTOIRE, cleIntitule } from './data/correspondances-eftp';
 import { FICHES_METIERS } from './data/fiches-metiers';
+import { VIDEOS_FILIERES } from './data/videos-filieres';
 import { estDomaine } from '../src/filiere/domaines';
 
 /** Filières du supérieur extraites du guide officiel du MESRS (data/outils/extraire-guide-mesrs.py). */
@@ -104,6 +105,7 @@ async function main() {
       sources: f.sources as unknown as Prisma.InputJsonValue,
       domaines: f.domaines,
       masquee: f.masquee ?? false,
+      videoUrl: VIDEOS_FILIERES[f.code] ?? null,
     };
     await prisma.filiere.upsert({
       where: { code: f.code },
@@ -148,6 +150,7 @@ async function main() {
       matieresClassement: f.matieresClassement,
       matieresCles: json(f.matieresCles),
       etablissementId: etablissement.id,
+      videoUrl: VIDEOS_FILIERES[f.code] ?? null,
     };
     await prisma.filiere.upsert({ where: { code: f.code }, update: data, create: { code: f.code, ...data } });
   }
