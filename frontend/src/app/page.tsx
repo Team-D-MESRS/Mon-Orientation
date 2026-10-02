@@ -1,268 +1,174 @@
 import Link from 'next/link';
 import {
   ArrowRight,
+  ArrowUpRight,
   Backpack,
   BookOpen,
+  Check,
   ClipboardList,
   Compass,
-  GraduationCap,
+  HeartHandshake,
   Languages,
   Lightbulb,
   Lock,
   Search,
+  ShieldCheck,
   Sparkles,
   Users,
   type LucideIcon,
 } from 'lucide-react';
 import { ActionsHero } from '@/components/accueil/ActionsHero';
-import { CTADecouverte } from '@/components/accueil/CTADecouverte';
 import { ApresLeBac } from '@/components/accueil/ApresLeBac';
+import { CTADecouverte } from '@/components/accueil/CTADecouverte';
 import { Domaines } from '@/components/accueil/Domaines';
 import { Apparition } from '@/components/animation/Apparition';
-import { ActionCard } from '@/components/ui/ActionCard';
-import { Badge } from '@/components/ui/Badge';
-import { SectionHeader } from '@/components/ui/SectionHeader';
 
-const PROFILS: { Icone: LucideIcon; titre: string; texte: string; href: string; action: string }[] = [
+const PROFILS: { Icone: LucideIcon; numero: string; etiquette: string; titre: string; texte: string; href: string; action: string; ton: string }[] = [
   {
     Icone: Backpack,
-    titre: 'En 4e ou en 3e',
-    texte: 'Explore les formations après le BEPC : lycée général, technique ou agricole, métiers. En 3e, tu saisis tes vœux.',
+    numero: '01',
+    etiquette: 'Élève de 4e ou 3e',
+    titre: 'Après le BEPC',
+    texte: 'Explore les lycées généraux, techniques, agricoles et les métiers qui te ressemblent.',
     href: '/catalogue?niveau=APRES_BEPC',
-    action: 'Formations après le BEPC',
+    action: 'Voir les formations',
+    ton: 'vert',
   },
   {
-    Icone: GraduationCap,
-    titre: 'En 1re ou en Terminale',
-    texte: 'Découvre les formations du supérieur accessibles avec ta série. En Terminale, tu saisis tes vœux.',
+    Icone: Compass,
+    numero: '02',
+    etiquette: 'Élève de 1re ou Terminale',
+    titre: 'Après le bac',
+    texte: 'Choisis ta série, compare les formations du supérieur et prépare tes vœux sereinement.',
     href: '/catalogue?niveau=APRES_BAC',
-    action: 'Formations après le bac',
+    action: 'Explorer le supérieur',
+    ton: 'nuit',
   },
   {
     Icone: Users,
-    titre: 'Parent ou tuteur',
-    texte: 'Suivez les résultats de votre enfant, validez ses vœux et posez vos questions à Guido, en français, en fongbé ou en note vocale.',
+    numero: '03',
+    etiquette: 'Parent ou tuteur',
+    titre: 'À ses côtés',
+    texte: 'Suis les résultats, valide les vœux et pose à Guido tes questions sur les métiers techniques.',
     href: '/guide#parent',
-    action: 'Suivre mon enfant',
+    action: 'Découvrir l’espace famille',
+    ton: 'sable',
   },
 ];
 
 const ETAPES: { Icone: LucideIcon; titre: string; texte: string }[] = [
-  {
-    Icone: Sparkles,
-    titre: 'Réponds au questionnaire',
-    texte: "D'abord, dis-nous ce qui te plaît et tes ambitions : 5 étapes, quelques minutes. C'est ce qui rend tes pistes personnelles.",
-  },
-  { Icone: Search, titre: 'Explore', texte: 'Parcours le catalogue, compare les formations et mets de côté celles qui te plaisent.' },
-  { Icone: Lightbulb, titre: 'Découvre tes pistes', texte: 'À partir de tes résultats et de tes réponses, la plateforme te propose des formations et t’explique pourquoi.' },
-  { Icone: ClipboardList, titre: 'Saisis tes vœux', texte: 'En 3e et en Terminale, indique tes préférences de formation, par ordre d’importance.' },
-  { Icone: Users, titre: 'Décide en famille', texte: 'Ton parent valide tes vœux. La décision t’appartient, avec ta famille.' },
+  { Icone: Sparkles, titre: 'Réponds', texte: "Un questionnaire de quelques minutes pour faire émerger ce qui te motive." },
+  { Icone: Search, titre: 'Explore', texte: 'Parcours le catalogue, compare les formations et garde tes préférées.' },
+  { Icone: Lightbulb, titre: 'Découvre', texte: 'Reçois des pistes expliquées simplement, selon tes envies et tes résultats.' },
+  { Icone: ClipboardList, titre: 'Décide', texte: 'Prépare tes vœux et échange avec ta famille avant de te lancer.' },
 ];
 
-const GARANTIES: { Icone: LucideIcon; titre: string; texte: string }[] = [
-  {
-    Icone: BookOpen,
-    titre: 'Des informations sourcées',
-    texte: 'Chaque fiche cite ses sources. Tant qu’une information n’est pas validée par le Ministère, elle porte la mention « À confirmer ».',
-  },
-  {
-    Icone: Compass,
-    titre: 'La plateforme propose, tu décides',
-    texte: 'Chaque piste est expliquée critère par critère. La décision d’orientation revient à l’élève et à sa famille.',
-  },
-  {
-    Icone: Lock,
-    titre: 'Un dossier protégé',
-    texte: 'Seuls l’élève, son parent rattaché et les administrateurs habilités voient le dossier scolaire.',
-  },
+const GARANTIES: { Icone: LucideIcon; titre: string; texte: string; lien: string; href: string; ton: string }[] = [
+  { Icone: BookOpen, titre: 'Des informations sourcées', texte: 'Chaque fiche cite ses sources. Tant qu’une information n’est pas validée, elle est clairement signalée.', lien: 'Comprendre les sources', href: '/catalogue', ton: 'vert' },
+  { Icone: HeartHandshake, titre: 'La plateforme propose, tu décides', texte: 'Chaque piste est expliquée critère par critère. La décision revient à l’élève et à sa famille.', lien: 'Voir notre méthode', href: '/guide', ton: 'corail' },
+  { Icone: Lock, titre: 'Un dossier protégé', texte: 'Seuls l’élève, son parent rattaché et les administrateurs habilités voient le dossier scolaire.', lien: 'En savoir plus', href: '/donnees-personnelles', ton: 'bleu' },
 ];
 
-/** Titre de section qui apparaît au défilement */
-function TitreSection({ titre, sousTitre, marge = 'mb-8v' }: { titre: string; sousTitre?: string; marge?: string }) {
-  return (
-    <Apparition className={marge}>
-      <SectionHeader title={titre} subtitle={sousTitre} />
-    </Apparition>
-  );
+function Kicker({ children, clair = false }: { children: React.ReactNode; clair?: boolean }) {
+  return <span className={`mo-kicker${clair ? ' mo-kicker-light' : ''}`}>{children}</span>;
 }
 
 export default function Accueil() {
   return (
-    <>
-      {/* Bandeau principal : recherche directe et raccourci par série (apparition en cascade au chargement) */}
-      <section className="bg-surface border-b border-border overflow-hidden">
-        <div className="bj-container py-12v lg:py-16v grid grid-cols-1 lg:grid-cols-[1.25fr_1fr] gap-12v items-center">
-          <div>
-            <Apparition
-              as="p"
-              className="inline-flex items-center gap-2v px-3v py-1v rounded-full bg-primary-soft text-primary text-sm font-semibold mb-4v"
-            >
-              <Compass size={16} aria-hidden="true" /> Plateforme nationale d&apos;orientation scolaire
-            </Apparition>
-            <Apparition as="h1" delai={80} className="font-serif text-4xl md:text-5xl font-bold leading-tight mb-4v">
-              Choisis ton avenir avec confiance
-            </Apparition>
-            <Apparition as="p" delai={160} className="text-lg text-text-secondary mb-8v max-w-xl">
-              De la 4e à la Terminale, découvre les formations, comprends tes résultats et prépare tes vœux d&apos;orientation, avec ta
-              famille.
-            </Apparition>
-
+    <div className="mo-home">
+      <section className="mo-hero">
+        <div className="mo-container mo-hero-grid">
+          <div className="mo-hero-copy">
+            <Apparition as="p" className="mo-eyebrow"><Sparkles size={14} aria-hidden="true" /> Ton avenir commence par une question</Apparition>
+            <Apparition as="h1" delai={80}>Choisis un chemin qui <em>te ressemble.</em></Apparition>
+            <Apparition as="p" delai={160} className="mo-hero-lede">De la 4e à la Terminale, explore les formations, comprends tes possibilités et avance avec ta famille.</Apparition>
             <Apparition delai={240}>
-              <form action="/catalogue" role="search" className="flex flex-col sm:flex-row gap-2v max-w-xl mb-3v">
-                <label htmlFor="recherche-accueil" className="sr-only">
-                  Rechercher une formation, un métier ou une ville
-                </label>
-                <div className="relative flex-1">
-                  <Search className="absolute left-3v top-1/2 -translate-y-1/2 text-text-secondary" size={20} aria-hidden="true" />
-                  <input
-                    id="recherche-accueil"
-                    name="q"
-                    type="search"
-                    placeholder="Une formation, un métier, une ville…"
-                    className="w-full pl-10 pr-4v py-3v border border-border-strong rounded-bj-sm text-sm bg-surface focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-                <button type="submit" className="bj-btn bj-btn-primary">
-                  Rechercher
-                </button>
+              <form action="/catalogue" role="search" className="mo-search">
+                <label htmlFor="recherche-accueil" className="sr-only">Rechercher une formation, un métier ou une ville</label>
+                <Search size={20} aria-hidden="true" />
+                <input id="recherche-accueil" name="q" type="search" placeholder="Une formation, un métier, une ville…" />
+                <button type="submit">Rechercher <ArrowRight size={16} aria-hidden="true" /></button>
               </form>
-              <Link href="/catalogue" className="inline-flex items-center gap-1v text-sm font-medium text-primary hover:underline mb-8v">
-                ou parcourir tout le catalogue <ArrowRight size={14} aria-hidden="true" />
-              </Link>
+              <Link href="/catalogue" className="mo-browse-link">ou parcourir tout le catalogue <ArrowRight size={15} aria-hidden="true" /></Link>
             </Apparition>
-
-            <Apparition delai={320}>
-              <ActionsHero />
-            </Apparition>
+            <Apparition delai={320} className="mo-hero-actions"><ActionsHero /></Apparition>
+            <div className="mo-hero-note"><ShieldCheck size={16} aria-hidden="true" /> Informations sourcées, données protégées, décision à toi.</div>
           </div>
 
-          <Apparition effet="droite" delai={200}>
-            <ApresLeBac />
+          <Apparition effet="droite" delai={180} className="mo-hero-visual">
+            <div className="mo-hero-image"><img src="/images/hero-orientation.webp" alt="Trois élèves échangent dans la cour de leur établissement" /><span className="mo-hero-image-wash" /></div>
+            <div className="mo-hero-sticker"><strong>5 min</strong><span>pour faire le point<br />sur tes envies</span></div>
+            <div className="mo-hero-proof"><span><Check size={16} /></span><div><strong>Des pistes qui ont du sens</strong><small>expliquées selon ton profil</small></div></div>
+            <div className="mo-hero-bac"><ApresLeBac /></div>
+            <span className="mo-hero-star" aria-hidden="true">✳</span>
           </Apparition>
         </div>
       </section>
 
-      {/* Entrées selon le profil */}
-      <section className="py-12v">
-        <div className="bj-container">
-          <TitreSection titre="Par où commencer ?" sousTitre="Selon ta classe, la plateforme t'accompagne différemment." />
-          <ul className="grid grid-cols-1 md:grid-cols-3 gap-6v">
-            {PROFILS.map(({ Icone, titre, texte, href, action }, i) => (
+      <div className="mo-proof-strip" aria-label="Repères de la plateforme">
+        <div><strong>De la 4e au supérieur</strong><span>Une continuité pour chaque étape</span></div>
+        <div><strong>+100 formations</strong><span>À découvrir dans le catalogue</span></div>
+        <div><strong>En famille</strong><span>Pour décider sans pression</span></div>
+        <div><strong>Questions en français</strong><span>Pour mieux se comprendre</span></div>
+      </div>
+
+      <section className="mo-section" id="depart">
+        <div className="mo-container">
+          <div className="mo-section-heading mo-section-heading-split">
+            <div><Kicker>Par où commencer ?</Kicker><h2>Le bon point de départ,<br /><em>selon ton histoire.</em></h2></div>
+            <p>Pas besoin de tout savoir aujourd’hui. Choisis simplement l’étape qui te concerne, et avance une question à la fois.</p>
+          </div>
+          <ul className="mo-profile-grid">
+            {PROFILS.map(({ Icone, numero, etiquette, titre, texte, href, action, ton }, i) => (
               <Apparition as="li" key={titre} delai={i * 120}>
-                <ActionCard href={href} icon={<Icone size={24} aria-hidden="true" />} title={titre} description={texte} actionLabel={action} />
+                <Link href={href} className={`mo-profile-card mo-profile-${ton}`}>
+                  <div className="mo-profile-top"><span>{numero}</span><Icone size={22} aria-hidden="true" /></div>
+                  <span className="mo-profile-label">{etiquette}</span>
+                  <h3>{titre}</h3>
+                  <p>{texte}</p>
+                  <span className="mo-card-link">{action} <ArrowUpRight size={16} aria-hidden="true" /></span>
+                </Link>
               </Apparition>
             ))}
           </ul>
         </div>
       </section>
 
-      {/* Parcours : les étapes apparaissent l'une après l'autre */}
-      <section className="py-12v bg-surface border-y border-border">
-        <div className="bj-container">
-          <TitreSection titre="Comment ça marche ?" />
-          <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6v">
-            {ETAPES.map(({ Icone, titre, texte }, i) => (
-              <Apparition as="li" key={titre} delai={i * 150} className="relative pl-14">
-                <span
-                  className="absolute left-0 top-0 w-10 h-10 rounded-full border-2 border-primary text-primary font-bold flex items-center justify-center"
-                  aria-hidden="true"
-                >
-                  {i + 1}
-                </span>
-                <h3 className="flex items-center gap-2v font-bold mb-1v">
-                  <Icone size={18} className="text-primary" aria-hidden="true" />
-                  <span>
-                    <span className="sr-only">Étape {i + 1} : </span>
-                    {titre}
-                  </span>
-                </h3>
-                <p className="text-sm text-text-secondary">{texte}</p>
-              </Apparition>
-            ))}
-          </ol>
-          <Apparition delai={200}>
-            <CTADecouverte />
-          </Apparition>
-        </div>
-      </section>
-
-      {/* Domaines */}
-      <section className="py-12v">
-        <div className="bj-container">
-          <TitreSection titre="Explore par domaine" marge="mb-2v" />
+      <section className="mo-catalogue-section" id="catalogue">
+        <div className="mo-container">
+          <div className="mo-section-heading mo-section-heading-split">
+            <div><Kicker>Le catalogue en un coup d’œil</Kicker><h2>Des domaines pour<br /><em>ouvrir le champ.</em></h2></div>
+            <div><p>Chaque domaine rassemble des formations, des métiers et des chemins différents. Commence par ce qui t’attire.</p><Link href="/catalogue" className="mo-browse-link">Voir tout le catalogue <ArrowRight size={15} aria-hidden="true" /></Link></div>
+          </div>
           <Domaines />
         </div>
       </section>
 
-      {/* Conseiller en fongbé : texte depuis la gauche, échange depuis la droite, bulles l'une après l'autre */}
-      <section className="py-12v bg-surface border-y border-border overflow-hidden">
-        <div className="bj-container grid grid-cols-1 lg:grid-cols-2 gap-8v items-center">
-          <Apparition effet="gauche">
-            <Badge ton="info" icon={<Languages size={14} aria-hidden="true" />} className="mb-4v text-sm py-1v">
-              Nouveau
-            </Badge>
-            <h2 className="text-2xl md:text-3xl font-bold mb-3v">Guido répond aussi en fongbé, et t&apos;écoute en note vocale</h2>
-            <p className="text-text-secondary mb-3v">
-              Pose tes questions sur les formations, les métiers et tes pistes. Choisis « Fɔ̀ngbè » pour une réponse dans ta langue, ou
-              parle-lui directement en note vocale — en fon, en yoruba, en mina — s&apos;écrire n&apos;est pas toujours facile, dire les
-              choses l&apos;est davantage.
-            </p>
-            <p className="text-xs text-text-secondary mb-6v">
-              Réponses rédigées automatiquement. Guido explique, il ne décide pas à ta place.
-            </p>
-            <Link href="/conseiller" className="bj-btn bj-btn-primary">
-              Poser une question
-            </Link>
-          </Apparition>
-
-          <Apparition as="figure" effet="droite" delai={150} className="rounded-bj-lg border border-border bg-background p-6v space-y-3v">
-            <Apparition effet="droite" delai={500} className="flex justify-end">
-              <p className="bubble-user max-w-[85%] text-sm">Bonjour&nbsp;!</p>
-            </Apparition>
-            <Apparition effet="gauche" delai={1100} className="flex justify-start">
-              <div className="bubble-assistant max-w-[85%]">
-                <p lang="fon" className="text-sm font-medium">
-                  A fɔ́n à, azɔ̌kplɔ́n tɛ́ a jló na bló ɖò bákì gudo&nbsp;?
-                </p>
-                <p className="text-xs text-text-secondary mt-1v">« Bonjour, quelle formation veux-tu faire après le bac&nbsp;? »</p>
-              </div>
-            </Apparition>
-            <figcaption className="text-xs text-text-secondary text-center pt-2v">Exemple de réponse en fongbé, avec sa traduction</figcaption>
-          </Apparition>
+      <section className="mo-process" id="parcours">
+        <div className="mo-container mo-process-grid">
+          <div className="mo-process-intro"><Kicker clair>Un chemin simple</Kicker><h2>Tu n’as pas à choisir<br /><em>tout seul.</em></h2><p>Mon Orientation t’aide à mettre des mots sur tes envies, puis à transformer ces envies en options concrètes.</p><CTADecouverte /></div>
+          <ol className="mo-step-list">
+            {ETAPES.map(({ Icone, titre, texte }, i) => <li key={titre}><span className="mo-step-number">0{i + 1}</span><div><h3><Icone size={16} aria-hidden="true" />{titre}</h3><p>{texte}</p></div><ArrowUpRight size={16} aria-hidden="true" /></li>)}
+          </ol>
         </div>
       </section>
 
-      {/* Garanties */}
-      <section className="py-12v">
-        <div className="bj-container">
-          <h2 className="sr-only">Nos engagements</h2>
-          <ul className="grid grid-cols-1 md:grid-cols-3 gap-8v">
-            {GARANTIES.map(({ Icone, titre, texte }, i) => (
-              <Apparition as="li" key={titre} delai={i * 120} className="flex gap-4v">
-                <Icone size={24} className="text-primary shrink-0 mt-[2px]" aria-hidden="true" />
-                <div>
-                  <h3 className="font-bold mb-1v">{titre}</h3>
-                  <p className="text-sm text-text-secondary">{texte}</p>
-                </div>
-              </Apparition>
-            ))}
+      <section className="mo-guido-section" id="guido">
+        <div className="mo-container mo-guido-grid">
+          <div className="mo-guido-copy"><Kicker>Une question ? Écris à Guido.</Kicker><h2>Parfois, il suffit de<br /><em>pouvoir demander.</em></h2><p>Guido répond en français à tes questions générales sur les métiers et les formations techniques. Il ne consulte pas ton dossier scolaire.</p><p className="mo-disclaimer">Réponses automatiques : vérifie les informations importantes auprès de l’établissement.</p><Link href="/conseiller" className="mo-button mo-button-primary">Poser une question <ArrowRight size={16} aria-hidden="true" /></Link></div>
+          <figure className="mo-chat-card"><div className="mo-chat-top"><span className="mo-guido-avatar">G</span><div><strong>Guido</strong><small>Guide des métiers techniques</small></div><span className="mo-online" /></div><div className="mo-bubble mo-bubble-bot">Bonjour ! Quels métiers techniques aimerais-tu découvrir ?</div><div className="mo-bubble mo-bubble-user">J’aime comprendre comment les choses fonctionnent.</div><div className="mo-chat-chips"><span>Technologie</span><span>Industrie</span><span>Autre idée</span></div><figcaption>Exemple de question écrite en français</figcaption></figure>
+        </div>
+      </section>
+
+      <section className="mo-section mo-trust-section" id="engagements">
+        <div className="mo-container">
+          <div className="mo-section-heading mo-section-heading-split"><div><Kicker>Nos engagements</Kicker><h2>Un service public pour<br /><em>avancer en confiance.</em></h2></div><p>Ton avenir mérite des informations claires, des choix expliqués et un espace qui respecte ta vie privée.</p></div>
+          <ul className="mo-trust-grid">
+            {GARANTIES.map(({ Icone, titre, texte, lien, href, ton }, i) => <Apparition as="li" key={titre} delai={i * 120} className={`mo-trust-card mo-trust-${ton}`}><span className="mo-trust-icon"><Icone size={20} aria-hidden="true" /></span><h3>{titre}</h3><p>{texte}</p><Link href={href}>{lien} <ArrowRight size={15} aria-hidden="true" /></Link></Apparition>)}
           </ul>
-          <Apparition as="p" delai={200} className="mt-10 text-sm text-text-secondary">
-            Besoin d&apos;aide&nbsp;?{' '}
-            <Link href="/guide" className="font-medium text-primary hover:underline">
-              Guide d&apos;utilisation
-            </Link>{' '}
-            ·{' '}
-            <Link href="/faq" className="font-medium text-primary hover:underline">
-              Questions fréquentes
-            </Link>{' '}
-            ·{' '}
-            <Link href="/donnees-personnelles" className="font-medium text-primary hover:underline">
-              Données personnelles
-            </Link>
-          </Apparition>
+          <p className="mo-help-line">Besoin d&apos;aide ? <Link href="/guide">Guide d&apos;utilisation</Link> · <Link href="/faq">Questions fréquentes</Link> · <Link href="/donnees-personnelles">Données personnelles</Link></p>
         </div>
       </section>
-    </>
+    </div>
   );
 }

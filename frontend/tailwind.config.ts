@@ -76,10 +76,10 @@ const config: Config = {
         'border-strong': 'var(--color-border-strong)',
       },
       fontFamily: {
-        sans: ['Montserrat', 'system-ui', 'sans-serif'],
+        sans: ['DM Sans', 'system-ui', 'sans-serif'],
         // Réservée aux grands titres (display / H1 de section) pour une touche éditoriale plus chaleureuse
         // qu'un site tout-Montserrat ; jamais pour du texte courant, des boutons ou des libellés d'UI.
-        serif: ['Spectral', 'Georgia', 'serif'],
+        serif: ['Fraunces', 'Georgia', 'serif'],
       },
       spacing: {
         '1v': '4px',

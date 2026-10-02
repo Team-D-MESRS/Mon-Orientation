@@ -31,7 +31,7 @@ export function Footer() {
   const user = useAuthStore((s) => s.user);
 
   return (
-    <footer className="bg-bj-gray-50 text-white py-12v print:hidden">
+    <footer className="mo-footer text-white py-12v print:hidden">
       <div className="bj-container">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8v mb-8v">
           <div>

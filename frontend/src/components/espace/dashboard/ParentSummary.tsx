@@ -46,7 +46,7 @@ export function ParentSummary({ prenom, decouverte, recommandations }: ParentSum
         </ul>
       )}
       <div className="flex flex-wrap gap-3v">
-        <ButtonLink href="/espace-apprenant/conseiller" variant="secondary" size="sm">
+        <ButtonLink href="/conseiller" variant="secondary" size="sm">
           Demander une explication à Guido
         </ButtonLink>
         <ButtonLink href="/espace-apprenant/preferences" variant="ghost" size="sm">

@@ -18,11 +18,14 @@ import {
   GraduationCap,
   MapPin,
   MessageCircle,
+  Search,
   ShieldCheck,
   Sparkles,
+  Video,
   Wallet,
 } from 'lucide-react';
 import { filiereApi, orientationApi, type EvaluationFiliere } from '@/lib/api';
+import { visuelFiliere } from '@/lib/visuels';
 import type { Recommandation } from '@/lib/apprenant';
 import {
   ContenuMetier as ContenuMetierType,
@@ -35,6 +38,8 @@ import {
   TYPE_TONES,
   aUneSourceOfficielle,
   avecAdmission,
+  idYoutube,
+  rechercheYoutube,
   serieDuBac,
 } from '@/lib/filiere';
 import { useAuthStore } from '@/stores/authStore';
@@ -59,6 +64,37 @@ function Section({ icone, titre, children }: { icone: ReactNode; titre: string; 
       </h2>
       <div className="text-text">{children}</div>
     </section>
+  );
+}
+
+function VideoFiliere({ filiere }: { filiere: Filiere }) {
+  const id = filiere.videoUrl ? idYoutube(filiere.videoUrl) : null;
+  if (id) {
+    return (
+      <div className="aspect-video rounded-bj-sm overflow-hidden border border-border">
+        <iframe
+          className="w-full h-full"
+          src={`https://www.youtube-nocookie.com/embed/${id}`}
+          title={`Vidéo : ${filiere.nom}`}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          loading="lazy"
+        />
+      </div>
+    );
+  }
+  return (
+    <div>
+      <p className="text-text-secondary mb-3v">Aucune vidéo n'est encore associée à cette fiche.</p>
+      <a
+        href={rechercheYoutube(filiere)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="bj-btn bj-btn-secondary inline-flex"
+      >
+        <Search size={16} aria-hidden="true" /> <span>Chercher des vidéos sur YouTube</span>
+      </a>
+    </div>
   );
 }
 
@@ -426,7 +462,7 @@ function PourquoiCetteFormation({ filiereId, code }: { filiereId: string; code: 
         <Cadre>
           <p className="text-sm text-text-secondary">
             Impossible de vérifier la correspondance de cette formation avec ton profil pour le moment —{' '}
-            <Link href="/espace-apprenant/conseiller" className="font-medium text-primary hover:underline">
+            <Link href="/conseiller" className="font-medium text-primary hover:underline">
               demande l&apos;avis de Guido
             </Link>
             , qui peut évaluer n&apos;importe quelle formation du catalogue.
@@ -653,6 +689,10 @@ export default function FicheFilierePage() {
                 </span>
               )}
             </div>
+            <div className="mo-filiere-detail-cover mb-5v">
+              <img src={visuelFiliere(filiere)} alt="" aria-hidden="true" />
+              <div><span>{filiere.niveauAcces === 'APRES_BAC' ? 'Formation du supérieur' : 'Formation après le BEPC'}</span><strong>{filiere.domaines.slice(0, 2).map((d) => DOMAINE_LABELS[d]).join(' · ')}</strong></div>
+            </div>
             <h1 className="text-3xl font-bold mb-4v">{filiere.nom}</h1>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3v mb-6v" aria-label="À retenir">
@@ -724,6 +764,12 @@ export default function FicheFilierePage() {
                   {!filiere.metiersVises?.length && !filiere.debouches && <p className="text-text-secondary">{NON_RENSEIGNE}</p>}
                 </Section>
               )}
+
+              <div className="print:hidden">
+                <Section icone={<Video size={18} />} titre="Vidéo">
+                  <VideoFiliere filiere={filiere} />
+                </Section>
+              </div>
 
               {serie && (
                 <Section icone={<CornerDownRight size={18} />} titre="Et après ce bac ?">

@@ -25,7 +25,7 @@ interface IconButtonOwnProps {
 
 export type IconButtonProps = IconButtonOwnProps & Omit<ButtonHTMLAttributes<HTMLButtonElement>, keyof IconButtonOwnProps | 'aria-label' | 'title'>;
 
-/** Bouton carré, icône seule (fermer, supprimer, enregistrer une note vocale…). `label` sert d'aria-label et de title. */
+/** Bouton carré, icône seule (fermer, supprimer…). `label` sert d'aria-label et de title. */
 export function IconButton({ icon, label, variant = 'ghost', size = 'md', loading, disabled, className, type = 'button', ...props }: IconButtonProps) {
   const classes = ['bj-icon-btn', CLASSE_VARIANTE[variant], size === 'sm' ? 'bj-icon-btn-sm' : '', className].filter(Boolean).join(' ');
   return (

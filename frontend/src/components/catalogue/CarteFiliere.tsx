@@ -11,6 +11,7 @@ import {
   type Filiere,
 } from '@/lib/filiere';
 import { Badge } from '@/components/ui/Badge';
+import { visuelFiliere } from '@/lib/visuels';
 import { BoutonComparer } from './BoutonComparer';
 import { BoutonFavori } from './BoutonFavori';
 
@@ -39,9 +40,15 @@ const MAX_DOMAINES_AFFICHES = 2;
 export function CarteFiliere({ filiere }: { filiere: Filiere }) {
   const domainesAffiches = filiere.domaines.slice(0, MAX_DOMAINES_AFFICHES);
   const domainesRestants = filiere.domaines.length - domainesAffiches.length;
+  const visuel = visuelFiliere(filiere);
 
   return (
-    <article className="bj-card bj-card-hoverable relative flex flex-col">
+    <article className="bj-card bj-card-hoverable mo-filiere-card relative flex flex-col">
+      <div className="mo-filiere-cover" aria-hidden="true">
+        <img src={visuel} alt="" />
+        <div className="mo-filiere-cover-overlay" />
+        <span>{filiere.niveauAcces === 'APRES_BAC' ? 'Après le bac' : 'Après le BEPC'}</span>
+      </div>
       <div className="p-6v flex-1">
         <div className="flex items-center flex-wrap gap-2v mb-3v">
           <Badge ton={TYPE_TONES[filiere.type]}>{TYPE_LABELS[filiere.type]}</Badge>
