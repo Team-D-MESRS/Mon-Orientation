@@ -498,7 +498,9 @@ Sans Node sur le poste, ces commandes peuvent être jouées depuis l'image : `do
 
 ### 3. Déployer le conteneur
 
-**Render (gratuit, sans carte) — voir `render.yaml` à la racine du dépôt.** Dans le tableau de bord : New → **Blueprint**, connecter le repo `Team-D-MESRS/Mon-Orientation`. Le fichier déclare déjà le Dockerfile (contexte `backend/`), la région Francfort, le plan gratuit, le health check `/api/health` et les variables, à l'exception de `DATABASE_URL` et des clés Guido à saisir dans le service. Les secrets JWT sont générés par Render (`generateValue: true`). L'application écoute sur le `PORT` injecté par Render (10000) : **ne pas fixer cette variable**.
+**Render (gratuit, sans carte) — voir `render.yaml` à la racine du dépôt.** Dans le tableau de bord : New → **Blueprint**, connecter le repo `Team-D-MESRS/Mon-Orientation`. Le fichier déclare déjà le Dockerfile (contexte `backend/`), la région Francfort, le plan gratuit, le health check `/api/health` et les variables, à l'exception de `DATABASE_URL` (`sync: false`) à saisir au moment de la création ou dans le service ensuite. Les secrets JWT sont générés par Render (`generateValue: true`). L'application écoute sur le `PORT` injecté par Render (10000) : **ne pas fixer cette variable**.
+
+Attention au schéma du blueprint : une même variable ne peut pas porter `value` **et** `sync` à la fois (« cannot simultaneously specify fields value and sync »), et Render refuse alors tout le blueprint. Pour une valeur à saisir dans le tableau de bord, écrire `sync: false` **seul** ; pour une variable optionnelle, mieux vaut ne pas la déclarer du tout.
 
 **Koyeb (carte exigée).** App → Deploy from GitHub, **Root directory : `backend`**, Dockerfile `backend/Dockerfile`. Instance `free`, région européenne, **service port `8080`** et variable `PORT=8080` (figer les deux évite tout décalage avec le port attribué), health check `/api/health` avec 30 s de délai initial — les migrations tournent avant l'écoute.
 

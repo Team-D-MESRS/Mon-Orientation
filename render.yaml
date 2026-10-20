@@ -10,9 +10,9 @@ services:
     dockerContext: ./backend
     healthCheckPath: /api/health
     envVars:
-      # À renseigner une fois dans le tableau de bord ; sync: false évite qu'un push écrase la valeur.
+      # sync: false seul = Render crée la variable et demande sa valeur une fois,
+      # sans jamais l'écraser au push suivant. (value + sync ensemble = rejet du blueprint.)
       - key: DATABASE_URL
-        value: ""
         sync: false
       - key: JWT_SECRET
         generateValue: true
@@ -28,11 +28,8 @@ services:
         value: fictif
       - key: TRUST_PROXY
         value: "true"
-      - key: GUIDO_API_URL
-        value: ""
-        sync: false
-      - key: GUIDO_API_KEY
-        value: ""
-        sync: false
+      # Guido (conseiller) et EducMaster restent non configurés : l'API répond 503 sur ces
+      # routes, ce qui est le comportement voulu en démo. Ajouter les variables dans le
+      # tableau de bord Render le jour où un vrai endpoint est disponible.
       - key: GUIDO_ALLOW_INSECURE_HTTP
         value: "true"
