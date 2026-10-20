@@ -1,0 +1,38 @@
+# Blueprint Render : https://render.com/docs/blueprint-spec
+# L'application lit la variable PORT injectée par Render (défaut 10000) : ne pas la fixer ici.
+services:
+  - type: web
+    name: mon-orientation-api
+    runtime: docker
+    region: frankfurt
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api/health
+    envVars:
+      # À renseigner une fois dans le tableau de bord ; sync: false évite qu'un push écrase la valeur.
+      - key: DATABASE_URL
+        value: ""
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: https://frontend-neon-two-70.vercel.app
+      # Profil démonstration : EducMaster n'étant pas branché, la garde de educmaster.service.ts
+      # refuse EDUCMASTER_MODE=fictif dès que NODE_ENV=production.
+      - key: NODE_ENV
+        value: preview
+      - key: EDUCMASTER_MODE
+        value: fictif
+      - key: TRUST_PROXY
+        value: "true"
+      - key: GUIDO_API_URL
+        value: ""
+        sync: false
+      - key: GUIDO_API_KEY
+        value: ""
+        sync: false
+      - key: GUIDO_ALLOW_INSECURE_HTTP
+        value: "true"

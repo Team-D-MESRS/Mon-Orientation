@@ -24,6 +24,7 @@ API REST de la plateforme nationale d'orientation scolaire. Elle gère l'authent
 13. [Tests](#tests)
 14. [Limites connues et suite](#limites-connues-et-suite)
 15. [Dépannage](#dépannage)
+16. [Déploiement sur hébergeur gratuit](#déploiement-sur-hébergeur-gratuit)
 
 ---
 
@@ -135,7 +136,7 @@ Ne jamais versionner `.env`. En production, utiliser des secrets longs et aléat
 |---|---|
 | `npm run start:dev` | API en mode watch (recompile et relance à chaque modification de `src/`) |
 | `npm run build` / `npm run start:prod` | Compilation dans `dist/` / exécution compilée |
-| `npm run prisma:generate` | Régénère le client Prisma après modification du schéma |
+| `npm run prisma:generate` | Régénère le client Prisma après modification du schéma (à faire avant tout seed : un client périmé fait échouer `prisma:seed`) |
 | `npm run prisma:migrate` | `prisma migrate dev` (création de migration, terminal interactif) |
 | `npm run prisma:studio` | Interface web d'exploration de la base |
 | `npm run prisma:seed` | Admin + référentiel des filières (idempotent) |
@@ -443,7 +444,7 @@ Il n'y a pas encore de tests unitaires (Jest n'est pas configuré) : c'est l'obj
 - **Rôle Établissement** : espace de connexion et fonctions propres non implémentés dans ce chantier (explicitement hors périmètre). L’Admin gère les fiches des établissements de formation, mais pas les comptes, les rôles ni les rattachements parent-enfant.
 - **Données éditoriales** : les pages statiques sont éditables dans le CMS pour l’Accueil, la FAQ, le guide et le contact ; les autres pages et les contenus non déclarés restent dans le code. Les exports disponibles sont CSV/XLSX, pas PDF.
 - **Filière ↔ établissement** : `OffreFormation` (table de jonction, depuis le lot 3 du 16/09) rattache une même fiche technique à plusieurs établissements, avec durée et source par offre ; le supérieur garde un établissement unique (`Filiere.etablissementId`). Le champ texte `ouSeFormer` reste pour les fiches sans lieu connu.
-- **Infrastructure et migration** : la migration `20261009023000_admin_cms_analytics` n’a pas été appliquée à une base distante. Le stockage média nécessite un MinIO/S3 configuré et un bucket dédié en lecture publique uniquement sous `uploads/filieres/`. Le `docker-compose.dev.yml` reste à fiabiliser ; aucun service MinIO n'est provisionné automatiquement par ce dépôt.
+- **Infrastructure et migration** : les 15 migrations, `20261009023000_admin_cms_analytics` comprise, ont été jouées avec succès sur une PostgreSQL 16 neuve via `backend/Dockerfile` ; elles restent à rejouer sur la base distante de l'équipe. Le stockage média nécessite un MinIO/S3 configuré et un bucket dédié en lecture publique uniquement sous `uploads/filieres/`. Le `docker-compose.dev.yml` reste à fiabiliser ; aucun service MinIO n'est provisionné automatiquement par ce dépôt. La procédure d'hébergement gratuit est décrite dans [Déploiement sur hébergeur gratuit](#déploiement-sur-hébergeur-gratuit).
 
 ---
 
@@ -457,3 +458,97 @@ Il n'y a pas encore de tests unitaires (Jest n'est pas configuré) : c'est l'obj
 | `P2002` (contrainte d'unicité) à l'inscription | Un compte existe déjà pour ce NIP ou cet email (l'API renvoie normalement 409) |
 | Le conseiller répond « pas encore configuré » | Renseigner `GUIDO_API_URL` et `GUIDO_API_KEY` dans `backend/.env`, puis relancer le backend ; l’URL distante doit être en HTTPS |
 | 429 à la connexion | Plus de 5 tentatives en une minute pour cet identifiant depuis cette IP : patienter une minute |
+
+---
+
+## Déploiement sur hébergeur gratuit
+
+`backend/Dockerfile` construit une image Node 24 multi-étapes (~750 Mo) qui applique les migrations Prisma au démarrage, puis lance `dist/main`. Validé en local sur une PostgreSQL 16 neuve : les 15 migrations s'appliquent (extension `unaccent` comprise), `/api/health` répond 200, la recherche accentuée/insensible aux accents et la connexion élève-parent fonctionnent.
+
+### Quel hébergeur gratuit
+
+Aucun de ces hébergeurs ne convient à une exploitation réelle : ils servent à démontrer la plateforme. Le choix se joue sur deux contraintes — la carte bancaire et la mise en veille.
+
+| Hébergeur | Carte bancaire | Veille | Base de données |
+|---|---|---|---|
+| **Render free** | non | endormi après 15 min sans trafic, reprise de 30 à 60 s | Supabase (500 Mo) ; la base gratuite Render est supprimée au bout de 30 jours |
+| **Railway** (essai) | non | pas de veille pendant l'essai | PostgreSQL du projet, 0,5 Go de volume |
+| **Koyeb free** | oui | veille annoncée après 1 h sans trafic par des sources tierces | 1 Go, limité à 5 h de temps actif par jour |
+
+L'essai Railway dure 30 jours ou 5 $ de consommation (environ un mois pour cette API), puis le plan Free alloue 1 $ par mois : le service se coupe dès que le crédit est épuisé.
+
+Rendu à 512 Mo de RAM, l'API tient, mais évitez les exports XLSX lourds et les requêtes analytiques simultanées. Pour neutraliser la veille de Render pendant une soutenance, appelez `/api/health` toutes les 10 minutes — un surveillant de statut gratuit fait ce travail.
+
+### 1. Créer la base PostgreSQL
+
+Sur Supabase : nouveau projet, région **eu-central-1 (Francfort)** pour rester près de la région Render, mot de passe fort. Conserver l'URI **Direct connection** (port 5432) et non l'URI « pooler » : le mode transaction de PgBouncer casse `prisma migrate deploy` et impose `?pgbouncer=true` au client.
+
+### 2. Appliquer les migrations et charger les données (une seule fois)
+
+```bash
+cd backend
+export DATABASE_URL="postgresql://postgres:<mot-de-passe>@db.<ref>.supabase.co:5432/postgres"
+npx prisma migrate deploy
+npx prisma generate          # indispensable : un client périmé fait échouer le seed
+npm run prisma:seed          # référentiel des filières (45 après le BEPC, 225 du supérieur)
+npm run prisma:seed:demo     # comptes de démonstration — refusé si NODE_ENV=production
+```
+
+Sans Node sur le poste, ces commandes peuvent être jouées depuis l'image : `docker build --target build -t mo-build .` puis `docker run --rm -e DATABASE_URL=… -e NODE_ENV=preview mo-build npx prisma db execute --file …` ou `npm run prisma:seed` dans le conteneur.
+
+### 3. Déployer le conteneur
+
+**Render (gratuit, sans carte) — voir `render.yaml` à la racine du dépôt.** Dans le tableau de bord : New → **Blueprint**, connecter le repo `Team-D-MESRS/Mon-Orientation`. Le fichier déclare déjà le Dockerfile (contexte `backend/`), la région Francfort, le plan gratuit, le health check `/api/health` et les variables, à l'exception de `DATABASE_URL` et des clés Guido à saisir dans le service. Les secrets JWT sont générés par Render (`generateValue: true`). L'application écoute sur le `PORT` injecté par Render (10000) : **ne pas fixer cette variable**.
+
+**Koyeb (carte exigée).** App → Deploy from GitHub, **Root directory : `backend`**, Dockerfile `backend/Dockerfile`. Instance `free`, région européenne, **service port `8080`** et variable `PORT=8080` (figer les deux évite tout décalage avec le port attribué), health check `/api/health` avec 30 s de délai initial — les migrations tournent avant l'écoute.
+
+### 4. Variables d'environnement du service
+
+| Variable | Valeur pour une démo publique | Rôle |
+|---|---|---|
+| `DATABASE_URL` | URI directe Supabase | connexion PostgreSQL |
+| `JWT_SECRET` | `openssl rand -base64 48` | signature des jetons |
+| `JWT_REFRESH_SECRET` | une seconde valeur aléatoire | rotation des sessions |
+| `PORT` | ne rien fixer sur Render | Render injecte `PORT=10000` que l'application respecte ; Koyeb demande `PORT=8080` plus le port de service correspondant |
+| `CORS_ORIGIN` | `https://frontend-neon-two-70.vercel.app` | origines autorisées ; ajouter `https://apresmonbac.bj` séparé par une virgule le jour où le domaine propre pointe vers le front |
+| `TRUST_PROXY` | `true` | Render et Koyeb terminent le TLS : la limitation des tentatives voit l'IP du client |
+| `NODE_ENV` | `preview` | **pas** `production` : voir avertissements |
+| `EDUCMASTER_MODE` | `fictif` | annuaire local, l'API EducMaster n'étant pas encore ouverte |
+| `GUIDO_API_URL`, `GUIDO_API_KEY` | ceux du service Guido | conseiller pédagogique |
+| `GUIDO_ALLOW_INSECURE_HTTP` | `true` | requis pour l'endpoint HTTP fourni, accepté seulement hors production |
+| `MINIO_*` | laissés vides | l'upload Admin répond 503, le reste de l'API fonctionne |
+
+### 5. Vérifier après déploiement
+
+```bash
+curl https://<service>.onrender.com/api/health                 # status ok, database ok
+curl "https://<service>.onrender.com/api/filiere?recherche=genie"   # renvoie « Mathématiques » : unaccent est actif
+```
+
+Enfin, tester une connexion côté frontend avec un compte du seed de démonstration (mot de passe `Demo2026!`).
+
+### 6. Avertissements avant de partager l'URL
+
+- **Ce n'est pas une mise en production.** `EDUCMASTER_MODE=fictif` est refusé dès que `NODE_ENV=production` ([educmaster.service.ts:38](file:///C:/Users/Lenovo/Team_D_MESRS_repo/Mon-Orientation/backend/src/educmaster/educmaster.service.ts#L38)), et avec `EDUCMASTER_MODE=api` la connexion élève renvoie 503 ([educmaster.service.ts:51](file:///C:/Users/Lenovo/Team_D_MESRS_repo/Mon-Orientation/backend/src/educmaster/educmaster.service.ts#L51)). Aucun accès élève n'est donc possible tant que l'API EducMaster n'est pas branchée ; les comptes internes (Admin, DGES) passent par `/api/auth/personnel` et fonctionnent dans les deux modes.
+- **Swagger est exposé** dès que `NODE_ENV` est différent de `production` ([main.ts:56](file:///C:/Users/Lenovo/Team_D_MESRS_repo/Mon-Orientation/backend/src/main.ts#L56)) : la documentation de l'API est publique sur `/api/docs`. `ENABLE_SWAGGER` ne peut que l'ajouter, pas le retirer hors production.
+- **Guido transite en HTTP clair** vers `13.140.158.110:8010` : ne pas y envoyer de conversations d'élèves tant que l'HTTPS n'est pas en place, et supprimer `GUIDO_ALLOW_INSECURE_HTTP` du service si l'URL devient publique.
+- **Médias.** Si vous reprenez Supabase Storage en lieu et place de MinIO, l'URL fabriquée est `<MINIO_PUBLIC_URL>/<bucket>/<clé>` ([media.service.ts:35](file:///C:/Users/Lenovo/Team_D_MESRS_repo/Mon-Orientation/backend/src/media/media.service.ts#L35)), d'où `MINIO_ENDPOINT=<ref>.storage.supabase.co`, `MINIO_PORT=443`, `MINIO_USE_SSL=true`, `MINIO_PUBLIC_URL=https://<ref>.storage.supabase.co/storage/v1/object/public`, et un bucket dont seule la préfixe `uploads/filieres/` est en lecture anonyme.
+- **Secrets.** `backend/.env` reste hors Git (déjà ignoré) et hors de l'image (`backend/.dockerignore` l'exclut) ; les valeurs vont uniquement dans Secrets Koyeb.
+- Les migrations ajoutées ensuite sont rejouées automatiquement au démarrage (`CMD` du Dockerfile), aucun déploiement manuel de la base n'est nécessaire après le premier seed.
+
+### 7. Variante Railway (essai gratuit sans carte bancaire)
+
+`backend/railway.json` déclare le build Dockerfile et le health check `/api/health`. Railway signale ce format (Config-as-Code) **déprécié et honoré jusqu'au 1ᵉʳ décembre 2026**, au profit d'un fichier `.railway/railway.ts` : pour une démo courte, le fichier actuel suffit. À retenir aussi : Railway injecte lui-même `PORT`, donc ne pas fixer cette variable ici.
+
+1. `npx @railway/cli@latest login` (autorisation navigateur), puis `railway init` depuis `backend/` pour créer le projet.
+2. Dans le tableau de bord, **Add → PostgreSQL** : l'essai donne 0,5 Go de stockage de volume, largement assez pour le référentiel.
+3. `railway up` depuis `backend/` : l'image est construite avec Docker puis poussée.
+4. Variables du service : celles du tableau de l'étape 4, **sauf `PORT`**, et `DATABASE_URL` réglée sur la référence `${{ Postgres.DATABASE_URL }}`.
+5. Base privée : `npx @railway/cli@latest connect` ouvre un tunnel local et affiche une URL de connexion ; avec cette URL en variable d'environnement, jouer `npx prisma migrate deploy`, `npx prisma generate`, `npm run prisma:seed` puis `npm run prisma:seed:demo` depuis le poste. (L'extension `unaccent`, créée par la migration `20260914000931_catalogue_favoris`, est installable sur Railway ; si `CREATE EXTENSION` est refusé, prendre le service PostgreSQL classique plutôt qu'une instance serverless.)
+6. `Settings → Networking → Generate domain` donne `https://<service>.up.railway.app` : à reporter dans `CORS_ORIGIN` et dans `NEXT_PUBLIC_API_URL` côté Vercel, puis redéployer le front.
+
+**Durée de vie** : l'essai dure 30 jours ou 5 $ de consommation (environ un mois pour cette API), puis le plan Free alloue 1 $ par mois — le service se coupe dès que le crédit est épuisé. Cette voie convient à une démonstration de quelques semaines (soutenance, revue client), pas à une exploitation continue. La migration des données vers Supabase le moment venu ne demande que de changer `DATABASE_URL`.
+
+### 8. Et si aucune de ces voies ne convient
+
+Vercel serverless demande d'adapter NestJS en fonction sans serveur et de passer Prisma par un pooler. Pour une exploitation durable, hors démonstration, le `docker-compose.yml` à la racine du dépôt fournit déjà PostgreSQL 16 : il manque alors un hôte payant à quelques euros par mois et un MinIO pour les médias.
