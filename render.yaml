@@ -18,8 +18,10 @@ services:
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
+      # Liste séparée par des virgules (voir main.ts). Les deux fronts Vercel du projet :
+      # « mon-orientation » (compte niyi2) et celui importé par l'équipe.
       - key: CORS_ORIGIN
-        value: https://frontend-neon-two-70.vercel.app
+        value: https://mon-orientation-six.vercel.app,https://frontend-neon-two-70.vercel.app
       # Profil démonstration : EducMaster n'étant pas branché, la garde de educmaster.service.ts
       # refuse EDUCMASTER_MODE=fictif dès que NODE_ENV=production.
       - key: NODE_ENV
