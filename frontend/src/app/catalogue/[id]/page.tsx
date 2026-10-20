@@ -44,6 +44,7 @@ import {
 } from '@/lib/filiere';
 import { useAuthStore } from '@/stores/authStore';
 import { useFavoris } from '@/stores/favorisStore';
+import { mesurerUsage } from '@/lib/mesure-audience';
 import { BoutonComparer } from '@/components/catalogue/BoutonComparer';
 import { BoutonFavori } from '@/components/catalogue/BoutonFavori';
 import { Partage } from '@/components/catalogue/Partage';
@@ -637,6 +638,7 @@ export default function FicheFilierePage() {
         if (annule) return;
         setFiliere(data);
         setStatut('ok');
+        mesurerUsage('CONSULTATION_FILIERE', data.type);
       })
       .catch((err) => {
         if (!annule) setStatut(err.response?.status === 404 ? 'introuvable' : 'erreur');

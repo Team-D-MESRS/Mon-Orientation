@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ACompleter, Bloc, EnTete, LienExterne } from '@/components/informations/ui';
 import { LIENS_EXTERNES, SITE } from '@/lib/site';
+import { PageEditorialeDynamique } from '@/components/contenu/PageEditorialeDynamique';
 
 export const metadata: Metadata = { title: 'Contact — Mon Orientation' };
 
@@ -14,7 +15,7 @@ export default function ContactPage() {
   if (adresse) coordonnees.push({ libelle: 'Adresse', valeur: adresse });
 
   return (
-    <>
+    <PageEditorialeDynamique slug="contact">
       <EnTete titre="Contact" intro="Selon ta question, voici à qui t'adresser." />
 
       <Bloc titre="Une question sur ton dossier scolaire">
@@ -59,6 +60,6 @@ export default function ContactPage() {
           l&apos;infirmerie ou le conseiller de ton établissement.
         </p>
       </Bloc>
-    </>
+    </PageEditorialeDynamique>
   );
 }

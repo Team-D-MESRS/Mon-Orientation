@@ -9,6 +9,9 @@ import { ConseillerModule } from './conseiller/conseiller.module';
 import { StatsModule } from './stats/stats.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { HealthModule } from './health/health.module';
+import { AdminModule } from './admin/admin.module';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { ContenuSiteModule } from './contenu-site/contenu-site.module';
 
 @Module({
   imports: [
@@ -22,6 +25,9 @@ import { HealthModule } from './health/health.module';
     ConseillerModule,
     StatsModule,
     HealthModule,
+    AdminModule,
+    AnalyticsModule,
+    ContenuSiteModule,
   ],
 })
 export class AppModule {}

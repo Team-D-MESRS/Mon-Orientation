@@ -74,3 +74,10 @@ news/
 
 # Cache Python des outils d'extraction
 __pycache__/
+
+# Notes techniques publiques du chantier Admin/DGES ; les autres documents sous docs/ restent ignorés.
+!docs/
+docs/*
+!docs/admin-dges/
+docs/admin-dges/*
+!docs/admin-dges/*.md

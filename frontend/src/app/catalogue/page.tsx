@@ -15,6 +15,7 @@ import { Alerte, CHAMP } from '@/components/espace/ui';
 import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SkeletonGrid } from '@/components/ui/LoadingState';
+import { mesurerUsage } from '@/lib/mesure-audience';
 
 /** Formations chargées à la fois ; « Afficher plus » charge la page suivante */
 const LIMITE = 48;
@@ -85,6 +86,7 @@ function Catalogue() {
   const [filtreProfilActif, setFiltreProfilActif] = useState(false);
   const decisionProfilPrise = useRef(false);
   const decisionNiveauPrise = useRef(false);
+  const derniereRechercheMesuree = useRef('');
   // Capturée une seule fois, au tout premier rendu : dit si la page s'ouvre déjà filtrée (lien partagé),
   // sans dépendre de window.location.search — qui peut changer entre deux filtres par défaut (domaine,
   // niveau) avant que l'un n'ait eu le temps de voir l'écriture de l'autre (router.replace n'est pas
@@ -201,6 +203,12 @@ function Catalogue() {
         setTotal(data.total);
         setPage(1);
         setStatut('ok');
+        const recherche = requete.search?.trim() ?? '';
+        if (!recherche) derniereRechercheMesuree.current = '';
+        else if (recherche !== derniereRechercheMesuree.current) {
+          mesurerUsage('RECHERCHE_CATALOGUE');
+          derniereRechercheMesuree.current = recherche;
+        }
       })
       .catch(() => {
         if (!annule) setStatut('erreur');

@@ -9,6 +9,7 @@ import { authApi, conseillerApi, type Moi } from '@/lib/api';
 import { messageErreur } from '@/lib/erreurs';
 import { useAuthStore } from '@/stores/authStore';
 import { TexteConseiller } from '@/components/espace/TexteConseiller';
+import { mesurerUsage } from '@/lib/mesure-audience';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -144,6 +145,7 @@ export function GuidoWidget() {
       const { data } = await conseillerApi.chat(nip, question, conversationId);
       setConversationId(data.conversationId);
       setMessages((precedents) => [...precedents, { role: 'assistant', texte: data.reponse }]);
+      mesurerUsage('UTILISATION_GUIDO');
     } catch (err) {
       setMessages((precedents) => precedents.slice(0, -1));
       setSaisie(question);

@@ -9,6 +9,7 @@ import { useEspace, useProfil } from '@/components/espace/EspaceContext';
 import { Alerte, CHAMP } from '@/components/espace/ui';
 import { TexteConseiller } from '@/components/espace/TexteConseiller';
 import { Button } from '@/components/ui/Button';
+import { mesurerUsage } from '@/lib/mesure-audience';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -77,6 +78,7 @@ export default function GuidoChat() {
       const { data } = await conseillerApi.chat(profil.nip, question, conversationId);
       setConversationId(data.conversationId);
       setMessages((m) => [...m, { role: 'assistant', texte: data.reponse }]);
+      mesurerUsage('UTILISATION_GUIDO');
     } catch (err) {
       // La question sans réponse est retirée et remise dans le champ, pour pouvoir la renvoyer
       setMessages((m) => m.slice(0, -1));

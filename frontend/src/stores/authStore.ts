@@ -62,6 +62,7 @@ export function accueilDuRole(role: Role): string {
   // sur son questionnaire déjà rempli plutôt que sur son tableau de bord, contrairement à tous les autres
   // liens « Mon espace » de l'application (en-tête, pied de page, /identification).
   if (role === 'APPRENANT' || role === 'PARENT') return '/espace-apprenant';
-  if (role === 'DGES' || role === 'ADMIN') return '/stats';
+  if (role === 'DGES') return '/stats';
+  if (role === 'ADMIN') return '/admin';
   return '/';
 }

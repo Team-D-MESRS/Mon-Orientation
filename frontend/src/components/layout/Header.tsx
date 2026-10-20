@@ -18,10 +18,10 @@ export function Header() {
   const [deconnexionEnCours, setDeconnexionEnCours] = useState(false);
 
   const liens = liensVisibles(user);
-  // Un compte ADMIN voit les 5 liens (Catalogue, Guido, Mon espace, Statistiques, Administration) au lieu des
-  // 2-3 du tronc commun : passés le seuil habituel (md, 768px), un petit ordinateur portable (~1024px) n'a
-  // plus assez de place pour 5 liens + logo + profil + déconnexion sur une ligne — la navigation desktop
-  // bascule alors plus tard (lg, 1024px) dans ce cas, plutôt que de laisser le contenu déborder ou se replier
+  // Les profils DGES et Admin ont chacun un lien métier dédié en plus du tronc commun : passés le seuil
+  // habituel (md, 768px), un petit ordinateur portable (~1024px) peut manquer de place pour les liens,
+  // le logo, le profil et la déconnexion — la navigation desktop bascule alors plus tard (lg, 1024px)
+  // dans ce cas, plutôt que de laisser le contenu déborder ou se replier
   // sur deux lignes. Générée en chaînes Tailwind complètes (pas de préfixe interpolé) : le compilateur ne
   // reconnaît que des noms de classe littéraux dans le code source.
   const seuilDesktopEtroit = liens.length > 3;

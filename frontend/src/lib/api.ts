@@ -209,4 +209,112 @@ export const statsApi = {
   getDepartements: () => api.get<StatsDepartement[]>('/stats/departements'),
   getDepartement: (code: string) => api.get(`/stats/departement/${code}`),
   getFiliere: () => api.get('/stats/filiere'),
+  getObservatoire: (params?: { debut?: string; fin?: string; departement?: string }) => api.get<StatsObservatoire>('/stats/observatoire', { params }),
+  exporter: (format: 'csv' | 'xlsx', params?: { debut?: string; fin?: string; departement?: string }) =>
+    api.get<Blob>('/stats/export', { params: { ...params, format }, responseType: 'blob' }),
+};
+
+export interface StatsObservatoire {
+  periode: { debut: string; fin: string };
+  filtres: { departement: string | null };
+  synthese: { apprenants: number; nouveauxApprenants: number; parentsActifs: number; etablissementsActifs: number; filieresPubliees: number; offresFormationActives: number };
+  parcours: { apprenantsAvecDecouverte: number; decouvertesEnregistrees: number; recommandationsCalculees: number; preferencesEnregistrees: number; preferencesValideesParParent: number; favorisEnregistres: number; tauxDecouverte: number; tauxValidationParent: number };
+  territoires: StatsDepartement[];
+  repartition: { parPalier: { valeur: string | null; total: number }[]; parSerie: { valeur: string | null; total: number }[] };
+  qualiteCatalogue: { total: number; sansSource: number; sansDescription: number; sansImage: number; sansDomaine: number; etablissementAvecDepartementEtCommune: number; tauxLocalisationEtablissement: number };
+  filieresLesPlusRecommandees: { id: string; nom: string; type: string | null; recommandations: number }[];
+  usages: { sansIdentifiantVisiteur: true; sansTexteLibre: true; evenementsParJour: { jour: string; type: string; total: number }[]; evenementsParTypeEtDimension: { type: string; dimension: string | null; total: number }[] };
+}
+
+export type TypeRessourceAdmin = 'FILIERE' | 'ETABLISSEMENT' | 'PAGE_SITE';
+export type FiliereAdmin = Omit<Filiere, 'offres'> & {
+  masquee: boolean;
+  imageUrl: string | null;
+  etablissementId: string | null;
+  offres: { etablissementId: string; duree: string | null; source: string }[];
+};
+export interface PageSiteAdmin {
+  id: string;
+  slug: string;
+  titre: string;
+  intro: string | null;
+  sections: { titre: string; paragraphes: string[]; lienLabel?: string | null; lienUrl?: string | null }[];
+  statut: 'BROUILLON' | 'PUBLIE' | 'ARCHIVE';
+  updatedAt: string;
+}
+export interface EtablissementAdmin {
+  id: string;
+  code: string | null;
+  educmasterId: string | null;
+  nom: string;
+  sigle: string | null;
+  universite: string | null;
+  type: string;
+  departement: string | null;
+  commune: string | null;
+  quartier: string | null;
+  internat: boolean | null;
+  externat: boolean | null;
+  capacite: number | null;
+  actif: boolean;
+  offres: { filiereId: string; duree: string | null; source: string }[];
+}
+export interface BrouillonAdmin {
+  id: string;
+  type: TypeRessourceAdmin;
+  cibleId: string | null;
+  titre: string;
+  payload: Record<string, unknown>;
+  etat: 'BROUILLON' | 'PUBLIE';
+  createdAt: string;
+  updatedAt: string;
+  auteur?: { nom: string; prenom: string };
+}
+export interface HistoriqueAdmin {
+  id: string;
+  type: TypeRessourceAdmin;
+  cibleId: string;
+  action: string;
+  avant: Record<string, unknown> | null;
+  apres: Record<string, unknown> | null;
+  createdAt: string;
+  auteur: { nom: string; prenom: string };
+}
+export const adminApi = {
+  resume: () => api.get<{ filieres: number; etablissements: number; pagesPubliees: number; brouillons: number }>('/admin/resume'),
+  catalogue: () => api.get<FiliereAdmin[]>('/admin/catalogue'),
+  etablissements: () => api.get<EtablissementAdmin[]>('/admin/etablissements'),
+  pages: () => api.get<PageSiteAdmin[]>('/admin/pages'),
+  brouillons: () => api.get<BrouillonAdmin[]>('/admin/brouillons'),
+  historique: (params?: { type?: TypeRessourceAdmin; cibleId?: string }) => api.get<HistoriqueAdmin[]>('/admin/historique', { params }),
+  creerBrouillon: (type: TypeRessourceAdmin, payload: Record<string, unknown>, cibleId?: string) =>
+    api.post<BrouillonAdmin>('/admin/brouillons', { type, ...(cibleId ? { cibleId } : {}), payload }),
+  modifierBrouillon: (id: string, payload: Record<string, unknown>) => api.patch<BrouillonAdmin>(`/admin/brouillons/${id}`, { payload }),
+  supprimerBrouillon: (id: string) => api.delete(`/admin/brouillons/${id}`),
+  publier: (id: string) => api.post<BrouillonAdmin>(`/admin/brouillons/${id}/publier`),
+  restaurer: (id: string) => api.post<BrouillonAdmin>(`/admin/historique/${id}/restaurer`),
+};
+
+export const mediaApi = {
+  televerserImage: (file: File) => {
+    const body = new FormData();
+    body.append('file', file);
+    return api.post<{ url: string; key: string; type: string; taille: number }>('/admin/media', body);
+  },
+};
+
+export interface PageSitePublique {
+  slug: string;
+  titre: string;
+  intro: string | null;
+  sections: PageSiteAdmin['sections'];
+  updatedAt: string;
+}
+export const contenuSiteApi = {
+  get: (slug: string) => api.get<PageSitePublique>(`/contenu-site/${encodeURIComponent(slug)}`),
+};
+
+export type TypeEvenementUsage = 'RECHERCHE_CATALOGUE' | 'CONSULTATION_FILIERE' | 'UTILISATION_GUIDO';
+export const analyticsApi = {
+  enregistrer: (type: TypeEvenementUsage, dimension?: string) => axios.post(`${API_URL}/api/analytics/evenements`, { type, ...(dimension ? { dimension } : {}) }, { headers: { 'Content-Type': 'application/json' }, withCredentials: false }),
 };

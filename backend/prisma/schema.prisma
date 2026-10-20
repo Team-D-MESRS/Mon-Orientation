@@ -15,6 +15,29 @@ enum Role {
   ADMIN
 }
 
+enum TypeRessourceAdmin {
+  FILIERE
+  ETABLISSEMENT
+  PAGE_SITE
+}
+
+enum EtatBrouillonAdmin {
+  BROUILLON
+  PUBLIE
+}
+
+enum StatutPageSite {
+  BROUILLON
+  PUBLIE
+  ARCHIVE
+}
+
+enum TypeEvenementUsage {
+  RECHERCHE_CATALOGUE
+  CONSULTATION_FILIERE
+  UTILISATION_GUIDO
+}
+
 enum Palier {
   QUATRIEME
   TROISIEME
@@ -60,6 +83,8 @@ model Utilisateur {
   apprenant   Apprenant?
   parentLinks ParentApprenant[] @relation("Parent")
   sessions    Session[]
+  brouillonsAdmin BrouillonAdmin[] @relation("AuteurBrouillonAdmin")
+  historiqueAdmin HistoriqueAdmin[] @relation("AuteurHistoriqueAdmin")
 
   @@map("utilisateurs")
 }
@@ -158,6 +183,7 @@ model Etablissement {
   internat     Boolean?
   externat     Boolean?
   capacite     Int?
+  actif        Boolean           @default(true)
   createdAt    DateTime          @default(now()) @map("created_at")
   updatedAt    DateTime          @updatedAt @map("updated_at")
 
@@ -353,4 +379,69 @@ model ConversationIA {
   filiere   Filiere?  @relation(fields: [filiereId], references: [id])
 
   @@map("conversations_ia")
+}
+
+/// Modifications préparées par l’Admin : elles ne changent pas le site public avant publication.
+model BrouillonAdmin {
+  id         String             @id @default(uuid())
+  type       TypeRessourceAdmin
+  cibleId    String?            @map("cible_id")
+  titre      String
+  payload    Json
+  etat       EtatBrouillonAdmin @default(BROUILLON)
+  auteurId   String             @map("auteur_id")
+  publieLe   DateTime?          @map("publie_le")
+  createdAt  DateTime           @default(now()) @map("created_at")
+  updatedAt  DateTime           @updatedAt @map("updated_at")
+
+  auteur Utilisateur @relation("AuteurBrouillonAdmin", fields: [auteurId], references: [id], onDelete: Restrict)
+
+  @@index([type, etat, updatedAt])
+  @@map("brouillons_admin")
+}
+
+/// Journal append-only des changements éditoriaux, sans données nominatives d’élèves.
+model HistoriqueAdmin {
+  id          String             @id @default(uuid())
+  auteurId    String             @map("auteur_id")
+  type        TypeRessourceAdmin
+  cibleId     String             @map("cible_id")
+  action      String
+  avant       Json?
+  apres       Json?
+  createdAt   DateTime           @default(now()) @map("created_at")
+
+  auteur Utilisateur @relation("AuteurHistoriqueAdmin", fields: [auteurId], references: [id], onDelete: Restrict)
+
+  @@index([type, cibleId, createdAt])
+  @@map("historique_admin")
+}
+
+/// Contenus éditoriaux administrables, publiés seulement après validation explicite.
+model PageSite {
+  id          String          @id @default(uuid())
+  slug        String          @unique
+  titre       String
+  intro       String?
+  sections    Json
+  statut      StatutPageSite  @default(BROUILLON)
+  publieLe    DateTime?       @map("publie_le")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  @@index([statut, updatedAt])
+  @@map("pages_site")
+}
+
+/// Compteurs d’usage agrégés par jour, type et dimension, sans enregistrement d’une action individuelle.
+model EvenementUsage {
+  id        String              @id @default(uuid())
+  jour      DateTime            @db.Date
+  type      TypeEvenementUsage
+  dimension String              @default("")
+  nombre    Int                 @default(0)
+
+  @@unique([jour, type, dimension])
+  @@index([type, jour])
+  @@map("evenements_usage")
 }

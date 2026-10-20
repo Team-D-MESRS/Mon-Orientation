@@ -22,6 +22,7 @@ import { ApresLeBac } from '@/components/accueil/ApresLeBac';
 import { CTADecouverte } from '@/components/accueil/CTADecouverte';
 import { Domaines } from '@/components/accueil/Domaines';
 import { Apparition } from '@/components/animation/Apparition';
+import { AccueilHeroDynamique } from '@/components/contenu/PageEditorialeDynamique';
 
 const PROFILS: { Icone: LucideIcon; numero: string; etiquette: string; titre: string; texte: string; href: string; action: string; ton: string }[] = [
   {
@@ -80,8 +81,7 @@ export default function Accueil() {
         <div className="mo-container mo-hero-grid">
           <div className="mo-hero-copy">
             <Apparition as="p" className="mo-eyebrow"><Sparkles size={14} aria-hidden="true" /> Ton avenir commence par une question</Apparition>
-            <Apparition as="h1" delai={80}>Choisis un chemin qui <em>te ressemble.</em></Apparition>
-            <Apparition as="p" delai={160} className="mo-hero-lede">De la 4e à la Terminale, explore les formations, comprends tes possibilités et avance avec ta famille.</Apparition>
+            <AccueilHeroDynamique titre="Choisis un chemin qui te ressemble." intro="De la 4e à la Terminale, explore les formations, comprends tes possibilités et avance avec ta famille." />
             <Apparition delai={240}>
               <form action="/catalogue" role="search" className="mo-search">
                 <label htmlFor="recherche-accueil" className="sr-only">Rechercher une formation, un métier ou une ville</label>

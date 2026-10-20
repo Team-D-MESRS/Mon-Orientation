@@ -4,6 +4,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { AuthInitialiser } from '@/components/auth/AuthInitialiser';
 import { GuidoWidget } from '@/components/guido/GuidoWidget';
+import { ConsentementMesureAudience } from '@/components/contenu/ConsentementMesureAudience';
 
 export const metadata: Metadata = {
   title: 'Mon Orientation — Plateforme nationale d\'orientation scolaire',
@@ -41,6 +42,7 @@ export default function RootLayout({
         </main>
         <Footer />
         <GuidoWidget />
+        <ConsentementMesureAudience />
       </body>
     </html>
   );

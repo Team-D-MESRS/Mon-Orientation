@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Bloc, EnTete } from '@/components/informations/ui';
 import { SITE } from '@/lib/site';
+import { PageEditorialeDynamique } from '@/components/contenu/PageEditorialeDynamique';
 
 export const metadata: Metadata = { title: "Guide d'utilisation — Mon Orientation" };
 
@@ -17,7 +18,7 @@ const ETAPES = [
 
 export default function GuidePage() {
   return (
-    <>
+    <PageEditorialeDynamique slug="guide">
       <EnTete
         titre="Guide d'utilisation"
         intro="Mon Orientation t'accompagne de la 4e à la Terminale : découvrir les formations, comprendre tes résultats et préparer tes vœux d'orientation."
@@ -141,6 +142,6 @@ export default function GuidePage() {
           Consulte les <Link href="/faq">questions fréquentes</Link> ou la page <Link href="/contact">Contact</Link>.
         </p>
       </Bloc>
-    </>
+    </PageEditorialeDynamique>
   );
 }

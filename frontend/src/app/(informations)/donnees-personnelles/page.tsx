@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { ACompleter, Bloc, EnTete, LienExterne, Provisoire } from '@/components/informations/ui';
 import { LIENS_EXTERNES, SITE } from '@/lib/site';
+import { PreferencesMesureAudience } from '@/components/contenu/ConsentementMesureAudience';
 
 export const metadata: Metadata = { title: 'Données personnelles — Mon Orientation' };
 
@@ -97,9 +98,15 @@ export default function DonneesPersonnellesPage() {
 
       <Bloc titre="Stockage dans votre navigateur">
         <p>
-          La plateforme n&apos;utilise ni cookie publicitaire ni outil de mesure d&apos;audience. Le navigateur conserve seulement la
-          session de connexion et la sélection du comparateur de formations. Les polices de caractères sont chargées depuis Google Fonts,
-          qui reçoit à cette occasion l&apos;adresse IP du visiteur.
+          La plateforme n&apos;utilise pas de cookie publicitaire. Une mesure d&apos;audience facultative s&apos;active uniquement après votre accord dans la bannière. Le navigateur conserve votre choix dans son stockage local (pas dans un cookie). En cas de refus, aucune mesure d&apos;audience n&apos;est envoyée et l&apos;accès au site reste identique.
+        </p>
+        <p>
+          Si vous acceptez, la plateforme compte seulement trois catégories d&apos;actions : recherche dans le catalogue, consultation d&apos;une fiche et utilisation de Guido. Elle incrémente un compteur journalier commun, par type d&apos;action et dimension contrôlée (type de filière ou domaine, le cas échéant) ; aucune ligne ni heure précise n&apos;est conservée pour chaque action. Le registre ne reçoit ni NIP, ni compte, ni texte de recherche, ni message envoyé à Guido. Les journaux techniques d&apos;hébergement sont distincts et doivent être vérifiés par le Ministère avant la mise en production.
+        </p>
+        <p>Vous pouvez modifier votre décision à tout moment avec ce bouton :</p>
+        <PreferencesMesureAudience />
+        <p className="text-sm">
+          Le navigateur conserve aussi la session de connexion et la sélection du comparateur. Les polices de caractères sont chargées depuis Google Fonts, qui reçoit à cette occasion l&apos;adresse IP du visiteur.
         </p>
       </Bloc>
 

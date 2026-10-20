@@ -2,12 +2,13 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Bloc, EnTete, Question } from '@/components/informations/ui';
 import { SITE } from '@/lib/site';
+import { PageEditorialeDynamique } from '@/components/contenu/PageEditorialeDynamique';
 
 export const metadata: Metadata = { title: 'Questions fréquentes — Mon Orientation' };
 
 export default function FaqPage() {
   return (
-    <>
+    <PageEditorialeDynamique slug="faq">
       <EnTete titre="Questions fréquentes" intro="Les réponses aux questions les plus courantes des élèves et des parents." miseAJour={SITE.miseAJour} />
 
       <Bloc titre="La plateforme">
@@ -126,6 +127,6 @@ export default function FaqPage() {
         </Link>
         .
       </p>
-    </>
+    </PageEditorialeDynamique>
   );
 }

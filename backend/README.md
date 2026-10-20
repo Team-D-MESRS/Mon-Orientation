@@ -38,7 +38,8 @@ API REST de la plateforme nationale d'orientation scolaire. Elle gère l'authent
 | Sécurité HTTP | `helmet` (CSP désactivée : API JSON + Swagger), CORS limité à `CORS_ORIGIN`, `@nestjs/throttler` |
 | Documentation | `@nestjs/swagger` |
 | Conseiller pédagogique | Proxy NestJS vers le service Guido externe ; l’API externe fournie utilise elle-même Gemini |
-| Dépendances installées mais pas encore utilisées | `minio` (fichiers), `zod` |
+| Médias Admin | Upload JPEG/PNG/WebP vers MinIO/S3 compatible, activé lorsque les variables `MINIO_*` sont renseignées |
+| Validation éditoriale | DTO `class-validator` et schémas Zod pour les brouillons publiés par l’Admin |
 
 ---
 
@@ -115,7 +116,10 @@ Variables lues dans `backend/.env` :
 | `TRUST_PROXY` | non | `false` | `true` derrière nginx, pour que la limitation des tentatives voie l'IP réelle |
 | `SEED_ADMIN_PASSWORD` | en production | `admin123` hors production | Mot de passe du compte admin créé par le seed |
 | `NODE_ENV` | non | — | `production` interdit le seed de démonstration et impose `SEED_ADMIN_PASSWORD` |
-| `MINIO_*` | non | — | Prévu (fichiers), non utilisé à ce stade |
+| `MINIO_ENDPOINT`, `MINIO_PORT`, `MINIO_USE_SSL` | pour l’upload Admin | `localhost:9000`, SSL désactivé | Endpoint MinIO/S3 interne ; endpoint sans protocole |
+| `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY` | pour l’upload Admin | — | Identifiants de stockage ; secrets serveur uniquement |
+| `MINIO_BUCKET` | pour l’upload Admin | — | Bucket dédié aux médias de la plateforme |
+| `MINIO_PUBLIC_URL` | pour l’upload Admin | — | URL HTTPS publique, dont le chemin `/bucket/` est ajouté au lien retourné |
 | `EDUCMASTER_API_URL` | non | — | Prévu pour l'intégration EducMaster (tâche 2.1), non utilisé |
 | `GUIDO_API_URL` | pour le conseiller | — | URL de base du service Guido ; configurer une URL HTTPS en production |
 | `GUIDO_API_KEY` | pour le conseiller | — | Clé envoyée dans `X-API-Key`, gardée uniquement dans les secrets du backend |
@@ -338,9 +342,29 @@ Chaque recommandation contient `score` (0 à 100), `explication` (texte) et `cri
 |---|---|---|---|
 | POST | `/conseiller/:nip/chat` | élève, parent rattaché (10/min par compte) | Question écrite `{ message (≤ 2000), conversationId? }` → `{ conversationId, reponse, outilsUtilises: [] }`. Le backend relaie au bot externe ; 503 si l’API n’est pas configurée ou disponible |
 | GET | `/conseiller/:nip/historique` | dossier | 10 dernières conversations |
-| GET | `/stats/national` | DGES, admin | Effectifs, nombre de filières et d'établissements, répartition par type |
-| GET | `/stats/departement/:code` | DGES, admin | Indicateurs d'un département |
-| GET | `/stats/filiere` | DGES, admin | Répartition et taux d'insertion moyen par type |
+| GET | `/stats/national` | DGES | Effectifs agrégés, catalogue et répartition par type |
+| GET | `/stats/departements` | DGES | Indicateurs territoriaux agrégés |
+| GET | `/stats/departement/:code` | DGES | Indicateurs agrégés d'un département |
+| GET | `/stats/filiere` | DGES | Répartition et taux d'insertion moyen par type |
+| GET | `/stats/observatoire?debut=AAAA-MM-JJ&fin=AAAA-MM-JJ&departement=...` | DGES | Stocks, activités de parcours, usage consenti et qualité du catalogue ; valeurs agrégées |
+| GET | `/stats/export?format=csv&debut=...&fin=...&departement=...` | DGES | Export CSV ou XLSX du même observatoire, sans dossiers nominatifs (`format=csv` ou `format=xlsx`) |
+
+### Administration éditoriale et CMS
+
+Les routes suivantes nécessitent un JWT de rôle `ADMIN`. Les modifications restent des brouillons jusqu’à publication explicite ; la restauration de l’historique crée un nouveau brouillon.
+
+| Méthode | Route | Description |
+|---|---|---|
+| GET | `/admin/resume`, `/admin/catalogue`, `/admin/etablissements`, `/admin/pages`, `/admin/brouillons`, `/admin/historique` | Charger la console, y compris les éléments archivés |
+| POST | `/admin/brouillons` | Créer un brouillon validé selon son type |
+| PATCH / DELETE | `/admin/brouillons/:id` | Modifier ou supprimer un brouillon non publié ; l’opération est journalisée |
+| POST | `/admin/brouillons/:id/publier` | Publier explicitement le contenu du brouillon |
+| POST | `/admin/historique/:id/restaurer` | Créer un brouillon à partir d’une version antérieure |
+| POST | `/admin/media` | Téléverser JPEG/PNG/WebP, 8 Mo maximum, vers le stockage MinIO/S3 configuré |
+| GET | `/contenu-site/:slug` | Public ; retourne uniquement une page CMS publiée (jamais un brouillon) |
+| POST | `/analytics/evenements` | Public et limité en débit ; le frontend ne l’appelle qu’après opt-in et n’envoie qu’un type et une dimension autorisés |
+
+L’upload média reste indisponible tant que les variables `MINIO_*` ne sont pas configurées. En production, l’URL publique du stockage doit être en HTTPS et le bucket dédié ne doit autoriser la lecture publique que pour le préfixe d’images indiqué dans la configuration.
 
 ---
 
@@ -416,9 +440,10 @@ Il n'y a pas encore de tests unitaires (Jest n'est pas configuré) : c'est l'obj
 
 - **EducMaster** non connecté (tâche 2.1) : les notes proviennent du seed de démonstration.
 - **Conseiller pédagogique** : prototype du niveau B, pas encore testé avec une vraie clé. Supervision, jeu de questions de référence, streaming et hébergement des données restent à faire (voir [Conseiller pédagogique](#conseiller-pédagogique)).
-- **Rôle établissement** sans accès aux dossiers ; pas encore d'écran d'administration pour le rattachement parent-enfant ni pour le référentiel (tâche 3.10).
+- **Rôle Établissement** : espace de connexion et fonctions propres non implémentés dans ce chantier (explicitement hors périmètre). L’Admin gère les fiches des établissements de formation, mais pas les comptes, les rôles ni les rattachements parent-enfant.
+- **Données éditoriales** : les pages statiques sont éditables dans le CMS pour l’Accueil, la FAQ, le guide et le contact ; les autres pages et les contenus non déclarés restent dans le code. Les exports disponibles sont CSV/XLSX, pas PDF.
 - **Filière ↔ établissement** : `OffreFormation` (table de jonction, depuis le lot 3 du 16/09) rattache une même fiche technique à plusieurs établissements, avec durée et source par offre ; le supérieur garde un établissement unique (`Filiere.etablissementId`). Le champ texte `ouSeFormer` reste pour les fiches sans lieu connu.
-- **Infrastructure** : MinIO n'est pas utilisé ; il n'y a pas de Dockerfile (`docker-compose.dev.yml` n'est pas encore fonctionnel) ni d'intégration continue.
+- **Infrastructure et migration** : la migration `20261009023000_admin_cms_analytics` n’a pas été appliquée à une base distante. Le stockage média nécessite un MinIO/S3 configuré et un bucket dédié en lecture publique uniquement sous `uploads/filieres/`. Le `docker-compose.dev.yml` reste à fiabiliser ; aucun service MinIO n'est provisionné automatiquement par ce dépôt.
 
 ---
 

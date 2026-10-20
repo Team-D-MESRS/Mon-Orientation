@@ -64,7 +64,7 @@ dans le process backend.)*
 | 3.7 | Recommandations — affichage, explication, sélection | frontend-dev | P0 | `done` | 2.7, 3.6 |
 | 3.8 | Module d'information — contenus par palier, guides, vidéos | frontend-dev | P1 | `pending` | 3.3 |
 | 3.9 | PWA — service worker, mode hors-ligne, cache contenus | frontend-dev | P1 | `pending` | 3.1, 3.5, 3.8 |
-| 3.10 | Admin — première console de supervision catalogue, santé API et indicateurs | frontend-dev | P1 | `done` | 2.10, 2.3, 3.3 |
+| 3.10 | Admin — console de gestion du catalogue, des pages CMS, brouillons, publications et historique | frontend-dev | P1 | `done` | 2.10, 2.3, 3.3 |
 
 ---
 
@@ -92,7 +92,7 @@ uniquement, voir JOURNAL.md. Le dossier `mobile/` a été supprimé.)*
 | 6.1 | API Stats nationales — indicateurs, flux, répartition | backend-dev | P1 | `done` | 2.2, 2.7 |
 | 6.2 | API Stats par département | backend-dev | P1 | `done` | 6.1 |
 | 6.3 | Dashboard web — indicateurs, répartition et filtres de base | frontend-dev | P1 | `done` | 6.1, 3.3 |
-| 6.4 | Export rapports — PDF, Excel | backend-dev | P1 | `pending` | 6.1 |
+| 6.4 | Export des indicateurs agrégés — CSV et XLSX | backend-dev | P1 | `done` | 6.1 |
 | 6.5 | Cartographie — visualisation géographique par département | frontend-dev | P2 | `pending` | 6.2, 3.3 |
 
 ---

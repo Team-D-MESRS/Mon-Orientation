@@ -65,6 +65,8 @@ export interface Filiere {
   contenuMetier?: ContenuMetier | null;
   /** Vidéo présentant le métier et ses débouchés, curatée manuellement pour quelques fiches seulement */
   videoUrl?: string | null;
+  /** Visuel éditorial de la fiche, absent sur les anciennes entrées */
+  imageUrl?: string | null;
   /** Présent quand la liste est filtrée par série de bac */
   accesSerie?: AccesSerie;
 }

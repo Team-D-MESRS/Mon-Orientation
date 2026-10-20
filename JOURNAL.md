@@ -6,6 +6,17 @@
 
 ## État actuel
 
+### Mise à jour du 18/10/2026 — administration éditoriale et observatoire DGES
+
+- **Demande** : sortir le profil Établissement du périmètre ; permettre à l’ADMIN de gérer les éléments éditoriaux et le catalogue sans modifier le code ; fournir à la DGES un observatoire approfondi de données agrégées.
+- **Fait (Admin)** : workflow brouillon → aperçu → publication pour filières, établissements et pages déclarées (Accueil, FAQ, guide, contact) ; archivage logique, historique, restauration comme nouveau brouillon, reprise et modification des brouillons ; sélection de visuels existants et téléversement JPEG/PNG/WebP vers MinIO/S3 compatible. Les routes et la page sont réservées au rôle `ADMIN`.
+- **Fait (DGES)** : observatoire avec période et département, stocks et activités d’orientation, couverture/qualité du catalogue, répartition territoriale et usage consenti ; exports CSV/XLSX agrégés. Les mesures d’audience ne collectent ni requête saisie ni message Guido, et l’interface rappelle que les comptes de la plateforme ne sont pas l’effectif national.
+- **Confidentialité et interprétation** : choix d’audience facultatif (opt-in), compteurs journaliers agrégés sans événements individuels ; les effectifs/référentiels sont des stocks, les créations/activités sont datées. Les apprenants avec découverte sont dédupliqués par dossier. Détails et prérequis dans `docs/admin-dges/architecture-et-prerequis.md`.
+- **Dépendances** : lockfiles backend et frontend régénérés ; `npm ci` réussi dans les deux applications.
+- **Vérifié** : `npx tsc --noEmit` + `npm run build` frontend ; `npx prisma validate` + `npm run build` backend ; `git diff --check` propre.
+- **Non réalisé en production** : aucune migration appliquée à une base distante, aucun secret réel, aucune validation de permissions MinIO, aucun test d’API Guido réel ; l’upload requiert une configuration de stockage et HTTPS avant production. La validation métier des données et une source officielle d’effectifs restent requises avant toute présentation comme statistique nationale.
+- **État de livraison** : changements locaux non commités/non poussés, archive incrémentale à fournir.
+
 ### Mise à jour du 02/10/2026 (9) — fusion avec orientation-new-version/, devenu la base du dépôt
 
 - **Demande de l'utilisateur** : un chantier de refonte visuelle mené en parallèle, hors dépôt, dans `orientation-new-version/` (Home, widget Guido flottant, page `/conseiller` autonome, 10 visuels de filière, Guido relié à une API externe) devait prendre la place de `backend/` et `frontend/`, sans perdre le travail métier fait ici depuis (vidéo par fiche filière, historique de notes, tendance des notes, palier Seconde, renommage favoris).
