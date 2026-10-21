@@ -18,7 +18,6 @@ import {
   GraduationCap,
   MapPin,
   MessageCircle,
-  Search,
   ShieldCheck,
   Sparkles,
   Video,
@@ -39,7 +38,6 @@ import {
   aUneSourceOfficielle,
   avecAdmission,
   idYoutube,
-  rechercheYoutube,
   serieDuBac,
 } from '@/lib/filiere';
 import { useAuthStore } from '@/stores/authStore';
@@ -69,6 +67,16 @@ function Section({ icone, titre, children }: { icone: ReactNode; titre: string; 
 }
 
 function VideoFiliere({ filiere }: { filiere: Filiere }) {
+  if (filiere.videoUrl?.startsWith('/videos/')) {
+    return (
+      <div className="aspect-video rounded-bj-sm overflow-hidden border border-border bg-black">
+        <video className="w-full h-full" controls playsInline preload="metadata" aria-label={`Vidéo : ${filiere.nom}`}>
+          <source src={filiere.videoUrl} type="video/mp4" />
+          Votre navigateur ne prend pas en charge la lecture vidéo.
+        </video>
+      </div>
+    );
+  }
   const id = filiere.videoUrl ? idYoutube(filiere.videoUrl) : null;
   if (id) {
     return (
@@ -84,19 +92,7 @@ function VideoFiliere({ filiere }: { filiere: Filiere }) {
       </div>
     );
   }
-  return (
-    <div>
-      <p className="text-text-secondary mb-3v">Aucune vidéo n'est encore associée à cette fiche.</p>
-      <a
-        href={rechercheYoutube(filiere)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="bj-btn bj-btn-secondary inline-flex"
-      >
-        <Search size={16} aria-hidden="true" /> <span>Chercher des vidéos sur YouTube</span>
-      </a>
-    </div>
-  );
+  return <p className="text-text-secondary">Aucune vidéo n'est encore associée à cette fiche.</p>;
 }
 
 function Liste({ elements }: { elements: string[] | null }) {

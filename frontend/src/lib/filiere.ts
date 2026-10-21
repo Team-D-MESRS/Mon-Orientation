@@ -63,7 +63,8 @@ export interface Filiere {
   offres?: LieuDeFormation[];
   /** Secondaire technique : contenu des catalogues officiels des nouveaux métiers (DTM), fiche détaillée seulement */
   contenuMetier?: ContenuMetier | null;
-  /** Vidéo présentant le métier et ses débouchés, curatée manuellement pour quelques fiches seulement */
+  /** Vidéo présentant le métier et ses débouchés, curatée manuellement pour quelques fiches seulement —
+   * lien YouTube, ou chemin `/videos/...` pour un fichier MP4 servi par le site */
   videoUrl?: string | null;
   /** Visuel éditorial de la fiche, absent sur les anciennes entrées */
   imageUrl?: string | null;
@@ -92,10 +93,6 @@ export const idYoutube = (url: string): string | null => {
   const correspondance = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{11})/);
   return correspondance ? correspondance[1] : null;
 };
-
-/** Lien de recherche YouTube pour une filière sans vidéo curatée : jamais de section vide. */
-export const rechercheYoutube = (filiere: Pick<Filiere, 'nom'>) =>
-  `https://www.youtube.com/results?search_query=${encodeURIComponent(`${filiere.nom} métier débouchés`)}`;
 
 /** « LTP Kandi (Kandi), LTP Ina (Bèbèrèkè)… » : résumé des lieux, pour les listes et la comparaison. */
 export const resumeLieux = (offres: LieuDeFormation[]) =>
