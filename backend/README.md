@@ -471,7 +471,7 @@ Aucun de ces hébergeurs ne convient à une exploitation réelle : ils servent �
 
 | Hébergeur | Carte bancaire | Veille | Base de données |
 |---|---|---|---|
-| **Render free** | non | endormi après 15 min sans trafic, reprise de 30 à 60 s | Supabase (500 Mo) ; la base gratuite Render est supprimée au bout de 30 jours |
+| **Render free** | non | endormi après 15 min sans trafic, reprise de 30 à 60 s | Neon (voir ci-dessous) ; la base gratuite Render est supprimée au bout de 30 jours |
 | **Railway** (essai) | non | pas de veille pendant l'essai | PostgreSQL du projet, 0,5 Go de volume |
 | **Koyeb free** | oui | veille annoncée après 1 h sans trafic par des sources tierces | 1 Go, limité à 5 h de temps actif par jour |
 
@@ -481,13 +481,13 @@ Rendu à 512 Mo de RAM, l'API tient, mais évitez les exports XLSX lourds et les
 
 ### 1. Créer la base PostgreSQL
 
-Sur Supabase : nouveau projet, région **eu-central-1 (Francfort)** pour rester près de la région Render, mot de passe fort. Conserver l'URI **Direct connection** (port 5432) et non l'URI « pooler » : le mode transaction de PgBouncer casse `prisma migrate deploy` et impose `?pgbouncer=true` au client.
+Sur [Neon](https://neon.tech) : nouveau projet, région **AWS eu-central-1 (Francfort)** pour rester près de la région Render, mot de passe fort. Supabase a été essayé en premier mais Render n'arrivait pas à le joindre (cause exacte non tranchée, possiblement l'IPv6 requis par la connexion directe de Supabase en plan gratuit) ; Neon fonctionne sans ce souci. Conserver l'URI **Direct connection**, pas celle avec `-pooler` dans le nom d'hôte : le mode transaction du pooler casse `prisma migrate deploy`.
 
 ### 2. Appliquer les migrations et charger les données (une seule fois)
 
 ```bash
 cd backend
-export DATABASE_URL="postgresql://postgres:<mot-de-passe>@db.<ref>.supabase.co:5432/postgres"
+export DATABASE_URL="postgresql://<utilisateur>:<mot-de-passe>@<nom-projet>.eu-central-1.aws.neon.tech/<base>?sslmode=require"
 npx prisma migrate deploy
 npx prisma generate          # indispensable : un client périmé fait échouer le seed
 npm run prisma:seed          # référentiel des filières (45 après le BEPC, 225 du supérieur)
@@ -508,7 +508,7 @@ Attention au schéma du blueprint : une même variable ne peut pas porter `value
 
 | Variable | Valeur pour une démo publique | Rôle |
 |---|---|---|
-| `DATABASE_URL` | URI directe Supabase | connexion PostgreSQL |
+| `DATABASE_URL` | URI directe Neon | connexion PostgreSQL |
 | `JWT_SECRET` | `openssl rand -base64 48` | signature des jetons |
 | `JWT_REFRESH_SECRET` | une seconde valeur aléatoire | rotation des sessions |
 | `PORT` | ne rien fixer sur Render | Render injecte `PORT=10000` que l'application respecte ; Koyeb demande `PORT=8080` plus le port de service correspondant |
@@ -549,7 +549,7 @@ Enfin, tester une connexion côté frontend avec un compte du seed de démonstra
 5. Base privée : `npx @railway/cli@latest connect` ouvre un tunnel local et affiche une URL de connexion ; avec cette URL en variable d'environnement, jouer `npx prisma migrate deploy`, `npx prisma generate`, `npm run prisma:seed` puis `npm run prisma:seed:demo` depuis le poste. (L'extension `unaccent`, créée par la migration `20260914000931_catalogue_favoris`, est installable sur Railway ; si `CREATE EXTENSION` est refusé, prendre le service PostgreSQL classique plutôt qu'une instance serverless.)
 6. `Settings → Networking → Generate domain` donne `https://<service>.up.railway.app` : à reporter dans `CORS_ORIGIN` et dans `NEXT_PUBLIC_API_URL` côté Vercel, puis redéployer le front.
 
-**Durée de vie** : l'essai dure 30 jours ou 5 $ de consommation (environ un mois pour cette API), puis le plan Free alloue 1 $ par mois — le service se coupe dès que le crédit est épuisé. Cette voie convient à une démonstration de quelques semaines (soutenance, revue client), pas à une exploitation continue. La migration des données vers Supabase le moment venu ne demande que de changer `DATABASE_URL`.
+**Durée de vie** : l'essai dure 30 jours ou 5 $ de consommation (environ un mois pour cette API), puis le plan Free alloue 1 $ par mois — le service se coupe dès que le crédit est épuisé. Cette voie convient à une démonstration de quelques semaines (soutenance, revue client), pas à une exploitation continue. La migration des données vers Neon le moment venu ne demande que de changer `DATABASE_URL`.
 
 ### 8. Et si aucune de ces voies ne convient
 

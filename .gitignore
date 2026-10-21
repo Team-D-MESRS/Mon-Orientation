@@ -18,6 +18,7 @@ build/
 
 # Node.js / Web
 node_modules/
+.vercel/
 dist/
 .next/
 .nuxt/
