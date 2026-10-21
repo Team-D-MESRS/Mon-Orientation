@@ -377,6 +377,50 @@ const ELEVES: EleveDemo[] = [
     // compte de démo.
   },
   {
+    nip: 'DEMO-2ND-0002',
+    numeroEducmaster: 'EM-2026-00073',
+    nom: 'Toko',
+    prenom: 'Mariam',
+    dateNaissance: '2010-01-17',
+    sexe: 'F',
+    departement: 'Mono',
+    commune: 'Lokossa',
+    palier: 'SECONDE',
+    avecCompte: true,
+    notes: {
+      Mathématiques: [11, 11.5, 11],
+      PCT: [10.5, 11, 11],
+      SVT: [12, 12, 12.5],
+      Français: [15, 15.5, 15],
+      Anglais: [14, 14.5, 15],
+      'Histoire-Géographie': [14.5, 14, 15],
+      EPS: [13, 13.5, 13],
+    },
+    // Second compte de 2nde, dédié à la démo (présentation ministérielle du 21/10) d'un palier
+    // intermédiaire avec le questionnaire de découverte déjà rempli : Edwige (DEMO-2ND-0001) reste
+    // le compte « rien fait » de ce palier, pour ne pas priver la démo « un compte par classe sans
+    // activité » de sa 2nde.
+    decouverte: {
+      // Dominante Artistique/Social : cohérent avec le français/anglais forts et le métier envisagé.
+      riasec: reponsesRiasec({
+        A: [10, 8, 10, 8, 10, 10],
+        S: [8, 10, 8, 8, 8, 8],
+        I: [6, 6, 8, 6, 6, 6],
+        R: [3, 3, 3, 3, 3, 3],
+        E: [6, 6, 3, 6, 6, 3],
+        C: [6, 6, 8, 6, 6, 8],
+      }),
+      metierEnvisage: 'Journaliste ou communicante',
+      apresCollege: 'GENERAL',
+      styleTravail: 'INTELLECTUEL',
+      statut: 'SALARIE',
+      dureeEtudes: 'LONGUE',
+      priorites: ['UTILITE', 'REVENU'],
+      internat: 'NON',
+      mobiliteDepartement: 'OUI',
+    },
+  },
+  {
     nip: 'DEMO-4E-0002',
     numeroEducmaster: 'EM-2026-00067',
     nom: 'Zannou',
