@@ -27,6 +27,9 @@ const PAR_CODE: Record<string, string> = {
   'DTM-LTP-GROS-OEUVRE': '/images/card-gros-oeuvre.webp',
   'DTM-LTP-TOPOGRAPHIE': '/images/card-topographie.webp',
   'DTM-LTP-ACCUEIL-TOURISTIQUE': '/images/card-accueil-touristique.webp',
+  'DTM-LTP-FROID-CLIM': '/images/card-froid-clim.webp',
+  'DTM-LTP-BOIS': '/images/card-bois.webp',
+  'DTM-LTP-QUALITE-EAU': '/images/card-qualite-eau.webp',
 };
 
 const PAR_TYPE: Record<string, string> = {
